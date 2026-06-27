@@ -19,6 +19,6 @@ sibling submodules checked out until those shared interfaces are extracted.
 ```bash
 uv run --extra dev ruff check src
 uv run --extra dev ruff format --check src
+uv run --extra dev pytest
 uv run --extra dev basedpyright
 ```
-
