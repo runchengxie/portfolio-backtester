@@ -19,9 +19,11 @@ OWNED_MODULES = (
     "cstree.backtesting.reporting",
     "cstree.backtesting.tearsheet",
     "cstree.backtesting.portfolio",
+    "cstree.backtesting.portfolio_weights",
     "cstree.backtesting.rebalance",
     "cstree.backtesting.position_backtest",
     "cstree.backtesting.strategy",
+    "cstree.backtesting.turnover_attribution",
 )
 
 
