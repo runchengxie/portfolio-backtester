@@ -11,6 +11,7 @@ from cstree import backtesting
 OWNED_MODULES = (
     "cstree.backtesting.engine",
     "cstree.backtesting.metrics",
+    "cstree.backtesting.a_share_executable_oos_topk",
     "cstree.backtesting.execution_sim",
     "cstree.backtesting.a_share_round_lot_diagnostics",
     "cstree.backtesting.reporting",
