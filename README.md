@@ -9,10 +9,19 @@ position post-processing, turnover attribution, benchmark ladders, and
 backtest reporting.
 
 Current status: transitional stage-3 split. The package is physically separated
-from `cross-sectional-trees`, but some modules still import shared workspace
-helpers from `cstree.pipeline`, `cstree.contracts`, `cstree.alpha`, and other
-strategy orchestration modules. Run it from `research-workspace` with the
-sibling submodules checked out until those shared interfaces are extracted.
+from `cross-sectional-trees`, and workspace gates prevent runtime imports back
+into `cstree.pipeline`, `cstree.alpha`, and strategy-pipeline contract helpers.
+Full research runs are still orchestrated by `cross-sectional-trees`, but this
+package owns the reusable backtesting layer and can consume external signal or
+position inputs without importing alpha research internals.
+
+Public package entrypoints include:
+
+- `backtest_topk` for score-to-return Top-K research backtests.
+- `StrategySpec` and `construct_positions_from_strategy` for signal-to-position
+  construction.
+- `PositionBacktestConfig` and `run_position_backtest` for replaying explicit
+  target positions against pricing data.
 
 ## Local checks
 
