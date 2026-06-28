@@ -1,6 +1,8 @@
 from __future__ import annotations
 
 import importlib
+import subprocess
+import sys
 from pathlib import Path
 
 import pytest
@@ -30,14 +32,13 @@ OWNED_MODULES = (
     "cstree.backtesting.strategy",
     "cstree.backtesting.turnover_attribution",
 )
+FORBIDDEN_RUNTIME_PREFIXES = ("cstree.alpha", "cstree.pipeline")
 
 
-def test_cstree_namespace_reaches_workspace_siblings() -> None:
+def test_cstree_namespace_includes_backtesting_package_root() -> None:
     namespace_paths = {Path(path).as_posix() for path in cstree.__path__}
 
     assert any(path.endswith("portfolio-backtester/src/cstree") for path in namespace_paths)
-    assert any(path.endswith("cross-sectional-trees/src/cstree") for path in namespace_paths)
-    assert any(path.endswith("alpha-research/src/cstree") for path in namespace_paths)
 
 
 @pytest.mark.parametrize("module_name", OWNED_MODULES)
@@ -59,3 +60,30 @@ def test_backtesting_package_exports_core_entrypoints() -> None:
         "strategy_from_config",
         "summarize_period_returns",
     }
+
+
+def test_owned_backtesting_modules_do_not_load_alpha_or_pipeline() -> None:
+    code = f"""
+import importlib
+import sys
+
+for module_name in {OWNED_MODULES!r}:
+    importlib.import_module(module_name)
+
+for prefix in {FORBIDDEN_RUNTIME_PREFIXES!r}:
+    offenders = [
+        module_name
+        for module_name in sys.modules
+        if module_name == prefix or module_name.startswith(prefix + ".")
+    ]
+    if offenders:
+        raise SystemExit("loaded forbidden module(s): " + ", ".join(sorted(offenders)))
+"""
+    result = subprocess.run(
+        [sys.executable, "-c", code],
+        capture_output=True,
+        check=False,
+        text=True,
+    )
+
+    assert result.returncode == 0, result.stderr + result.stdout
