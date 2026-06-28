@@ -25,6 +25,12 @@ STRATEGY_SPEC_REQUIRED_FIELDS = (
     "long_only",
 )
 
+POSITIONS_BY_REBALANCE_CONTRACT_NAME = "cstree.positions_by_rebalance"
+POSITIONS_BY_REBALANCE_SCHEMA_VERSION = 1
+CANONICAL_POSITIONS_BY_REBALANCE_FILE = "positions_by_rebalance.csv"
+POSITIONS_BY_REBALANCE_REQUIRED_COLUMNS = ("rebalance_date", "symbol", "weight")
+POSITIONS_BY_REBALANCE_COMMON_COLUMNS = ("entry_date", "side", "signal", "rank")
+
 
 @dataclass(frozen=True)
 class BacktestPricingFrameContract:
@@ -44,8 +50,23 @@ class StrategySpecContract:
     required_fields: tuple[str, ...] = STRATEGY_SPEC_REQUIRED_FIELDS
 
 
+@dataclass(frozen=True)
+class PositionsByRebalanceFrameContract:
+    """Stable portfolio-construction positions artifact contract."""
+
+    name: str = POSITIONS_BY_REBALANCE_CONTRACT_NAME
+    schema_version: int = POSITIONS_BY_REBALANCE_SCHEMA_VERSION
+    file_name: str = CANONICAL_POSITIONS_BY_REBALANCE_FILE
+    required_columns: tuple[str, ...] = POSITIONS_BY_REBALANCE_REQUIRED_COLUMNS
+    common_columns: tuple[str, ...] = POSITIONS_BY_REBALANCE_COMMON_COLUMNS
+    date_column: str = "rebalance_date"
+    symbol_column: str = "symbol"
+    weight_column: str = "weight"
+
+
 BACKTEST_PRICING_CONTRACT = BacktestPricingFrameContract()
 STRATEGY_SPEC_CONTRACT = StrategySpecContract()
+POSITIONS_BY_REBALANCE_CONTRACT = PositionsByRebalanceFrameContract()
 
 
 @dataclass(frozen=True)
@@ -94,6 +115,18 @@ def _dedupe(values: Iterable[str | None]) -> tuple[str, ...]:
 
 def _column_series(frame: pd.DataFrame, column: str) -> pd.Series:
     return cast(pd.Series, frame[column])
+
+
+def _parse_contract_dates(values: pd.Series) -> pd.Series:
+    text = values.astype(str).str.strip().str.replace(r"\.0$", "", regex=True)
+    compact = text.str.fullmatch(r"\d{8}")
+    parsed = pd.Series(pd.NaT, index=values.index, dtype="datetime64[ns]")
+    if bool(compact.any()):
+        parsed.loc[compact] = pd.to_datetime(text.loc[compact], format="%Y%m%d", errors="coerce")
+    remaining = ~compact
+    if bool(remaining.any()):
+        parsed.loc[remaining] = pd.to_datetime(text.loc[remaining], errors="coerce")
+    return cast(pd.Series, parsed.dt.normalize())
 
 
 def required_backtest_pricing_columns(
@@ -235,24 +268,68 @@ def assert_strategy_spec(spec: StrategySpec) -> None:
         raise ValueError("Invalid strategy spec: " + "; ".join(issues))
 
 
+def validate_positions_by_rebalance_frame(positions: pd.DataFrame) -> list[str]:
+    """Return contract violations for a positions_by_rebalance artifact frame."""
+
+    issues: list[str] = []
+    missing = [
+        column
+        for column in POSITIONS_BY_REBALANCE_REQUIRED_COLUMNS
+        if column not in positions.columns
+    ]
+    if missing:
+        issues.append("missing columns: " + ", ".join(missing))
+        return issues
+    if positions.empty:
+        return issues
+
+    rebalance_dates = _parse_contract_dates(_column_series(positions, "rebalance_date"))
+    if bool(rebalance_dates.isna().any()):
+        issues.append("rebalance_date must be date-like")
+
+    symbols = _column_series(positions, "symbol").astype("string")
+    if bool(symbols.isna().any()) or bool(symbols.str.strip().eq("").any()):
+        issues.append("symbol must be non-empty")
+
+    weights = pd.to_numeric(_column_series(positions, "weight"), errors="coerce")
+    if bool(weights.isna().any()):
+        issues.append("weight must be numeric")
+    return issues
+
+
+def assert_positions_by_rebalance_frame(positions: pd.DataFrame) -> None:
+    issues = validate_positions_by_rebalance_frame(positions)
+    if issues:
+        raise ValueError("Invalid positions_by_rebalance frame: " + "; ".join(issues))
+
+
 __all__ = [
     "BACKTEST_PRICING_CONTRACT",
     "BACKTEST_PRICING_CONTRACT_NAME",
     "BACKTEST_PRICING_KEY_COLUMNS",
     "BACKTEST_PRICING_SCHEMA_VERSION",
+    "CANONICAL_POSITIONS_BY_REBALANCE_FILE",
     "DEFAULT_TRADABLE_FLAG_COLUMNS",
+    "POSITIONS_BY_REBALANCE_COMMON_COLUMNS",
+    "POSITIONS_BY_REBALANCE_CONTRACT",
+    "POSITIONS_BY_REBALANCE_CONTRACT_NAME",
+    "POSITIONS_BY_REBALANCE_REQUIRED_COLUMNS",
+    "POSITIONS_BY_REBALANCE_SCHEMA_VERSION",
     "STRATEGY_SPEC_CONTRACT",
     "STRATEGY_SPEC_CONTRACT_NAME",
     "STRATEGY_SPEC_REQUIRED_FIELDS",
     "STRATEGY_SPEC_SCHEMA_VERSION",
     "BacktestPricingFrameContract",
     "GroupCap",
+    "PositionsByRebalanceFrameContract",
     "StrategySpec",
     "StrategySpecContract",
     "assert_backtest_pricing_frame",
+    "assert_positions_by_rebalance_frame",
     "assert_strategy_spec",
     "required_backtest_pricing_columns",
     "validate_backtest_pricing_frame",
+    "validate_positions_by_rebalance_frame",
     "validate_strategy_spec",
     "validate_tradable_flags_frame",
 ]

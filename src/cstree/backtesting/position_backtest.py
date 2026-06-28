@@ -5,6 +5,7 @@ from typing import Any, Literal
 
 import pandas as pd
 
+from .contracts import assert_positions_by_rebalance_frame
 from .engine import _compute_trade_summary
 from .execution import BpsCostModel, ExitPolicy
 from .metrics import summarize_period_returns
@@ -64,10 +65,7 @@ def _date_key(value: Any) -> str:
 
 
 def normalize_position_backtest_positions(positions: pd.DataFrame) -> pd.DataFrame:
-    required = {"rebalance_date", "symbol", "weight"}
-    missing = sorted(required - set(positions.columns))
-    if missing:
-        raise ValueError("Positions file is missing required column(s): " + ", ".join(missing))
+    assert_positions_by_rebalance_frame(positions)
     out = positions.copy()
     out["rebalance_key"] = _date_series(out["rebalance_date"]).dt.strftime("%Y%m%d")
     out["symbol"] = out["symbol"].astype(str)

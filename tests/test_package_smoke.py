@@ -51,14 +51,18 @@ def test_owned_backtesting_modules_import(module_name: str) -> None:
 def test_backtesting_package_exports_core_entrypoints() -> None:
     assert set(backtesting.__all__) == {
         "GroupCap",
+        "POSITIONS_BY_REBALANCE_CONTRACT",
         "PositionBacktestConfig",
         "PositionBacktestResult",
+        "PositionsByRebalanceFrameContract",
         "StrategySpec",
+        "assert_positions_by_rebalance_frame",
         "backtest_topk",
         "construct_positions_from_strategy",
         "run_position_backtest",
         "strategy_from_config",
         "summarize_period_returns",
+        "validate_positions_by_rebalance_frame",
     }
 
 
