@@ -75,10 +75,6 @@ exclude = [
   "dist",
   "outputs",
 ]
-extraPaths = [
-  "../alpha-research/src",
-  "../cross-sectional-trees/src",
-]
 venvPath = "."
 venv = ".venv"
 pythonVersion = "3.12"
