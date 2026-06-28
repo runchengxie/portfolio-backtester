@@ -17,8 +17,14 @@ sibling submodules checked out until those shared interfaces are extracted.
 ## Local checks
 
 ```bash
-uv run --extra dev ruff check src
-uv run --extra dev ruff format --check src
+uv run --extra dev ruff check .
+uv run --extra dev ruff format --check .
+uv run --extra dev ty check
 uv run --extra dev pytest
+```
+
+Release/advisory check:
+
+```bash
 uv run --extra dev basedpyright
 ```
