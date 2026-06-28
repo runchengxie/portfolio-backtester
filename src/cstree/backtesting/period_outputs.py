@@ -5,7 +5,6 @@ from typing import Any
 
 import pandas as pd
 
-from ..contracts.rebalance import _sample_rebalance_frame
 from .evaluation import (
     _build_period_positions as _build_period_positions_impl,
     _record_exposure_outputs,
@@ -16,6 +15,7 @@ from .evaluation import (
 )
 from .portfolio_positions import build_positions_by_rebalance as build_positions_by_rebalance
 from .position_postprocess import rebuild_backtest_from_positions
+from .rebalance import _sample_rebalance_frame
 
 
 def _build_period_positions(

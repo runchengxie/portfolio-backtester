@@ -113,6 +113,46 @@ def get_rebalance_dates(dates: Iterable[pd.Timestamp], freq: str) -> list[pd.Tim
     return _period_end_dates(dates_list, freq)
 
 
+def _timestamp_set(dates: Iterable[pd.Timestamp]) -> set[pd.Timestamp]:
+    return {pd.Timestamp(date) for date in pd.to_datetime(list(dates))}
+
+
+def sample_rebalance_frame(
+    frame: pd.DataFrame | None,
+    *,
+    frequency: str,
+    valid_dates: Iterable[pd.Timestamp] | None = None,
+    allowed_dates: Iterable[pd.Timestamp] | None = None,
+) -> tuple[pd.DataFrame, list[pd.Timestamp]]:
+    if frame is None or frame.empty:
+        columns = frame.columns if frame is not None else pd.Index([])
+        return pd.DataFrame(columns=columns), []
+
+    frame_sorted = frame.sort_values("trade_date", kind="mergesort").reset_index(drop=True)
+    normalized_trade_dates = pd.Series(
+        pd.to_datetime(frame_sorted["trade_date"], errors="coerce"),
+        index=frame_sorted.index,
+    )
+    trade_dates_sorted = sorted(
+        pd.Timestamp(date) for date in normalized_trade_dates.dropna().unique()
+    )
+    rebalance_dates = get_rebalance_dates(trade_dates_sorted, frequency)
+    if valid_dates:
+        valid_dates_set = _timestamp_set(valid_dates)
+        rebalance_dates = [date for date in rebalance_dates if date in valid_dates_set]
+    if allowed_dates is not None:
+        allowed_dates_set = _timestamp_set(allowed_dates)
+        rebalance_dates = [date for date in rebalance_dates if date in allowed_dates_set]
+    if not rebalance_dates:
+        return frame_sorted.iloc[0:0].copy(), []
+
+    sampled = frame_sorted.loc[normalized_trade_dates.isin(set(rebalance_dates))].copy()
+    return sampled, rebalance_dates
+
+
+_sample_rebalance_frame = sample_rebalance_frame
+
+
 def estimate_rebalance_gap(
     trade_dates: Iterable[pd.Timestamp],
     rebalance_dates: Iterable[pd.Timestamp],
