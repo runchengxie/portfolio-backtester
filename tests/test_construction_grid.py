@@ -81,7 +81,25 @@ def _args(config_path):
         output_json=None,
         log_level="INFO",
         backtest_topk_fn=backtest_topk,
+        dynamic_ensemble_fn=_fake_dynamic_ensemble_score,
     )
+
+
+def _fake_dynamic_ensemble_score(data, *, spec, target_col):
+    del target_col
+    signal_cols = [str(col) for col in spec.get("signal_cols", [])]
+    output_col = str(spec.get("output_col") or "__dynamic_ensemble_score")
+    out = data.copy()
+    out[output_col] = out[signal_cols].mean(axis=1)
+    result = SimpleNamespace(
+        summary={
+            "avg_active_factor_count": float(len(signal_cols)),
+            "avg_factor_turnover": 0.0,
+            "avg_stock_turnover": 0.0,
+            "correlation_threshold": None,
+        }
+    )
+    return out, output_col, result
 
 
 def test_construction_grid_reuses_existing_scores(tmp_path):
@@ -228,6 +246,34 @@ def test_construction_grid_accepts_explicit_rebalance_dates(tmp_path):
 
     assert rows[0]["status"] == "ok"
     assert rows[0]["backtest_periods"] == 1
+
+
+def test_construction_grid_requires_dynamic_ensemble_injection(tmp_path):
+    run_dir = tmp_path / "run"
+    run_dir.mkdir()
+    scored_file = run_dir / "eval_scored.parquet"
+    _scored_data().to_parquet(scored_file)
+    summary_path = _write_summary(run_dir, scored_file)
+
+    cfg = {
+        "construction_grid": {
+            "summary_file": str(summary_path),
+            "variants": [
+                {
+                    "name": "dynamic_risk",
+                    "top_k": 2,
+                    "dynamic_ensemble": {"signal_cols": ["signal_backtest", "alt_signal"]},
+                }
+            ],
+        }
+    }
+
+    with pytest.raises(ValueError, match="dynamic_ensemble requires an injected"):
+        construction_grid.build_construction_grid(
+            cfg,
+            config_dir=tmp_path,
+            backtest_topk_fn=backtest_topk,
+        )
 
 
 def test_construction_grid_compounds_daily_benchmark_returns(tmp_path):

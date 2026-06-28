@@ -12,7 +12,6 @@ import pandas as pd
 import yaml
 from market_data_platform.symbols import canonicalize_symbol_columns
 
-from ..alpha.dynamic_signal_ensemble import attach_dynamic_ensemble_score
 from ..metrics import (
     daily_ic_series,
     estimate_turnover,
@@ -33,6 +32,7 @@ select_construction_variant_with_inertia = (
 write_reports = _construction_grid_reports.write_reports
 
 BacktestTopKFn = Callable[..., Any]
+DynamicEnsembleFn = Callable[..., tuple[pd.DataFrame, str, Any]]
 
 
 def _resolve_path(path_text: str | Path | None, *, base_dir: Path | None = None) -> Path | None:
@@ -225,27 +225,35 @@ def _prepare_signal_column(
     variant: dict[str, Any],
     *,
     target_col: str,
+    dynamic_ensemble_fn: DynamicEnsembleFn | None,
 ) -> tuple[pd.DataFrame, str, str, str, dict[str, Any]]:
     ensemble = variant.get("dynamic_ensemble") or variant.get("dynamic_signal_ensemble")
     if ensemble is not None:
         if not isinstance(ensemble, dict):
             raise ValueError("dynamic_ensemble must be a mapping.")
-        out, ensemble_col, result = attach_dynamic_ensemble_score(
+        if dynamic_ensemble_fn is None:
+            raise ValueError(
+                "dynamic_ensemble requires an injected dynamic_ensemble_fn. "
+                "Precompute dynamic ensemble scores in alpha-research or use the "
+                "strategy-pipeline CLI."
+            )
+        out, ensemble_col, result = dynamic_ensemble_fn(
             data,
             spec=ensemble,
             target_col=target_col,
         )
+        summary = getattr(result, "summary", {})
+        if not isinstance(summary, dict):
+            summary = {}
         method = "dynamic_ensemble"
         columns = ",".join(str(col) for col in ensemble.get("signal_cols", []))
         meta = {
             "dynamic_ensemble_active": True,
             "dynamic_ensemble_signal_cols": columns,
-            "dynamic_ensemble_avg_active_factor_count": result.summary.get(
-                "avg_active_factor_count"
-            ),
-            "dynamic_ensemble_avg_factor_turnover": result.summary.get("avg_factor_turnover"),
-            "dynamic_ensemble_avg_stock_turnover": result.summary.get("avg_stock_turnover"),
-            "factor_correlation_threshold": result.summary.get("correlation_threshold"),
+            "dynamic_ensemble_avg_active_factor_count": summary.get("avg_active_factor_count"),
+            "dynamic_ensemble_avg_factor_turnover": summary.get("avg_factor_turnover"),
+            "dynamic_ensemble_avg_stock_turnover": summary.get("avg_stock_turnover"),
+            "factor_correlation_threshold": summary.get("correlation_threshold"),
             "dynamic_ensemble_result": result,
         }
         data = out
@@ -851,12 +859,14 @@ def _evaluate_variant(
     variant: dict[str, Any],
     *,
     backtest_topk_fn: BacktestTopKFn,
+    dynamic_ensemble_fn: DynamicEnsembleFn | None,
 ) -> dict[str, Any]:
     data, signal_col, method, columns, signal_meta = _prepare_signal_column(
         context["scored_data"],
         context["backtest_signal_col"],
         variant,
         target_col=context["target_col"],
+        dynamic_ensemble_fn=dynamic_ensemble_fn,
     )
     row = _init_row(
         variant=variant,
@@ -922,11 +932,17 @@ def build_construction_grid(
     *,
     config_dir: Path,
     backtest_topk_fn: BacktestTopKFn | None = None,
+    dynamic_ensemble_fn: DynamicEnsembleFn | None = None,
 ) -> list[dict[str, Any]]:
     context = _build_base_context(config, config_dir)
     runner = _resolve_backtest_topk_fn(backtest_topk_fn)
     return [
-        _evaluate_variant(context, variant, backtest_topk_fn=runner)
+        _evaluate_variant(
+            context,
+            variant,
+            backtest_topk_fn=runner,
+            dynamic_ensemble_fn=dynamic_ensemble_fn,
+        )
         for variant in context["variants"]
     ]
 
@@ -956,6 +972,7 @@ def run(args: argparse.Namespace) -> list[dict[str, Any]]:
         config,
         config_dir=config_path.parent,
         backtest_topk_fn=_resolve_backtest_topk_fn(getattr(args, "backtest_topk_fn", None)),
+        dynamic_ensemble_fn=getattr(args, "dynamic_ensemble_fn", None),
     )
     cfg = config.get("construction_grid", config)
     output_csv = _resolve_path(
