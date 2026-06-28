@@ -12,16 +12,16 @@ import pandas as pd
 import yaml
 from market_data_platform.symbols import canonicalize_symbol_columns
 
-from ..metrics import (
+from . import construction_grid_reports as _construction_grid_reports
+from .benchmarking import build_benchmark_series
+from .execution import build_execution_model
+from .metrics import (
     daily_ic_series,
     estimate_turnover,
     quantile_returns,
     summarize_active_returns,
     summarize_ic,
 )
-from . import construction_grid_reports as _construction_grid_reports
-from .benchmarking import build_benchmark_series
-from .execution import build_execution_model
 from .rebalance import get_rebalance_dates
 from .signal_postprocess import apply_score_postprocess
 

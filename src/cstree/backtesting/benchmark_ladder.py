@@ -12,7 +12,7 @@ import numpy as np
 import pandas as pd
 import yaml
 
-from ..metrics import summarize_active_returns
+from .metrics import summarize_active_returns
 
 FIELDNAMES = [
     "benchmark_name",

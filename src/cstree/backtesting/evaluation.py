@@ -7,7 +7,6 @@ from typing import Any, cast
 import numpy as np
 import pandas as pd
 
-from ..metrics import summarize_active_returns
 from .benchmarking import build_benchmark_series, warn_if_delay_exit_lag as _warn_if_delay_exit_lag
 from .engine import backtest_topk
 from .execution import DetailedTradeFeeModel
@@ -18,7 +17,7 @@ from .execution_sim import (
 )
 from .exposure import compute_backtest_exposure_analysis
 from .freshness_overlay import apply_freshness_overlay
-from .metrics import summarize_period_returns
+from .metrics import summarize_active_returns, summarize_period_returns
 from .portfolio_positions import build_positions_by_rebalance
 from .position_postprocess import apply_position_postprocess
 from .rebalance import get_rebalance_dates
