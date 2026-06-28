@@ -12,6 +12,7 @@ OWNED_MODULES = (
     "cstree.backtesting.engine",
     "cstree.backtesting.metrics",
     "cstree.backtesting.a_share_executable_oos_topk",
+    "cstree.backtesting.execution",
     "cstree.backtesting.execution_sim",
     "cstree.backtesting.a_share_round_lot_diagnostics",
     "cstree.backtesting.benchmark_ladder",
@@ -20,6 +21,7 @@ OWNED_MODULES = (
     "cstree.backtesting.portfolio",
     "cstree.backtesting.rebalance",
     "cstree.backtesting.position_backtest",
+    "cstree.backtesting.strategy",
 )
 
 
