@@ -5,9 +5,9 @@ from typing import Any, Literal
 
 import pandas as pd
 
-from ..backtest import summarize_period_returns
-from ..backtesting.engine import _compute_trade_summary
+from .engine import _compute_trade_summary
 from .execution import BpsCostModel, ExitPolicy
+from .metrics import summarize_period_returns
 from .portfolio_weights import normalize_position_weights
 
 PositionExitPolicy = Literal["period", "strict", "ffill", "delay"]
