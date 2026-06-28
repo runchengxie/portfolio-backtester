@@ -12,6 +12,7 @@ OWNED_MODULES = (
     "cstree.backtesting.engine",
     "cstree.backtesting.metrics",
     "cstree.backtesting.execution_sim",
+    "cstree.backtesting.a_share_round_lot_diagnostics",
     "cstree.backtesting.reporting",
     "cstree.backtesting.portfolio",
     "cstree.backtesting.rebalance",
