@@ -4,7 +4,7 @@ from typing import Any
 
 import pandas as pd
 
-from ..contracts.strategy import GroupCap, StrategySpec
+from .contracts import GroupCap, StrategySpec
 from .execution import ExecutionModel
 from .portfolio_positions import build_positions_by_rebalance
 

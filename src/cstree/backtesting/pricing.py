@@ -5,7 +5,7 @@ from typing import Literal
 import pandas as pd
 from market_data_platform.symbols import canonicalize_symbol_columns
 
-from ..contracts.backtest import assert_backtest_pricing_frame
+from .contracts import assert_backtest_pricing_frame
 from .execution import (
     BpsCostModel,
     EntryPolicy,
