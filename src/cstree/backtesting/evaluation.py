@@ -9,7 +9,6 @@ import pandas as pd
 
 from ..alpha.evaluation import _postprocess_pred_column
 from ..metrics import summarize_active_returns
-from ..pipeline.freshness_overlay import apply_freshness_overlay
 from .benchmarking import build_benchmark_series, warn_if_delay_exit_lag as _warn_if_delay_exit_lag
 from .engine import backtest_topk
 from .execution import DetailedTradeFeeModel
@@ -19,6 +18,7 @@ from .execution_sim import (
     simulate_ideal_daily_nav,
 )
 from .exposure import compute_backtest_exposure_analysis
+from .freshness_overlay import apply_freshness_overlay
 from .metrics import summarize_period_returns
 from .portfolio_positions import build_positions_by_rebalance
 from .position_postprocess import apply_position_postprocess
