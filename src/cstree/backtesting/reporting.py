@@ -8,7 +8,7 @@ import numpy as np
 import pandas as pd
 
 from ..metrics import summarize_active_returns
-from ..pipeline.eval_benchmark import build_benchmark_series
+from .benchmarking import build_benchmark_series
 from .metrics import summarize_period_returns
 
 _ROLLING_REPORT_YEARS: tuple[int, ...] = (1, 3, 5)

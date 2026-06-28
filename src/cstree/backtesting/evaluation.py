@@ -9,11 +9,8 @@ import pandas as pd
 
 from ..alpha.evaluation import _postprocess_pred_column
 from ..metrics import summarize_active_returns
-from ..pipeline.eval_benchmark import (
-    build_benchmark_series,
-    warn_if_delay_exit_lag as _warn_if_delay_exit_lag,
-)
 from ..pipeline.freshness_overlay import apply_freshness_overlay
+from .benchmarking import build_benchmark_series, warn_if_delay_exit_lag as _warn_if_delay_exit_lag
 from .engine import backtest_topk
 from .execution import DetailedTradeFeeModel
 from .execution_sim import (

@@ -14,7 +14,6 @@ from market_data_platform.symbols import canonicalize_symbol_columns
 
 from ..alpha.dynamic_signal_ensemble import attach_dynamic_ensemble_score
 from ..alpha.transform import apply_score_postprocess
-from ..benchmarking import build_benchmark_series
 from ..metrics import (
     daily_ic_series,
     estimate_turnover,
@@ -23,6 +22,7 @@ from ..metrics import (
     summarize_ic,
 )
 from . import construction_grid_reports as _construction_grid_reports
+from .benchmarking import build_benchmark_series
 from .execution import build_execution_model
 from .rebalance import get_rebalance_dates
 
