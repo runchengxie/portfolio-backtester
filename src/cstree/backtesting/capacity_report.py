@@ -12,7 +12,6 @@ from typing import Any
 import numpy as np
 import pandas as pd
 
-from ..liquidity_proxy import _derive_execution_liquidity_proxy_columns
 from .capacity_report_support import (
     build_execution_context,
     capacity_cfg,
@@ -38,6 +37,7 @@ from .execution_sim import (
     simulate_execution_adjusted_nav,
     simulate_ideal_daily_nav,
 )
+from .liquidity_proxy import _derive_execution_liquidity_proxy_columns
 
 DEFAULT_PORTFOLIO_VALUES = (
     500_000.0,

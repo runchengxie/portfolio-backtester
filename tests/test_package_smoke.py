@@ -22,6 +22,7 @@ OWNED_MODULES = (
     "cstree.backtesting.tearsheet",
     "cstree.backtesting.portfolio",
     "cstree.backtesting.portfolio_weights",
+    "cstree.backtesting.liquidity_proxy",
     "cstree.backtesting.rebalance",
     "cstree.backtesting.position_backtest",
     "cstree.backtesting.post_buffer_exposure_repair",
