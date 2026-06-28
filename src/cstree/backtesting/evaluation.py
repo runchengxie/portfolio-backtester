@@ -7,7 +7,6 @@ from typing import Any, cast
 import numpy as np
 import pandas as pd
 
-from ..alpha.evaluation import _postprocess_pred_column
 from ..metrics import summarize_active_returns
 from .benchmarking import build_benchmark_series, warn_if_delay_exit_lag as _warn_if_delay_exit_lag
 from .engine import backtest_topk
@@ -23,6 +22,7 @@ from .metrics import summarize_period_returns
 from .portfolio_positions import build_positions_by_rebalance
 from .position_postprocess import apply_position_postprocess
 from .rebalance import get_rebalance_dates
+from .signal_postprocess import apply_score_postprocess_inplace
 
 logger = logging.getLogger("cstree")
 
@@ -184,7 +184,7 @@ def _score_walk_forward_backtest_frame(
 
     features = context["features"]
     test_full_w["pred"] = model_w.predict(test_full_w[features])
-    _postprocess_pred_column(
+    apply_score_postprocess_inplace(
         test_full_w,
         "pred",
         method=context["score_postprocess_method"],

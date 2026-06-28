@@ -13,7 +13,6 @@ import yaml
 from market_data_platform.symbols import canonicalize_symbol_columns
 
 from ..alpha.dynamic_signal_ensemble import attach_dynamic_ensemble_score
-from ..alpha.transform import apply_score_postprocess
 from ..metrics import (
     daily_ic_series,
     estimate_turnover,
@@ -25,6 +24,7 @@ from . import construction_grid_reports as _construction_grid_reports
 from .benchmarking import build_benchmark_series
 from .execution import build_execution_model
 from .rebalance import get_rebalance_dates
+from .signal_postprocess import apply_score_postprocess
 
 build_inertia_selection_report = _construction_grid_reports.build_inertia_selection_report
 select_construction_variant_with_inertia = (
