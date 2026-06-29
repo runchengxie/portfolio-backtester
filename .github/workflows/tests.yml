@@ -1,0 +1,55 @@
+name: tests
+
+on:
+  pull_request:
+  push:
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  UV_LOCKED: "true"
+  MARKET_DATA_PLATFORM_REF: "c508ea886ea051eebf039de9df299100caea601d"
+
+defaults:
+  run:
+    working-directory: portfolio-backtester
+
+jobs:
+  quality:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          path: portfolio-backtester
+      - uses: actions/checkout@v6
+        with:
+          repository: runchengxie/market-data-platform
+          ref: ${{ env.MARKET_DATA_PLATFORM_REF }}
+          token: ${{ secrets.HK_DATA_PLATFORM_READ_TOKEN || github.token }}
+          path: market-data-platform
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+      - uses: astral-sh/setup-uv@v8.1.0
+        with:
+          version: "0.10.11"
+          enable-cache: true
+      - name: Install dependencies
+        run: uv sync --locked --extra dev
+      - name: Run Ruff lint
+        run: ./scripts/dev/run_tests.sh lint
+      - name: Run Ruff format check
+        run: ./scripts/dev/run_tests.sh format
+      - name: Run ty typecheck
+        run: ./scripts/dev/run_tests.sh typecheck
+      - name: Run BasedPyright advisory
+        continue-on-error: true
+        run: ./scripts/dev/run_tests.sh basedpyright
+      - name: Run maintainability ratchet
+        run: ./scripts/dev/run_tests.sh maintainability
+      - name: Run tests
+        run: ./scripts/dev/run_tests.sh all
