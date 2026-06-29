@@ -13,13 +13,18 @@
 
 仍留在 `strategy-pipeline` 的文档应聚焦编排、CLI、配置合成、运行目录和执行目标导出。后续从 `strategy-pipeline/docs/` 迁移回测主题时，先在原位置保留跳转说明，再更新相对链接和测试。
 
-## 优先承接页面
+## 已承接页面
 
-后续优先从 `strategy-pipeline` 迁入：
+这些页面已经从 `strategy-pipeline` 迁入，并由本仓库维护：
 
-- `docs/concepts/execution-costs.md`
-- `docs/reference/outputs/positions.md`
-- `docs/reference/outputs/full-reference.md` 中的 backtest、positions、execution simulation、capacity、exposure 和 benchmark ladder 字段
-- `docs/metrics.md` 中的回测收益、成本、换手、容量、暴露和 benchmark ladder 内容
-- `docs/concepts/benchmark-protocol.md` 中的 benchmark ladder 和组合层比较内容
-- `docs/capabilities.md` 中 `cstree backtest ...` 命令的细节说明
+- [concepts/execution-costs.md](concepts/execution-costs.md)
+- [reference/outputs/positions.md](reference/outputs/positions.md)
+
+## 后续优先承接内容
+
+后续从 `strategy-pipeline` 拆分文档时，优先迁入：
+
+- `strategy-pipeline/docs/reference/outputs/full-reference.md` 中的 backtest、positions、execution simulation、capacity、exposure 和 benchmark ladder 字段
+- `strategy-pipeline/docs/metrics.md` 中的回测收益、成本、换手、容量、暴露和 benchmark ladder 内容
+- `strategy-pipeline/docs/concepts/benchmark-protocol.md` 中的 benchmark ladder 和组合层比较内容
+- `strategy-pipeline/docs/capabilities.md` 中 `cstree backtest ...` 命令的细节说明

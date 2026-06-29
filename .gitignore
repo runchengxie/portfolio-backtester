@@ -7,6 +7,5 @@ __pycache__/
 build/
 dist/
 *.egg-info/
-artifacts/
-outputs/
-
+/artifacts/
+/outputs/
