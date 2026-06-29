@@ -27,6 +27,22 @@ run_ruff() {
   uv run --no-project --with ruff ruff "$@"
 }
 
+run_ty() {
+  if [[ "${CSTREE_NO_PROJECT_TOOLS:-0}" == "1" ]]; then
+    uv run --no-project --with "ty>=0.0.55" ty check "$@"
+    return
+  fi
+  uv run --extra dev ty check "$@"
+}
+
+run_basedpyright() {
+  if [[ "${CSTREE_NO_PROJECT_TOOLS:-0}" == "1" ]]; then
+    uv run --no-project --with "basedpyright>=1.39.9" basedpyright "$@"
+    return
+  fi
+  uv run --extra dev python -m basedpyright "$@"
+}
+
 mode="${1:-all}"
 if [[ $# -gt 0 ]]; then
   shift
@@ -41,11 +57,11 @@ case "$mode" in
     ;;
   typecheck)
     echo "Running ty typed surface from pyproject.toml."
-    exec uv run --extra dev ty check "$@"
+    run_ty "$@"
     ;;
   basedpyright | typecheck-release)
     echo "Running BasedPyright diagnostics from pyproject.toml."
-    exec uv run --extra dev python -m basedpyright "$@"
+    run_basedpyright "$@"
     ;;
   format | format-all)
     run_ruff format --check . "$@"
