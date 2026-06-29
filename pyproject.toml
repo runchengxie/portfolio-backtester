@@ -67,7 +67,17 @@ exclude = [
 ]
 
 [tool.basedpyright]
-include = ["src/cstree/backtesting/types.py"]
+include = [
+  "src/cstree/__init__.py",
+  "src/cstree/backtesting/__init__.py",
+  "src/cstree/backtesting/capacity.py",
+  "src/cstree/backtesting/period_outputs.py",
+  "src/cstree/backtesting/portfolio.py",
+  "src/cstree/backtesting/reports.py",
+  "src/cstree/backtesting/types.py",
+  "src/cstree/backtesting/execution_sim/__init__.py",
+  "src/cstree/backtesting/execution_sim/results.py",
+]
 stubPath = "typings"
 exclude = [
   ".venv",
