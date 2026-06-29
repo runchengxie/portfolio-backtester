@@ -38,6 +38,8 @@ jobs:
         run: ./scripts/dev/run_tests.sh format
       - name: Run ty typecheck
         run: ./scripts/dev/run_tests.sh typecheck
+      - name: Run pytest
+        run: ./scripts/dev/run_tests.sh all
       - name: Run BasedPyright advisory
         continue-on-error: true
         run: ./scripts/dev/run_tests.sh basedpyright
