@@ -36,6 +36,12 @@ scripts/dev/run_tests.sh basedpyright
 
 GitHub Actions 中 Ruff、format、`ty check` 和维护性 ratchet 是阻塞检查，BasedPyright 是非阻塞建议项。
 
+## GitHub 发布偏好
+
+- 用户明确要求 commit、push 或发布本仓改动时，默认直接在 `main` 上提交并推送到 `origin/main`。
+- 不要默认新建 `codex/*` 分支或 draft PR；只有用户明确要求 PR、远端规则阻止直接推送、工作区存在难以拆分的混杂改动，或改动风险需要人工 review 时才走分支和 PR。
+- 本仓作为 `research-workspace` 子模块使用时，推送本仓后还要回到顶层仓库提交更新后的 submodule gitlink。
+
 ## 文档归属
 
 新增组合或回测说明时，优先放在本仓 `docs/`：
