@@ -294,7 +294,7 @@ def test_backtest_group_cap_limits_names_per_group():
         group_col="industry",
         max_names_per_group=1,
     )
-    stats, net_series, gross_series, _, period_info = result
+    stats, net_series, gross_series, _, _period_info = result
     expected_gross = np.mean([0.20, 0.10, 0.30])
     assert stats["periods"] == 1
     assert np.isclose(gross_series.iloc[0], expected_gross)

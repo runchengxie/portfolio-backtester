@@ -169,7 +169,8 @@ def resolve_positions_path(
         if candidate is not None and candidate.exists():
             return candidate.resolve()
     raise SystemExit(
-        "No positions_by_rebalance file found. Pass --positions-file or run from a complete run_dir."
+        "No positions_by_rebalance file found. Pass --positions-file or run from "
+        "a complete run_dir."
     )
 
 
@@ -205,7 +206,8 @@ def resolve_pricing_path(
         if candidate is not None and candidate.exists():
             return candidate.resolve()
     raise SystemExit(
-        "No pricing panel found. Pass --pricing-file with trade_date, symbol, price, and liquidity columns."
+        "No pricing panel found. Pass --pricing-file with trade_date, symbol, "
+        "price, and liquidity columns."
     )
 
 

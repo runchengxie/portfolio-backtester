@@ -86,7 +86,7 @@ def apply_freshness_overlay(
         "base_score_col": base_score_col,
         "output_col": output_col,
         "volume_rank_cols": volume_cols,
-        "rows": int(len(out)),
+        "rows": len(out),
         "dates": int(pd.Series(out[date_col]).nunique()),
     }
 

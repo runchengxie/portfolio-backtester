@@ -78,7 +78,10 @@ def test_build_exit_policy_supports_alias_keys() -> None:
 
 
 def test_build_exit_policy_invalid_value_raises() -> None:
-    with pytest.raises(ValueError, match="exit_policy.price must be one of: strict, ffill, delay."):
+    with pytest.raises(
+        ValueError,
+        match=r"exit_policy\.price must be one of: strict, ffill, delay\.",
+    ):
         build_exit_policy({"price": "bad"}, default_price="strict", default_fallback="ffill")
 
 

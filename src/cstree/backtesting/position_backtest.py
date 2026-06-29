@@ -59,8 +59,7 @@ def _date_value(value: Any) -> pd.Timestamp:
 def _date_key(value: Any) -> str:
     timestamp = pd.to_datetime(value, errors="coerce")
     if pd.isna(timestamp):
-        text = str(value).strip().replace("-", "").replace(".0", "")
-        return text
+        return str(value).strip().replace("-", "").replace(".0", "")
     return pd.Timestamp(timestamp).strftime("%Y%m%d")
 
 
@@ -72,8 +71,7 @@ def normalize_position_backtest_positions(positions: pd.DataFrame) -> pd.DataFra
     out["weight"] = pd.to_numeric(out["weight"], errors="coerce").fillna(0.0)
     if "side" in out.columns:
         out = out.loc[out["side"].astype(str).str.lower().eq("long")].copy()
-    out = out.loc[out["weight"] > 0].copy()
-    return out
+    return out.loc[out["weight"] > 0].copy()
 
 
 def normalize_position_backtest_pricing(

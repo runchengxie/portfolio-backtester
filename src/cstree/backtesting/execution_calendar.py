@@ -218,10 +218,7 @@ def resolve_execution_date(
     calendar = normalize_execution_calendar(calendar)
     signal = pd.Timestamp(signal_date).normalize()
     normalized_trade_dates = _normalize_dates(trade_dates)
-    if normalized_trade_dates:
-        end = max(normalized_trade_dates)
-    else:
-        end = signal
+    end = max(normalized_trade_dates) if normalized_trade_dates else signal
     if allow_future:
         end = max(end, signal + pd.Timedelta(days=max(int(horizon_days), 7)))
 

@@ -12,8 +12,8 @@ from .position_backtest import PositionBacktestConfig, PositionBacktestResult, r
 from .strategy import construct_positions_from_strategy, strategy_from_config
 
 __all__ = [
-    "GroupCap",
     "POSITIONS_BY_REBALANCE_CONTRACT",
+    "GroupCap",
     "PositionBacktestConfig",
     "PositionBacktestResult",
     "PositionsByRebalanceFrameContract",

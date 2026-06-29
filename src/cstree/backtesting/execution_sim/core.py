@@ -1083,9 +1083,8 @@ def _capacity_weight(
     price = _table_float_at(price_table, trade_date, symbol)
     if not np.isfinite(price) or price <= 0:
         return 0.0
-    if tradable_table is not None:
-        if not _table_bool_at(tradable_table, trade_date, symbol):
-            return 0.0
+    if tradable_table is not None and not _table_bool_at(tradable_table, trade_date, symbol):
+        return 0.0
 
     liquidity_values: list[float] = []
     for column in config.liquidity_cols:
