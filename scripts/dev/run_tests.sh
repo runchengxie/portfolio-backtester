@@ -29,7 +29,7 @@ run_ruff() {
 
 run_ty() {
   if [[ "${CSTREE_NO_PROJECT_TOOLS:-0}" == "1" ]]; then
-    uv run --no-project --with "ty>=0.0.55" ty check "$@"
+    uv run --no-project --with "pandas>=2.0" --with "ty>=0.0.55" ty check "$@"
     return
   fi
   uv run --extra dev ty check "$@"
@@ -37,7 +37,7 @@ run_ty() {
 
 run_basedpyright() {
   if [[ "${CSTREE_NO_PROJECT_TOOLS:-0}" == "1" ]]; then
-    uv run --no-project --with "basedpyright>=1.39.9" basedpyright "$@"
+    uv run --no-project --with "basedpyright>=1.39.9" --with "pandas>=2.0" basedpyright "$@"
     return
   fi
   uv run --extra dev python -m basedpyright "$@"
