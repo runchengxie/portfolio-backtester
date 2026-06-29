@@ -13,6 +13,7 @@ env:
   UV_LOCKED: "true"
   CSTREE_NO_PROJECT_TOOLS: "1"
   MARKET_DATA_PLATFORM_REF: "f74c2442b7bfef77c0052bc394f833fce4e135ec"
+  HAS_MARKET_DATA_PLATFORM_TOKEN: ${{ secrets.HK_DATA_PLATFORM_READ_TOKEN != '' }}
 
 defaults:
   run:
@@ -27,10 +28,11 @@ jobs:
         with:
           path: portfolio-backtester
       - uses: actions/checkout@v6
+        if: env.HAS_MARKET_DATA_PLATFORM_TOKEN == 'true'
         with:
           repository: runchengxie/market-data-platform
           ref: ${{ env.MARKET_DATA_PLATFORM_REF }}
-          token: ${{ secrets.HK_DATA_PLATFORM_READ_TOKEN || github.token }}
+          token: ${{ secrets.HK_DATA_PLATFORM_READ_TOKEN }}
           path: market-data-platform
       - uses: actions/setup-python@v6
         with:
@@ -46,6 +48,7 @@ jobs:
       - name: Run ty typecheck
         run: ./scripts/dev/run_tests.sh typecheck
       - name: Run pytest
+        if: env.HAS_MARKET_DATA_PLATFORM_TOKEN == 'true'
         run: ./scripts/dev/run_tests.sh all
       - name: Run BasedPyright advisory
         continue-on-error: true
