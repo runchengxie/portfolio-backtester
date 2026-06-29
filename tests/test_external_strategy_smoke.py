@@ -95,7 +95,7 @@ from cstree.backtesting import (
 )
 
 namespace_paths = [str(path) for path in cstree.__path__]
-if any("alpha-research" in path or "cross-sectional-trees" in path for path in namespace_paths):
+if any("alpha-research" in path or "strategy-pipeline" in path for path in namespace_paths):
     raise SystemExit("unexpected sibling cstree namespace path(s): " + ", ".join(namespace_paths))
 
 signals = pd.DataFrame(
