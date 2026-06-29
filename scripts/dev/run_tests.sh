@@ -29,13 +29,7 @@ run_ruff() {
 
 run_ty() {
   if [[ "${CSTREE_NO_PROJECT_TOOLS:-0}" == "1" ]]; then
-    uv run \
-      --no-project \
-      --with "pandas>=2.0" \
-      --with "pandas-stubs" \
-      --with "ty>=0.0.55" \
-      python -c 'import subprocess, sys; raise SystemExit(subprocess.call(["ty", "check", "--python", sys.executable, *sys.argv[1:]]))' \
-      "$@"
+    uv run --no-project --with "ty>=0.0.55" ty check --extra-search-path typings "$@"
     return
   fi
   uv run --extra dev ty check "$@"
@@ -43,7 +37,7 @@ run_ty() {
 
 run_basedpyright() {
   if [[ "${CSTREE_NO_PROJECT_TOOLS:-0}" == "1" ]]; then
-    uv run --no-project --with "basedpyright>=1.39.9" --with "pandas>=2.0" --with "pandas-stubs" basedpyright "$@"
+    uv run --no-project --with "basedpyright>=1.39.9" basedpyright "$@"
     return
   fi
   uv run --extra dev python -m basedpyright "$@"
