@@ -568,63 +568,37 @@ def _build_intraday_vwap_tables(
     fallback_entry: pd.DataFrame,
     fallback_exit: pd.DataFrame,
 ) -> tuple[pd.DataFrame, pd.DataFrame]:
-    """Build daily VWAP price tables from intraday bar data.
-
-    intraday DataFrame format:
-        trade_date | bar_time | symbol | vwap | close | volume | ...
-
-    Computes volume-weighted average price per (trade_date, symbol),
-    falling back to the daily price tables for dates/symbols without intraday data.
-    """
+    """Override daily price tables with VWAP computed from intraday bars."""
     if "trade_date" not in intraday.columns:
         return fallback_entry, fallback_exit
-
     df = intraday.copy()
     df["trade_date"] = _date_series(df["trade_date"])
     df["symbol"] = df["symbol"].astype(str)
-
-    price_cols = set()
-    for col in (entry_col, exit_col, "vwap", "close"):
-        if col in df.columns:
-            price_cols.add(col)
-
-    if not price_cols:
-        return fallback_entry, fallback_exit
-
-    # Use first available price column for VWAP computation
     use_col = (
-        "vwap" if "vwap" in price_cols else (entry_col if entry_col in price_cols else "close")
+        "vwap" if "vwap" in df.columns else (entry_col if entry_col in df.columns else "close")
     )
-
+    if use_col not in df.columns:
+        return fallback_entry, fallback_exit
     if "volume" in df.columns:
         df["_vol"] = pd.to_numeric(df["volume"], errors="coerce").fillna(0)
         df["_px"] = pd.to_numeric(df[use_col], errors="coerce")
         df["_notional"] = df["_px"] * df["_vol"]
-        vwap = (
-            df.groupby(["trade_date", "symbol"])
-            .apply(
-                lambda g: (
-                    float(g["_notional"].sum() / g["_vol"].sum())
-                    if g["_vol"].sum() > 0
-                    else float(g["_px"].mean())
-                ),
-                include_groups=False,
-            )
-            .unstack("symbol")
-        )
+        grouped = df.groupby(["trade_date", "symbol"])
+        total_notional = grouped["_notional"].sum()
+        total_vol = grouped["_vol"].sum()
+        vwap_series = total_notional / total_vol.replace(0, float("nan"))
+        vwap = vwap_series.unstack("symbol")
     else:
         vwap = df.pivot_table(index="trade_date", columns="symbol", values=use_col, aggfunc="mean")
-
-    # Merge with fallbacks: use VWAP where available, fallback where not
     result_entry = fallback_entry.copy()
     result_exit = fallback_exit.copy()
     for date_idx in vwap.index:
-        if date_idx in result_entry.index:
-            for sym in vwap.columns:
-                if sym in result_entry.columns and not pd.isna(vwap.loc[date_idx, sym]):
-                    result_entry.loc[date_idx, sym] = vwap.loc[date_idx, sym]
-                    result_exit.loc[date_idx, sym] = vwap.loc[date_idx, sym]
-
+        if date_idx not in result_entry.index:
+            continue
+        for sym in vwap.columns:
+            if sym in result_entry.columns and not pd.isna(vwap.loc[date_idx, sym]):
+                result_entry.loc[date_idx, sym] = vwap.loc[date_idx, sym]
+                result_exit.loc[date_idx, sym] = vwap.loc[date_idx, sym]
     return result_entry, result_exit
 
 
@@ -716,6 +690,8 @@ def _summarize_position_backtest(
         "schema": "position_backtest.v1",
         "config": {
             "price_col": config.price_col,
+            "entry_price_col": config.entry_price_col,
+            "exit_price_col": config.exit_price_col,
             "transaction_cost_bps": config.transaction_cost_bps,
             "trading_days_per_year": config.trading_days_per_year,
             "long_only": config.long_only,
