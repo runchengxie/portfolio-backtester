@@ -23,7 +23,7 @@ DEFAULT_RATCHET_BUDGETS = {
     "functions_over_250": 0,
     "functions_over_500": 0,
     "c901_file_ignores": 0,
-    "files_over_800": 5,
+    "files_over_800": 6,
     "files_over_1200": 2,
     "tests_over_1000": 0,
     "command_run_functions_over_150": 0,

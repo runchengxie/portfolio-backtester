@@ -17,6 +17,8 @@ PositionExitPolicy = Literal["period", "strict", "ffill", "delay"]
 @dataclass(frozen=True)
 class PositionBacktestConfig:
     price_col: str = "close"
+    entry_price_col: str | None = None
+    exit_price_col: str | None = None
     transaction_cost_bps: float = 0.0
     trading_days_per_year: int = 252
     long_only: bool = True
@@ -24,6 +26,14 @@ class PositionBacktestConfig:
     exit_price_policy: PositionExitPolicy = "period"
     exit_fallback_policy: Literal["ffill", "none"] = "ffill"
     tradable_col: str | None = None
+
+    @property
+    def effective_entry_price_col(self) -> str:
+        return self.entry_price_col or self.price_col
+
+    @property
+    def effective_exit_price_col(self) -> str:
+        return self.exit_price_col or self.price_col
 
 
 @dataclass(frozen=True)
@@ -78,19 +88,31 @@ def normalize_position_backtest_pricing(
     pricing: pd.DataFrame,
     *,
     price_col: str,
+    entry_price_col: str | None = None,
+    exit_price_col: str | None = None,
     tradable_col: str | None = None,
 ) -> pd.DataFrame:
     required = {"trade_date", "symbol", price_col}
+    if entry_price_col and entry_price_col != price_col:
+        required.add(entry_price_col)
+    if exit_price_col and exit_price_col != price_col:
+        required.add(exit_price_col)
     missing = sorted(required - set(pricing.columns))
     if missing:
         raise ValueError("Pricing file is missing required column(s): " + ", ".join(missing))
     columns = ["trade_date", "symbol", price_col]
+    for col in (entry_price_col, exit_price_col):
+        if col and col != price_col and col not in columns:
+            columns.append(col)
     if tradable_col and tradable_col in pricing.columns:
         columns.append(tradable_col)
     out = pricing[columns].copy()
     out["trade_date"] = _date_series(out["trade_date"])
     out["symbol"] = out["symbol"].astype(str)
     out[price_col] = pd.to_numeric(out[price_col], errors="coerce")
+    for col in (entry_price_col, exit_price_col):
+        if col and col != price_col and col in out.columns:
+            out[col] = pd.to_numeric(out[col], errors="coerce")
     return out.dropna(subset=["trade_date", "symbol", price_col]).drop_duplicates(
         subset=["trade_date", "symbol"],
         keep="last",
@@ -182,15 +204,16 @@ def _weights_for_rebalance(
 def _valid_period_prices(
     *,
     weights: pd.Series,
-    price_table: pd.DataFrame,
+    entry_price_table: pd.DataFrame,
+    exit_price_table: pd.DataFrame,
     entry_date: pd.Timestamp,
     exit_date: pd.Timestamp,
     preserve_gross_exposure: bool,
 ) -> tuple[pd.Series, pd.Series, pd.Series, int]:
-    if entry_date not in price_table.index or exit_date not in price_table.index:
+    if entry_date not in entry_price_table.index or exit_date not in exit_price_table.index:
         return pd.Series(dtype=float), pd.Series(dtype=float), pd.Series(dtype=float), len(weights)
-    entry_prices = price_table.loc[entry_date].reindex(weights.index)
-    exit_prices = price_table.loc[exit_date].reindex(weights.index)
+    entry_prices = entry_price_table.loc[entry_date].reindex(weights.index)
+    exit_prices = exit_price_table.loc[exit_date].reindex(weights.index)
     valid = entry_prices.notna() & exit_prices.notna()
     missing = int((~valid).sum())
     clean_weights = _clean_position_weights(
@@ -236,6 +259,7 @@ def _valid_period_policy_prices(
     *,
     weights: pd.Series,
     price_table: pd.DataFrame,
+    entry_price_table: pd.DataFrame | None = None,
     entry_date: pd.Timestamp,
     exit_date: pd.Timestamp,
     preserve_gross_exposure: bool,
@@ -243,9 +267,11 @@ def _valid_period_policy_prices(
     planned_exit_idx: int,
     exit_idx: int,
 ) -> _PositionPeriodPrices:
+    entry_tbl = entry_price_table if entry_price_table is not None else price_table
     target, entry_prices, exit_prices, missing = _valid_period_prices(
         weights=weights,
-        price_table=price_table,
+        entry_price_table=entry_tbl,
+        exit_price_table=price_table,
         entry_date=entry_date,
         exit_date=exit_date,
         preserve_gross_exposure=preserve_gross_exposure,
@@ -351,9 +377,11 @@ def _resolve_position_period_prices(
     weights: pd.Series,
     period: Any,
     price_table: pd.DataFrame,
+    exit_price_table: pd.DataFrame | None = None,
     tradable_table: pd.DataFrame | None,
     config: PositionBacktestConfig,
 ) -> _PositionPeriodPrices:
+    exit_table = exit_price_table if exit_price_table is not None else price_table
     entry_date = pd.Timestamp(period.entry_date_ts)
     entry_idx = _idx_for_price_table_date(price_table, entry_date, int(period.entry_idx))
     planned_exit_idx = _planned_exit_idx_for_price_table(period, price_table)
@@ -361,17 +389,18 @@ def _resolve_position_period_prices(
         exit_date = pd.Timestamp(period.exit_date_ts)
         return _valid_period_policy_prices(
             weights=weights,
-            price_table=price_table,
+            price_table=exit_table,
+            entry_price_table=price_table if exit_price_table is not None else None,
             entry_date=entry_date,
             exit_date=exit_date,
             preserve_gross_exposure=config.preserve_gross_exposure,
             entry_idx=entry_idx,
             planned_exit_idx=planned_exit_idx,
-            exit_idx=_idx_for_price_table_date(price_table, exit_date, int(period.exit_idx)),
+            exit_idx=_idx_for_price_table_date(exit_table, exit_date, int(period.exit_idx)),
         )
     return _resolve_exit_policy_prices(
         weights=weights,
-        price_table=price_table,
+        price_table=exit_table,
         tradable_table=tradable_table,
         entry_date=entry_date,
         entry_idx=entry_idx,
@@ -531,11 +560,76 @@ def _build_period_result_row(
     return row, next_state
 
 
+def _build_intraday_vwap_tables(
+    intraday: pd.DataFrame,
+    *,
+    entry_col: str,
+    exit_col: str,
+    fallback_entry: pd.DataFrame,
+    fallback_exit: pd.DataFrame,
+) -> tuple[pd.DataFrame, pd.DataFrame]:
+    """Build daily VWAP price tables from intraday bar data.
+
+    intraday DataFrame format:
+        trade_date | bar_time | symbol | vwap | close | volume | ...
+    
+    Computes volume-weighted average price per (trade_date, symbol),
+    falling back to the daily price tables for dates/symbols without intraday data.
+    """
+    if "trade_date" not in intraday.columns:
+        return fallback_entry, fallback_exit
+    
+    df = intraday.copy()
+    df["trade_date"] = _date_series(df["trade_date"])
+    df["symbol"] = df["symbol"].astype(str)
+    
+    price_cols = set()
+    for col in (entry_col, exit_col, "vwap", "close"):
+        if col in df.columns:
+            price_cols.add(col)
+    
+    if not price_cols:
+        return fallback_entry, fallback_exit
+    
+    # Use first available price column for VWAP computation
+    use_col = "vwap" if "vwap" in price_cols else (
+        entry_col if entry_col in price_cols else "close"
+    )
+    
+    if "volume" in df.columns:
+        df["_vol"] = pd.to_numeric(df["volume"], errors="coerce").fillna(0)
+        df["_px"] = pd.to_numeric(df[use_col], errors="coerce")
+        df["_notional"] = df["_px"] * df["_vol"]
+        vwap = df.groupby(["trade_date", "symbol"]).apply(
+            lambda g: (
+                float(g["_notional"].sum() / g["_vol"].sum())
+                if g["_vol"].sum() > 0
+                else float(g["_px"].mean())
+            ),
+            include_groups=False,
+        ).unstack("symbol")
+    else:
+        vwap = df.pivot_table(index="trade_date", columns="symbol", values=use_col, aggfunc="mean")
+    
+    # Merge with fallbacks: use VWAP where available, fallback where not
+    result_entry = fallback_entry.copy()
+    result_exit = fallback_exit.copy()
+    for date_idx in vwap.index:
+        if date_idx in result_entry.index:
+            for sym in vwap.columns:
+                if sym in result_entry.columns and not pd.isna(vwap.loc[date_idx, sym]):
+                    result_entry.loc[date_idx, sym] = vwap.loc[date_idx, sym]
+                    result_exit.loc[date_idx, sym] = vwap.loc[date_idx, sym]
+    
+    return result_entry, result_exit
+
+
 def _evaluate_position_periods(
     *,
     positions: pd.DataFrame,
     periods: pd.DataFrame,
     table: pd.DataFrame,
+    exit_table: pd.DataFrame | None = None,
     tradable_table: pd.DataFrame | None,
     config: PositionBacktestConfig,
     cost_model: BpsCostModel,
@@ -557,6 +651,7 @@ def _evaluate_position_periods(
         prices = _resolve_position_period_prices(
             weights=target,
             price_table=table,
+            exit_price_table=exit_table,
             tradable_table=tradable_table,
             period=period,
             config=config,
@@ -659,20 +754,40 @@ def run_position_backtest(
     pricing: pd.DataFrame,
     periods: pd.DataFrame,
     config: PositionBacktestConfig,
+    intraday_bars: pd.DataFrame | None = None,
 ) -> PositionBacktestResult:
+    entry_col = config.effective_entry_price_col
+    exit_col = config.effective_exit_price_col
     normalized_positions = normalize_position_backtest_positions(positions)
     normalized_pricing = normalize_position_backtest_pricing(
         pricing,
         price_col=config.price_col,
+        entry_price_col=entry_col if entry_col != config.price_col else None,
+        exit_price_col=exit_col if exit_col != config.price_col else None,
         tradable_col=config.tradable_col,
     )
     normalized_periods = normalize_position_backtest_periods(periods)
-    table = _price_table(normalized_pricing, price_col=config.price_col)
+    
+    # Build price tables: entry table is primary, exit table separate if columns differ
+    entry_table = _price_table(normalized_pricing, price_col=entry_col)
+    if entry_col == exit_col:
+        exit_table = entry_table
+    else:
+        exit_table = _price_table(normalized_pricing, price_col=exit_col)
+    
+    # If intraday bars provided, compute VWAP and override price tables
+    if intraday_bars is not None and not intraday_bars.empty:
+        entry_table, exit_table = _build_intraday_vwap_tables(
+            intraday_bars, entry_col=entry_col, exit_col=exit_col,
+            fallback_entry=entry_table, fallback_exit=exit_table,
+        )
+    
     tradable_table = _tradable_table(normalized_pricing, tradable_col=config.tradable_col)
     period_frame, skipped = _evaluate_position_periods(
         positions=normalized_positions,
         periods=normalized_periods,
-        table=table,
+        table=entry_table,
+        exit_table=exit_table if entry_col != exit_col else None,
         tradable_table=tradable_table,
         config=config,
         cost_model=BpsCostModel(float(config.transaction_cost_bps)),
