@@ -4,9 +4,9 @@
 
 ## 仓库范围
 
-本仓库负责 `cstree.backtesting.*`，维护 Top-K 组合构造、调仓逻辑、执行模拟、容量和暴露报告、持仓后处理、换手归因、benchmark ladder 和回测报告。
+本仓库负责组合回测与持仓管理模块（`cstree.backtesting.*`），维护 Top-K 组合构造、调仓逻辑、执行模拟、容量和暴露报告、持仓后处理、换手归因、benchmark ladder 和回测报告。
 
-本仓库可以消费外部信号、行情和 tradability 数据，但不应在运行时导入 `cstree.alpha`、`cstree.pipeline` 或交易执行实现。研究编排和 `targets.json` 导出仍由 `strategy-pipeline` 负责。
+本仓库可以消费外部信号、行情和 tradability 数据，但不应在运行时导入 alpha 研究（`cstree.alpha`）、策略编排（`cstree.pipeline`）或交易执行实现。研究编排和 `targets.json` 导出仍由 `strategy-pipeline` 负责。
 
 ## 常用命令
 
