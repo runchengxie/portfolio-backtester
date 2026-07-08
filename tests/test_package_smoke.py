@@ -50,6 +50,7 @@ def test_owned_backtesting_modules_import(module_name: str) -> None:
 
 def test_backtesting_package_exports_core_entrypoints() -> None:
     assert set(backtesting.__all__) == {
+        "DetailedTradeFeeModel",
         "GroupCap",
         "POSITIONS_BY_REBALANCE_CONTRACT",
         "PositionBacktestConfig",
@@ -59,6 +60,7 @@ def test_backtesting_package_exports_core_entrypoints() -> None:
         "assert_positions_by_rebalance_frame",
         "backtest_topk",
         "construct_positions_from_strategy",
+        "l2_price_tiered_slippage",
         "run_position_backtest",
         "strategy_from_config",
         "summarize_period_returns",

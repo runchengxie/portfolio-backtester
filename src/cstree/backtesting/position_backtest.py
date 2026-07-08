@@ -572,45 +572,49 @@ def _build_intraday_vwap_tables(
 
     intraday DataFrame format:
         trade_date | bar_time | symbol | vwap | close | volume | ...
-    
+
     Computes volume-weighted average price per (trade_date, symbol),
     falling back to the daily price tables for dates/symbols without intraday data.
     """
     if "trade_date" not in intraday.columns:
         return fallback_entry, fallback_exit
-    
+
     df = intraday.copy()
     df["trade_date"] = _date_series(df["trade_date"])
     df["symbol"] = df["symbol"].astype(str)
-    
+
     price_cols = set()
     for col in (entry_col, exit_col, "vwap", "close"):
         if col in df.columns:
             price_cols.add(col)
-    
+
     if not price_cols:
         return fallback_entry, fallback_exit
-    
+
     # Use first available price column for VWAP computation
-    use_col = "vwap" if "vwap" in price_cols else (
-        entry_col if entry_col in price_cols else "close"
+    use_col = (
+        "vwap" if "vwap" in price_cols else (entry_col if entry_col in price_cols else "close")
     )
-    
+
     if "volume" in df.columns:
         df["_vol"] = pd.to_numeric(df["volume"], errors="coerce").fillna(0)
         df["_px"] = pd.to_numeric(df[use_col], errors="coerce")
         df["_notional"] = df["_px"] * df["_vol"]
-        vwap = df.groupby(["trade_date", "symbol"]).apply(
-            lambda g: (
-                float(g["_notional"].sum() / g["_vol"].sum())
-                if g["_vol"].sum() > 0
-                else float(g["_px"].mean())
-            ),
-            include_groups=False,
-        ).unstack("symbol")
+        vwap = (
+            df.groupby(["trade_date", "symbol"])
+            .apply(
+                lambda g: (
+                    float(g["_notional"].sum() / g["_vol"].sum())
+                    if g["_vol"].sum() > 0
+                    else float(g["_px"].mean())
+                ),
+                include_groups=False,
+            )
+            .unstack("symbol")
+        )
     else:
         vwap = df.pivot_table(index="trade_date", columns="symbol", values=use_col, aggfunc="mean")
-    
+
     # Merge with fallbacks: use VWAP where available, fallback where not
     result_entry = fallback_entry.copy()
     result_exit = fallback_exit.copy()
@@ -620,7 +624,7 @@ def _build_intraday_vwap_tables(
                 if sym in result_entry.columns and not pd.isna(vwap.loc[date_idx, sym]):
                     result_entry.loc[date_idx, sym] = vwap.loc[date_idx, sym]
                     result_exit.loc[date_idx, sym] = vwap.loc[date_idx, sym]
-    
+
     return result_entry, result_exit
 
 
@@ -767,21 +771,24 @@ def run_position_backtest(
         tradable_col=config.tradable_col,
     )
     normalized_periods = normalize_position_backtest_periods(periods)
-    
+
     # Build price tables: entry table is primary, exit table separate if columns differ
     entry_table = _price_table(normalized_pricing, price_col=entry_col)
     if entry_col == exit_col:
         exit_table = entry_table
     else:
         exit_table = _price_table(normalized_pricing, price_col=exit_col)
-    
+
     # If intraday bars provided, compute VWAP and override price tables
     if intraday_bars is not None and not intraday_bars.empty:
         entry_table, exit_table = _build_intraday_vwap_tables(
-            intraday_bars, entry_col=entry_col, exit_col=exit_col,
-            fallback_entry=entry_table, fallback_exit=exit_table,
+            intraday_bars,
+            entry_col=entry_col,
+            exit_col=exit_col,
+            fallback_entry=entry_table,
+            fallback_exit=exit_table,
         )
-    
+
     tradable_table = _tradable_table(normalized_pricing, tradable_col=config.tradable_col)
     period_frame, skipped = _evaluate_position_periods(
         positions=normalized_positions,

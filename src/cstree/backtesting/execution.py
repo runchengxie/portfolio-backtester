@@ -131,13 +131,23 @@ class SideBpsCostModel:
 
 @dataclass(frozen=True)
 class DetailedTradeFeeModel:
+    """A-share realistic trade fee model with commissions, stamp duty, and slippage.
+
+    Default slippage values (6 bps buy / 8 bps sell) are calibrated from
+    Level-2 order-book analysis of ~240 mid-cap A-shares (2026-04).
+    Median half-spread = 6.3 bps across all price tiers.
+
+    For price-tiered slippage, use ``l2_price_tiered_slippage()`` to
+    compute per-stock slippage from the stock's last close price.
+    """
+
     buy_commission_bps: float = 2.5
     sell_commission_bps: float = 2.5
     sell_stamp_duty_bps: float = 5.0
     transfer_fee_bps: float = 0.1
     min_commission: float = 5.0
-    buy_slippage_bps: float = 10.0
-    sell_slippage_bps: float = 10.0
+    buy_slippage_bps: float = 6.0
+    sell_slippage_bps: float = 8.0
     portfolio_value: float = 1_000_000.0
 
     def notional_cost(self, notional: float, *, side: str) -> float:
@@ -782,3 +792,37 @@ def describe_execution_model(model: ExecutionModel) -> dict:
         },
         "constraints": describe_selection_constraints(model.selection_constraints),
     }
+
+
+# ── L2 price-tiered slippage (calibrated from A-share order-book data) ──────
+
+# Half-spread estimates by price tier, from Level-2 snapshot analysis
+# of ~240 mid-cap A-shares across 5 trading days (2026-04).
+# Source: guan-factor-research-framework snapshot data.
+_L2_HALF_SPREAD_TABLE = {
+    (0, 10): 8.6,  # stocks < 10 CNY
+    (10, 20): 4.4,  # stocks 10-20 CNY
+    (20, 30): 3.5,  # stocks 20-30 CNY
+    (30, float("inf")): 3.5,  # stocks > 30 CNY
+}
+
+
+def l2_price_tiered_slippage(close_price: float, *, side: str = "buy") -> float:
+    """Return estimated half-spread-based slippage (bps) from L2 order-book data.
+
+    Calibrated on A-share Level-2 snapshot data.  For buy orders the
+    half-spread is a reasonable proxy for crossing cost; for sells a
+    small premium is added for market-impact uncertainty.
+
+    Args:
+        close_price: Last close price in CNY.
+        side: 'buy' or 'sell'.
+    """
+    base = 6.0
+    for (lo, hi), hs in _L2_HALF_SPREAD_TABLE.items():
+        if lo <= close_price < hi:
+            base = hs
+            break
+    if str(side).strip().lower() == "sell":
+        return base + 2.0
+    return base

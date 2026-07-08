@@ -480,4 +480,23 @@ def summarize_period_returns(
         "max_exit_lag_days": max_exit_lag,
         "periods_with_delayed_exit": delayed_periods,
         "delayed_exit_ratio": delayed_ratio,
+        **_calendar_half_year_split(returns),
     }
+
+
+def _calendar_half_year_split(returns: pd.Series) -> dict:
+    """Compute H1/H2 calendar-year split metrics on period returns.
+
+    Returns a flat dict with keys like 'h1_return', 'h2_return',
+    'h1h2_gap', etc.  If the series spans only one half-year the
+    missing half is filled with None.
+    """
+    if returns.empty:
+        return {"h1_return": None, "h2_return": None, "h1h2_gap": None}
+    idx = pd.DatetimeIndex(returns.index)
+    h1_mask = idx.month <= 6
+    h2_mask = idx.month >= 7
+    h1_ret = float(returns.loc[h1_mask].sum()) if h1_mask.any() else None
+    h2_ret = float(returns.loc[h2_mask].sum()) if h2_mask.any() else None
+    gap = (h1_ret - h2_ret) if (h1_ret is not None and h2_ret is not None) else None
+    return {"h1_return": h1_ret, "h2_return": h2_ret, "h1h2_gap": gap}
