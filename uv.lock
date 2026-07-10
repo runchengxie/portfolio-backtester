@@ -62,12 +62,16 @@ dependencies = [
 requires-dist = [
     { name = "basedpyright", marker = "extra == 'dev'", specifier = ">=1.39.9" },
     { name = "duckdb", marker = "extra == 'duckdb'", specifier = ">=1.0" },
+    { name = "duckdb", marker = "extra == 'minute-fusion'", specifier = ">=1.0" },
     { name = "numpy", specifier = ">=1.23" },
     { name = "pandas", marker = "extra == 'dev'", specifier = ">=2.2" },
+    { name = "pandas", marker = "extra == 'minute-fusion'", specifier = ">=2.2" },
     { name = "pandas", marker = "extra == 'rqdata'", specifier = ">=2.2" },
     { name = "pandas", marker = "extra == 'tushare'", specifier = ">=2" },
+    { name = "polars", marker = "extra == 'minute-fusion'", specifier = ">=1.30,<2" },
     { name = "pre-commit", marker = "extra == 'dev'", specifier = ">=4" },
     { name = "pyarrow", marker = "extra == 'dev'", specifier = ">=16" },
+    { name = "pyarrow", marker = "extra == 'minute-fusion'", specifier = ">=16" },
     { name = "pyarrow", marker = "extra == 'rqdata'", specifier = ">=16" },
     { name = "pyarrow", marker = "extra == 'tushare'", specifier = ">=15" },
     { name = "pytest", marker = "extra == 'dev'", specifier = ">=8" },
@@ -80,7 +84,7 @@ requires-dist = [
     { name = "tushare", marker = "extra == 'tushare'", specifier = ">=1.4" },
     { name = "ty", marker = "extra == 'dev'", specifier = ">=0.0.55" },
 ]
-provides-extras = ["dev", "duckdb", "rqdata", "tushare"]
+provides-extras = ["dev", "duckdb", "minute-fusion", "rqdata", "tushare"]
 
 [[package]]
 name = "narwhals"
