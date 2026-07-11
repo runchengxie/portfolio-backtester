@@ -12,7 +12,7 @@ concurrency:
 env:
   UV_LOCKED: "true"
   CSTREE_NO_PROJECT_TOOLS: "1"
-  MARKET_DATA_PLATFORM_REF: "f74c2442b7bfef77c0052bc394f833fce4e135ec"
+  MARKET_DATA_PLATFORM_REF: "ba37c93ce699525f24c4b21ff44e4cfa2e69cda9"
   HAS_MARKET_DATA_PLATFORM_TOKEN: ${{ secrets.HK_DATA_PLATFORM_READ_TOKEN != '' }}
 
 defaults:
@@ -41,6 +41,9 @@ jobs:
         with:
           version: "0.10.11"
           enable-cache: true
+      - name: Install project dependencies
+        if: env.HAS_MARKET_DATA_PLATFORM_TOKEN == 'true'
+        run: uv sync --locked --extra dev
       - name: Run Ruff lint
         run: ./scripts/dev/run_tests.sh lint
       - name: Run Ruff format check
