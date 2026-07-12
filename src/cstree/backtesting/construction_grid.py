@@ -10,7 +10,8 @@ from typing import Any
 import numpy as np
 import pandas as pd
 import yaml
-from market_data_platform.symbols import canonicalize_symbol_columns
+
+from cstree.backtesting._symbol_utils import canonicalize_symbol_columns
 
 from . import construction_grid_reports as _construction_grid_reports
 from .benchmarking import build_benchmark_series

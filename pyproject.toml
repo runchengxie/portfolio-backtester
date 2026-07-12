@@ -9,7 +9,6 @@ description = "Portfolio construction and backtesting tooling for research-works
 readme = "README.md"
 requires-python = ">=3.12"
 dependencies = [
-  "market-data-platform>=0.1.0",
   "numpy>=1.23",
   "pandas>=2.0",
   "pyarrow>=23.0.1",
@@ -33,8 +32,6 @@ package-dir = {"" = "src"}
 where = ["src"]
 include = ["cstree", "cstree.backtesting*"]
 
-[tool.uv.sources]
-market-data-platform = { path = "../market-data-platform", editable = true }
 
 [tool.ruff]
 target-version = "py312"

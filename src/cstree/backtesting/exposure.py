@@ -5,7 +5,8 @@ from typing import Any
 
 import numpy as np
 import pandas as pd
-from market_data_platform.symbols import canonicalize_symbol_columns
+
+from cstree.backtesting._symbol_utils import canonicalize_symbol_columns
 
 _DEFAULT_INDUSTRY_COLUMNS = (
     "industry_name",

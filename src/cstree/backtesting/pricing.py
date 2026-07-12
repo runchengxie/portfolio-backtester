@@ -3,7 +3,8 @@ from __future__ import annotations
 from typing import Literal
 
 import pandas as pd
-from market_data_platform.symbols import canonicalize_symbol_columns
+
+from cstree.backtesting._symbol_utils import canonicalize_symbol_columns
 
 from .contracts import assert_backtest_pricing_frame
 from .execution import (

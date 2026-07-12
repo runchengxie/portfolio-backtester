@@ -7,5 +7,8 @@ __pycache__/
 build/
 dist/
 *.egg-info/
+.env
+.env.*
+.envrc
 /artifacts/
 /outputs/

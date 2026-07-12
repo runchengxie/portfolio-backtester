@@ -12,8 +12,6 @@ concurrency:
 env:
   UV_LOCKED: "true"
   CSTREE_NO_PROJECT_TOOLS: "1"
-  MARKET_DATA_PLATFORM_REF: "bd7e09d2c3728ebd9c0beeb7373088c238be0cd4"
-  HAS_MARKET_DATA_PLATFORM_TOKEN: ${{ secrets.HK_DATA_PLATFORM_READ_TOKEN != '' }}
 
 defaults:
   run:
@@ -27,13 +25,6 @@ jobs:
       - uses: actions/checkout@v6
         with:
           path: portfolio-backtester
-      - uses: actions/checkout@v6
-        if: env.HAS_MARKET_DATA_PLATFORM_TOKEN == 'true'
-        with:
-          repository: runchengxie/market-data-platform
-          ref: ${{ env.MARKET_DATA_PLATFORM_REF }}
-          token: ${{ secrets.HK_DATA_PLATFORM_READ_TOKEN }}
-          path: market-data-platform
       - uses: actions/setup-python@v6
         with:
           python-version: "3.12"
@@ -42,7 +33,6 @@ jobs:
           version: "0.10.11"
           enable-cache: true
       - name: Install project dependencies
-        if: env.HAS_MARKET_DATA_PLATFORM_TOKEN == 'true'
         run: uv sync --locked --extra dev
       - name: Run Ruff lint
         run: ./scripts/dev/run_tests.sh lint
@@ -51,7 +41,6 @@ jobs:
       - name: Run ty typecheck
         run: ./scripts/dev/run_tests.sh typecheck
       - name: Run pytest
-        if: env.HAS_MARKET_DATA_PLATFORM_TOKEN == 'true'
         run: ./scripts/dev/run_tests.sh all
       - name: Run BasedPyright advisory
         continue-on-error: true
