@@ -2,12 +2,12 @@ from __future__ import annotations
 
 from typing import Literal, cast
 
-import numpy as np
 import pandas as pd
 
 from .execution import CostModel, SlippageModel
 from .portfolio_weights import normalize_position_weights
 from .pricing import slippage_pricing_row
+from .turnover import turnover_from_trade_weights
 from .types import BacktestLegResult, BacktestPositionState
 
 
@@ -29,8 +29,13 @@ def _compute_trade_summary(
 
     if prev_weights is None or prev_weights.empty:
         trade_weights = target_clean.copy()
-        traded = float(trade_weights.abs().sum())
-        return traded, traded, 0.0, trade_weights
+        turnover = turnover_from_trade_weights(trade_weights, is_initial=True)
+        return (
+            turnover.one_way_turnover,
+            turnover.buy_weight,
+            turnover.sell_weight,
+            trade_weights,
+        )
 
     prev_clean = normalize_position_weights(prev_weights)
     drift_weights = _drift_previous_weights(
@@ -44,10 +49,13 @@ def _compute_trade_summary(
     drift_aligned = drift_weights.reindex(all_ids).fillna(0.0)
     target_aligned = target_clean.reindex(all_ids).fillna(0.0)
     trade_weights = target_aligned - drift_aligned
-    entry_turnover = float(trade_weights.clip(lower=0.0).sum())
-    exit_turnover = float((-trade_weights.clip(upper=0.0)).sum())
-    turnover = 0.5 * float(np.abs(trade_weights).sum())
-    return turnover, entry_turnover, exit_turnover, trade_weights
+    turnover = turnover_from_trade_weights(trade_weights)
+    return (
+        turnover.one_way_turnover,
+        turnover.buy_weight,
+        turnover.sell_weight,
+        trade_weights,
+    )
 
 
 def _drift_previous_weights(
@@ -109,6 +117,10 @@ def _build_backtest_leg_result(
         entry_date,
         price_table=entry_price_table,
     )
+    turnover_breakdown = turnover_from_trade_weights(
+        trade_weights,
+        is_initial=previous.weights is None,
+    )
     fee_cost = cost_model.cost(
         turnover,
         is_initial=previous.weights is None,
@@ -138,4 +150,9 @@ def _build_backtest_leg_result(
         turnover=turnover,
         fee_cost=fee_cost,
         slippage_cost=slippage_cost,
+        buy_turnover=turnover_breakdown.buy_weight,
+        sell_turnover=turnover_breakdown.sell_weight,
+        gross_traded_weight=turnover_breakdown.gross_traded_weight,
+        half_l1_turnover=turnover_breakdown.half_l1_turnover,
+        is_initial=turnover_breakdown.is_initial,
     )
