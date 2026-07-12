@@ -19,6 +19,7 @@ OWNED_MODULES = (
     "cstree.backtesting.a_share_round_lot_diagnostics",
     "cstree.backtesting.benchmark_ladder",
     "cstree.backtesting.contracts",
+    "cstree.backtesting.daily_watch20",
     "cstree.backtesting.exposure",
     "cstree.backtesting.exposure_screen",
     "cstree.backtesting.reporting",
@@ -51,8 +52,13 @@ def test_owned_backtesting_modules_import(module_name: str) -> None:
 
 def test_backtesting_package_exports_core_entrypoints() -> None:
     assert set(backtesting.__all__) == {
+        "DailyWatch20Config",
+        "DailyWatch20Receipt",
+        "DailyWatch20Result",
+        "DailyWatch20SelectionError",
         "DetailedTradeFeeModel",
         "GroupCap",
+        "GuardFactorSpec",
         "POSITIONS_BY_REBALANCE_CONTRACT",
         "PositionBacktestConfig",
         "PositionBacktestResult",
@@ -68,6 +74,7 @@ def test_backtesting_package_exports_core_entrypoints() -> None:
         "construct_positions_from_strategy",
         "l2_price_tiered_slippage",
         "run_position_backtest",
+        "select_daily_watch20",
         "strategy_from_config",
         "summarize_period_returns",
         "validate_positions_by_rebalance_frame",

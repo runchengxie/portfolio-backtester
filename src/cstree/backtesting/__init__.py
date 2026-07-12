@@ -6,6 +6,14 @@ from .contracts import (
     assert_positions_by_rebalance_frame,
     validate_positions_by_rebalance_frame,
 )
+from .daily_watch20 import (
+    DailyWatch20Config,
+    DailyWatch20Receipt,
+    DailyWatch20Result,
+    DailyWatch20SelectionError,
+    GuardFactorSpec,
+    select_daily_watch20,
+)
 from .engine import backtest_topk
 from .execution import DetailedTradeFeeModel, l2_price_tiered_slippage
 from .metrics import summarize_period_returns
@@ -21,8 +29,13 @@ from .style_replica_portfolio import (
 
 __all__ = [
     "POSITIONS_BY_REBALANCE_CONTRACT",
+    "DailyWatch20Config",
+    "DailyWatch20Receipt",
+    "DailyWatch20Result",
+    "DailyWatch20SelectionError",
     "DetailedTradeFeeModel",
     "GroupCap",
+    "GuardFactorSpec",
     "PositionBacktestConfig",
     "PositionBacktestResult",
     "PositionsByRebalanceFrameContract",
@@ -37,6 +50,7 @@ __all__ = [
     "construct_positions_from_strategy",
     "l2_price_tiered_slippage",
     "run_position_backtest",
+    "select_daily_watch20",
     "strategy_from_config",
     "summarize_period_returns",
     "validate_positions_by_rebalance_frame",
