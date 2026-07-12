@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import pandas as pd
+import pytest
 
 from cstree.backtesting.style_replica_portfolio import (
     StyleReplicaPortfolioConfig,
@@ -44,7 +45,7 @@ def test_build_style_replica_positions_aggregates_overlap() -> None:
     assert positions.shape[0] == 1
     assert positions.loc[0, "symbol"] == "AAA"
     assert positions.loc[0, "leg"] == "A+B"
-    assert positions.loc[0, "weight"] == 0.20
+    assert positions.loc[0, "weight"] == pytest.approx(0.20)
     assert positions.loc[0, "rebalance_date"] == "20260102"
     assert positions.loc[0, "entry_date"] == "20260102"
     assert positions.loc[0, "rank"] == 1
@@ -66,7 +67,7 @@ def test_compute_daily_changes_classifies_position_updates() -> None:
     assert latest.loc["AAA", "action"] == "weight_change"
     assert latest.loc["BBB", "action"] == "exit"
     assert latest.loc["CCC", "action"] == "new"
-    assert latest.loc["AAA", "weight_change"] == -0.1
+    assert latest.loc["AAA", "weight_change"] == pytest.approx(-0.1)
 
 
 def test_compute_style_exposure_summary_counts_overlap() -> None:
@@ -97,4 +98,4 @@ def test_compute_style_exposure_summary_counts_overlap() -> None:
     assert summary["a_leg_count"] == 2
     assert summary["b_leg_count"] == 1
     assert summary["overlap_count"] == 1
-    assert summary["total_weight"] == 0.3
+    assert summary["total_weight"] == pytest.approx(0.3)
