@@ -1,30 +1,40 @@
-# portfolio-backtester 文档入口
+# 文档入口
 
-本目录用于承接组合构造和研究回测层文档。当前仓库的详细说明仍以根目录 [README.md](../README.md) 为入口。
+本目录说明 `portfolio-backtester` 的输入约定、执行假设、输出契约和开发检查。
 
-## 文档归属
+第一次接触项目时，建议按下面的顺序阅读：
 
-适合放在本仓库的主题：
+1. [根目录 README](../README.md)
+2. [持仓输出约定](reference/outputs/positions.md)
+3. [成本与执行假设](concepts/execution-costs.md)
+4. [风格复制组合构造器](concepts/style-replica-portfolio.md)
+5. [测试和质量检查](testing.md)
 
-- Top-K 组合构造、buffer、分组约束、手数约束和持仓后处理。
-- 回测收益、交易成本、换手、容量、暴露、benchmark ladder 和报告字段。
-- `positions_by_rebalance.csv`、`positions_current*.csv` 及其下游消费约定。
-- A 股 round-lot 可执行性、执行模拟和组合层敏感性分析。
+## 文档导航
 
-仍留在 `strategy-pipeline` 的文档应聚焦编排、CLI、配置合成、运行目录和执行目标导出。后续从 `strategy-pipeline/docs/` 迁移回测主题时，先在原位置保留跳转说明，再更新相对链接和测试。
+| 页面 | 主要内容 |
+| --- | --- |
+| [根目录 README](../README.md) | 项目用途、安装方式、快速示例和公开入口 |
+| [持仓输出约定](reference/outputs/positions.md) | `positions_by_rebalance.csv` 的字段和校验规则 |
+| [成本与执行假设](concepts/execution-costs.md) | 成本模型、滑点模型、价格选择和适用边界 |
+| [风格复制组合构造器](concepts/style-replica-portfolio.md) | 专用双层组合的输入、输出和当前限制 |
+| [测试和质量检查](testing.md) | 本地命令、CI 阻塞项和实际检查范围 |
 
-## 已承接页面
+## 事实来源
 
-这些页面已经从 `strategy-pipeline` 迁入，并由本仓库维护：
+文档中的接口、字段和默认值应与以下位置保持一致：
 
-- [concepts/execution-costs.md](concepts/execution-costs.md)
-- [reference/outputs/positions.md](reference/outputs/positions.md)
+- 顶层公开入口：`src/cstree/backtesting/__init__.py`
+- 输入和输出契约：`src/cstree/backtesting/contracts.py`
+- 成本与滑点：`src/cstree/backtesting/execution.py`
+- 持仓回放：`src/cstree/backtesting/position_backtest.py`
+- 测试入口：`scripts/dev/run_tests.sh`
+- CI 配置：`.github/workflows/tests.yml`
 
-## 后续优先承接内容
+代码、测试和文档发生冲突时，应先确认当前实现，再在同一个 PR 中修正不一致之处。
 
-后续从 `strategy-pipeline` 拆分文档时，优先迁入：
+## 文档边界
 
-- `strategy-pipeline/docs/reference/outputs/full-reference.md` 中的 backtest、positions、execution simulation、capacity、exposure 和 benchmark ladder 字段
-- `strategy-pipeline/docs/metrics.md` 中的回测收益、成本、换手、容量、暴露和 benchmark ladder 内容
-- `strategy-pipeline/docs/concepts/benchmark-protocol.md` 中的 benchmark ladder 和组合层比较内容
-- `strategy-pipeline/docs/capabilities.md` 中 `cstree backtest ...` 命令的细节说明
+本仓库记录组合构造和回测层的行为。数据下载、因子研究、模型训练、任务编排和实盘下单由调用方负责。
+
+跨仓库的历史迁移记录可以保留在 PR、发布说明或专门的维护记录中。用户指南应优先说明当前版本可以做什么、需要哪些输入、会产生哪些结果。
