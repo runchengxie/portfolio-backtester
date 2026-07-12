@@ -1,0 +1,42 @@
+name: diagnose maintainability
+
+on:
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  diagnose:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          path: portfolio-backtester
+          show-progress: false
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+      - uses: astral-sh/setup-uv@v8.1.0
+        with:
+          version: "0.10.11"
+          enable-cache: false
+      - name: Install dependencies
+        working-directory: portfolio-backtester
+        run: uv sync --locked --extra dev
+      - name: Capture maintainability test output
+        id: test
+        working-directory: portfolio-backtester
+        shell: bash
+        run: |
+          set +e
+          uv run python -m pytest tests/test_maintainability_metrics.py -q > "$RUNNER_TEMP/pytest.log" 2>&1
+          status=$?
+          echo "status=$status" >> "$GITHUB_OUTPUT"
+          exit 0
+      - uses: actions/upload-artifact@v4
+        with:
+          name: maintainability-test-log
+          path: ${{ runner.temp }}/pytest.log
+      - name: Preserve failure status
+        if: steps.test.outputs.status != '0'
+        run: exit 1
