@@ -1,153 +1,199 @@
-# 成本、滑点与 `tr_close`
+# 成本与执行假设
 
-> status: active
-> owner: portfolio-backtester
-> last_verified: 2026-06-29
-> source_of_truth: yes
-> superseded_by: n/a
+本页说明仓库当前支持的成本模型、滑点模型、价格列、流动性约束和退出价格规则。
 
-本页解决什么：把仓库当前的交易成本、滑点、`tr_close` 和分红处理假设放到一页里。\
-范围：broker 级 TCA 和真实现金账本需要单独实现。\
-适合谁：正在看 HK selected 回测、想知道结果里哪些是执行近似，哪些是总回报价格代理的读者。\
-读完你会得到什么：当前算法、数据依赖、适用范围和已知限制。\
-相关页面：`strategy-pipeline/docs/config.md`、`strategy-pipeline/docs/outputs.md`、`cstree.backtesting.execution`、`market_data_platform.data_providers`
+这些功能用于研究回测。参数需要根据市场、账户、券商和成交方式重新校准，默认值只能作为起点。
 
-迁移说明：本页从 `strategy-pipeline/docs/concepts/execution-costs.md` 迁入。回测成本、滑点和执行模拟由 `portfolio-backtester` 维护；配置合成和 CLI 编排仍由 `strategy-pipeline` 维护。
+## 执行模型的组成
 
-## 先说结论
+`ExecutionModel` 由五部分组成：
 
-仓库当前提供的是两层交易成本建模：
+| 组成部分 | 作用 |
+| --- | --- |
+| `entry_policy` | 指定开仓使用的价格列 |
+| `exit_policy` | 指定退出价格列和缺失价格的处理方式 |
+| `cost_model` | 估算佣金、税费和其他显式成本 |
+| `slippage_model` | 估算买卖价差和市场冲击 |
+| `selection_constraints` | 按价格和流动性过滤候选证券 |
 
-1. 默认研究线常用 `transaction_cost_bps`，这是单一平面成本近似。
-2. `backtest.execution` 提供更细的 execution 结构：买卖分边费用、固定滑点、participation 滑点、开平仓价列和最小流动性约束。
+执行模型还可以指定交易日历，以及额外的开市日和休市日。
 
-这已经比简易回测更进一步。相较最完整的机构级别 TCA，目前缺失的包括：
+## 成本模型
 
-* 用真实成交回报去校准参数。
-* 在需要时引入更细市场数据。
+### 固定基点成本
 
-## 当前成本与滑点是怎么工作的
+`BpsCostModel` 按换手率和基点数计算成本。
 
-`backtest.execution` 目前由三部分组成：
+初始建仓按组合总暴露收取单边成本。后续调仓默认按双边成本处理，可以通过 `round_trip=False` 改为单边。
 
-* `entry_policy` / `exit_policy`：决定回测用哪一列价格做成交价，例如 `open`、`close`、`tr_close`。
-* `cost_model`：显式费用模型，支持统一 `bps`、分边 `side_bps`、或关闭。
-* `slippage_model`：支持 `none`、固定 `bps`、或按参与率估计的 `participation`。
+### 分方向基点成本
 
-`participation` 现在的近似形式是：
+`SideBpsCostModel` 可以分别设置：
 
-* 用 `trade_weight * portfolio_value / amount_col` 估计成交额占当日流动性的比例。
-* 在这个比例上叠加 `base_bps` 和 `impact_bps * participation^power`。
+- 多头开仓成本
+- 多头退出成本
+- 空头开仓成本
+- 空头退出成本
+- 空头每日借券成本
 
-所以目前的状态是容量 / 冲击 stress model。
+这种方式适合不同交易方向具有不同费率的研究。
 
-如果需要回答目标仓位能否在给定成交量约束下买入或卖出，可以另外启用 `backtest.execution_sim`。它保留主回测净值，并把 `positions_by_rebalance.csv` 当成目标订单，按 `participation_rate * min(liquidity_cols)` 做日度成交容量模拟；未完成买入保留现金，未完成卖出保留旧仓并标记 delayed sell。启用后还会生成 `execution_sim_executed_daily.csv`，提供容量约束和未成交现金 / 持仓状态进入净值后的日度结果。
+### A 股明细费用模型
 
-如果 panel 同时包含 `is_buy_tradable` 与 `is_sell_tradable`，容量模拟会按方向分别使用：
-涨停可以阻断买入而不阻断卖出，跌停可以阻断卖出而不阻断买入。`is_tradable` 仍作为
-保守兼容列供单列 backtest 接口使用。完整 A 股撮合还需要覆盖 T+1 可卖数量、板块差异
-和券商侧拒单仍需要单独证据。
+`DetailedTradeFeeModel` 把佣金、印花税、过户费、最低佣金和滑点放在同一个模型中。
 
-历史月频 HK execution 配置已经迁入 `strategy-pipeline/docs/archive/research/hk/README.md` 归档入口。active
-`configs/experiments/` 不再保留这些港股执行层配置；当前主线新增实验应先围绕 A 股 default
-或显式 A 股候选配置建立 execution evidence。
+直接构造 `DetailedTradeFeeModel()` 时，默认值如下：
 
-## 为什么现在建议用 `adv20_amount`
+| 参数 | 默认值 |
+| --- | ---: |
+| 买入佣金 | 2.5 个基点 |
+| 卖出佣金 | 2.5 个基点 |
+| 卖出印花税 | 5.0 个基点 |
+| 过户费 | 0.1 个基点 |
+| 单笔最低佣金 | 5 元 |
+| 买入滑点 | 6.0 个基点 |
+| 卖出滑点 | 8.0 个基点 |
+| 组合规模 | 1,000,000 元 |
 
-如果 `entry_policy.price_col=open`，而 `slippage_model.amount_col=amount` 或 `constraints.amount_col=amount`，那就会拿同一天的日成交额去约束开盘成交。
+最低佣金需要名义成交金额。模型使用 `portfolio_value` 把权重换手换算为成交金额，因此组合规模会影响成本结果。
 
-这在工程上常见，但在严格意义上存在轻微 pre-trade 不可知问题，因为开盘时你并不知道全天总成交额。
+通过配置字典构造明细费用模型时，建议显式传入 `buy_slippage_bps` 和 `sell_slippage_bps`，避免依赖构造路径中的默认值。
 
-仓库现在支持把流动性代理列直接写成滞后版本，例如：
+默认费率不代表任何券商的实时收费标准。使用前应根据账户和回测时期调整。
 
-* `adv20_amount`
-* `medadv20_amount`
+### 关闭显式成本
 
-它们表示按 symbol 计算、排除当日后的过去 `20` 个交易日平均或中位成交额。对日线级回测，这是比同日 `amount` 更稳妥的默认值。
+`NoCostModel` 返回零显式成本。配置中的 `none`、`off` 和 `zero` 会构造该模型。
 
-## `tr_close` 是什么
+## 滑点模型
 
-`tr_close` 在仓库里表示总回报价格代理。
+### 固定基点滑点
 
-当前实现依赖下面几条路之一：
+`BpsSlippageModel` 按交易权重绝对值乘以固定基点数。
 
-* 本地 `ex_factors_dir`
-* 在线 provider 的 `adjust_type=pre/post`
-* 或 daily 源数据里已经自带 `tr_close`
+### 参与率滑点
 
-简化说，代码会把 `close` 结合复权因子变成 `tr_close`，让价格类特征、标签和回测一起走 total-return 口径。
+`ParticipationSlippageModel` 使用组合规模、交易权重和流动性列估算成交参与率。
 
-现在仓库还会把 `tr_close` 的来源沉到 `summary.json -> data -> price_col_diagnostics`。  
-如果你配置了本地 `ex_factors_dir`，但某些 symbol 没有对应 ex-factor 行，run 日志会显式提示；summary 里也能看到到底是：
+近似计算过程如下：
 
-* `local_ex_factors`
-* `provider_adjusted_price`
-* `input_frame`
-* `input_frame_missing_ex_factors`
-* `close_fallback_missing_ex_factors`
+```text
+成交金额 = abs(交易权重) × portfolio_value
+参与率 = 成交金额 ÷ amount_col
+单证券滑点基点 = base_bps + impact_bps × 参与率 ^ power
+```
 
-这意味着：
+`max_participation` 可以限制参与率上限。该限制用于稳定估算，不会自动完成分日成交或拒绝超量订单。
 
-* 如果你的目标是低频研究、比较信号强弱、避免分红导致价格跳空污染收益标签，那么 `tr_close` 是合理的。
-* 如果你的目标是重建真实现金分红到账、再投资时点、税率、到账日差异，那么 `tr_close` 不够。
+流动性列由 `amount_col` 指定。使用开盘价成交时，建议传入开盘前已经可知的滞后流动性指标，例如上一交易日计算完成的 `adv20_amount`。直接使用当日总成交额会引入未来信息。
 
-## 目前距离最严谨的考虑现金分红影响的回测还缺了什么
+### 价格分档滑点辅助函数
 
-现金分红账本至少还差这些维度：
+`l2_price_tiered_slippage` 根据收盘价区间返回一个研究用滑点基点数。卖出方向会在买入基准上增加 2 个基点。
 
-* `payable_date` 而不只是 `ex_dividend_date`
-* 税前/税后金额
-* 持仓股数与 round lot 影响
-* 分红现金是否再投资、何时再投资
-* 多市场税率和券商处理差异
+该函数基于仓库内置的价格分档表。它没有读取实时盘口，也没有根据证券、日期和订单规模动态更新。使用者应把它视为简化参数，不应视为真实成交报价。
 
-仓库现有 `dividends` 资产更适合做核对或后续扩展。
+## 开仓和退出价格
 
-## 当前实现的适用边界
+`EntryPolicy` 只负责指定开仓价格列，例如 `open`、`close` 或调用方准备的其他列。
 
-以下场景里，当前做法通常已经够用：
+`ExitPolicy` 支持三种退出规则：
 
-* 港股低频、月频或季频、Top-K 选股研究
-* 主要关心信号方向、组合排序和大体成本拖累
-* 希望 `close` 和 total-return 口径能快速做 A/B
+| 规则 | 行为 |
+| --- | --- |
+| `strict` | 计划退出日缺少有效价格或无法交易时，放弃该证券的退出价格 |
+| `ffill` | 在计划退出日及之前寻找最近的有效价格 |
+| `delay` | 从计划退出日开始向后寻找首个有效价格 |
 
-以下场景里，它就不够了：
+`delay` 可以配合 `fallback_policy='ffill'`。向后找不到有效价格时，模型会回到计划退出日及之前的最近价格。设置为 `none` 时不会回退。
 
-* 你开始关心开盘成交是否真的可行
-* 你需要盘中 VWAP/TWAP 偏离
-* 你在做集合竞价、盘口冲击或 broker 级 TCA
-* 你要做真实现金分红账本
+可交易标记通过调用方指定的布尔列传入。它只能表达该列提供的状态，无法自动补全涨跌停、T+1、停牌原因、订单拒绝和券商规则。
 
-`backtest.execution_sim` 可以覆盖其中一部分容量边界和分批执行问题，但仍属于日线级容量模拟，逐笔撮合器需要单独实现。
+## 价格列和盘中数据
 
-## 当前 HK `5m` 校准报告还要再记一个口径
+`PositionBacktestConfig` 支持分别设置：
 
-当前工作区里的 HK `5m` 缓存是 provider 默认 `adjust_type=pre` 的价格序列。  
-因此，如果直接拿 `amount / volume` 去对比历史复权后的 `open`，长期样本上的 `VWAP` 会失真。
+- `price_col`
+- `entry_price_col`
+- `exit_price_col`
 
-所以仓库里的 intraday 滑点报告当前采用的是：
+`entry_price_col` 或 `exit_price_col` 为空时，会回退到 `price_col`。
 
-* `vwap_method=bar_price_volume_proxy`
-* 用每根 `5m` bar 的 `OHLC` 均价按 bar `volume` 加权，近似 session price center
+`run_position_backtest` 还可以接收 `intraday_bars`。传入盘中数据后，函数会计算盘中成交量加权价格，并在有结果时替换对应的日线开仓价和退出价。缺失部分继续使用日线价格表。
 
-这能让现有缓存继续用于经验校准，但要明确：
+## `tr_close` 的含义
 
-* 它是可复用的研究 proxy，距离tick 级真实 VWAP仍有距离
-* 它当前用于离线校准 execution 参数，日线 backtest 的逐 bar 撮合输入需要单独设计
-* 如果后面要做更严肃的盘中执行研究，优先考虑重新下载 `adjust_type=none` 的分钟线，或直接引入更细成交数据
+本包把 `tr_close` 视为调用方提供的普通价格列。仓库不会下载复权因子，也不会构造现金分红账本。
 
-## 推荐的下一步
+使用 `tr_close` 前，需要由数据提供方明确以下内容：
 
-优先级从高到低通常是：
+- 前复权、后复权或总回报口径
+- 分红和拆股的处理方式
+- 缺失复权因子的回退规则
+- 不同证券和时期是否使用一致口径
 
-1. 固定 `ex_factors / dividends / shares` 这组轻量原料层。
-2. 用真实成交回报校准 `buy_bps / sell_bps / base_bps / impact_bps`。
-3. 回测层优先用 `adv20_amount` 或 `medadv20_amount`，避免 `open + same-day amount`。
-4. 若只是先把研究线做对，优先在当前 active baseline 上显式写清 execution config；单一的 `transaction_cost_bps` 已经不再适用。
-   需要复现港股 total-return execution 口径时，从 archive README 找到历史配置文件名和对应 run 产物。
-5. 如果误差主要来自执行假设，再补精选池或全市场的 `5m` 数据做经验滑点校准。
-6. 只有在策略明显进入容量或盘中执行问题时，才考虑更细的 `1m`、tick 或盘口数据。
+`tr_close` 适合减少除权除息造成的价格跳变。它无法表示实际分红到账日、税后现金、再投资时点和账户级现金流。
 
-## 最后一句
+## 配置示例
 
-`tr_close`、execution cost model、现金分红账本，是三件相邻但不同的事。把这三件事写清楚，比再多下载一批数据更重要。
+下面的配置使用分方向费用、参与率滑点、开盘建仓和延迟退出：
+
+```python
+from cstree.backtesting.execution import build_execution_model
+
+execution = build_execution_model(
+    {
+        'cost': {
+            'name': 'side_bps',
+            'buy_bps': 6,
+            'sell_bps': 8,
+        },
+        'slippage': {
+            'name': 'participation',
+            'base_bps': 2,
+            'impact_bps': 10,
+            'amount_col': 'adv20_amount',
+            'portfolio_value': 1_000_000,
+            'power': 0.5,
+        },
+        'entry': {
+            'price_col': 'open',
+        },
+        'exit': {
+            'price': 'delay',
+            'fallback': 'ffill',
+            'price_col': 'close',
+        },
+        'constraints': {
+            'min_price': 2,
+            'min_amount': 5_000_000,
+            'amount_col': 'adv20_amount',
+        },
+    },
+    default_cost_bps=0,
+    default_exit_price_policy='strict',
+    default_exit_fallback_policy='ffill',
+)
+```
+
+该配置需要定价数据提供 `open`、`close` 和 `adv20_amount`。
+
+## 适用边界
+
+当前实现适合：
+
+- 日线或低频组合研究
+- 比较不同成本和滑点假设
+- 检查流动性筛选和退出延迟的敏感性
+- 回放外部生成的目标持仓
+
+需要更细实现的场景包括：
+
+- 逐笔或盘口级撮合
+- 真实订单队列和部分成交
+- 账户级现金、税费和分红账本
+- T+1 可卖数量
+- 融券可用量和动态借券费
+- 券商拒单和交易所微观规则
+
+回测结果高度依赖输入数据和执行假设。报告中应保存价格列、成本参数、滑点参数、组合规模和可交易标记来源。
