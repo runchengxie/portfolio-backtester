@@ -7,8 +7,7 @@
 1. [根目录 README](../README.md)
 2. [持仓输出约定](reference/outputs/positions.md)
 3. [成本与执行假设](concepts/execution-costs.md)
-4. [风格复制组合构造器](concepts/style-replica-portfolio.md)
-5. [测试和质量检查](testing.md)
+4. [测试和质量检查](testing.md)
 
 ## 文档导航
 
@@ -17,7 +16,6 @@
 | [根目录 README](../README.md) | 项目用途、安装方式、快速示例和公开入口 |
 | [持仓输出约定](reference/outputs/positions.md) | `positions_by_rebalance.csv` 的字段和校验规则 |
 | [成本与执行假设](concepts/execution-costs.md) | 成本模型、滑点模型、价格选择和适用边界 |
-| [风格复制组合构造器](concepts/style-replica-portfolio.md) | 专用双层组合的输入、输出和当前限制 |
 | [测试和质量检查](testing.md) | 本地命令、CI 阻塞项和实际检查范围 |
 
 ## 事实来源
@@ -35,6 +33,6 @@
 
 ## 文档边界
 
-本仓库记录组合构造和回测层的行为。数据下载、因子研究、模型训练、任务编排和实盘下单由调用方负责。
+本仓库记录通用组合构造和回测层的行为。数据下载、因子研究、模型训练、具体策略规则、任务编排和实盘下单由调用方负责。
 
 跨仓库的历史迁移记录可以保留在 PR、发布说明或专门的维护记录中。用户指南应优先说明当前版本可以做什么、需要哪些输入、会产生哪些结果。
