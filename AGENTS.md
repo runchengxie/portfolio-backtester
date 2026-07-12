@@ -1,61 +1,133 @@
 # AGENTS.md
 
-本文件给维护者、外部贡献者和代码代理使用。它描述 `portfolio-backtester` 的本仓协作规则；工作区层面的规则仍以顶层 `research-workspace/AGENTS.md` 为准。
+本文件面向维护者、外部贡献者和代码代理，说明本仓库的协作方式、检查范围和文档要求。
 
-## 仓库范围
+## 仓库职责
 
-本仓库负责组合回测与持仓管理模块（`cstree.backtesting.*`），维护 Top-K 组合构造、调仓逻辑、执行模拟、容量和暴露报告、持仓后处理、换手归因、benchmark ladder 和回测报告。
+本仓库维护 `cstree.backtesting` 包，主要负责：
 
-本仓库可以消费外部信号、行情和 tradability 数据，但不应在运行时导入 alpha 研究（`cstree.alpha`）、策略编排（`cstree.pipeline`）或交易执行实现。研究编排和 `targets.json` 导出仍由 `strategy-pipeline` 负责。
+- Top-K 组合构造
+- 目标持仓生成和校验
+- 持仓回放
+- 交易成本、滑点和退出价格处理
+- 执行容量模拟
+- 换手、容量和暴露分析
+- 回测结果汇总和报告辅助功能
+
+数据下载、因子研究、模型训练、任务编排和实盘下单不属于本仓库的运行职责。调用方通过公开接口传入信号、持仓和行情数据。
+
+## 开始修改前
+
+1. 阅读根目录 `README.md` 和相关的 `docs/` 页面。
+2. 确认修改影响的是公开接口、文件契约、内部实现还是文档。
+3. 从最新的 `main` 创建短期分支。
+4. 保持改动范围集中，避免把无关重构混入同一个提交。
+5. 发现文档与实现不一致时，以当前代码和测试为依据，并同步修正文档。
 
 ## 常用命令
 
-日常阻塞检查：
+安装开发依赖：
 
 ```bash
-uv run --extra dev ruff check .
-uv run --extra dev ruff format --check .
-uv run --extra dev ty check
-uv run --extra dev pytest
+uv sync --locked --extra dev
 ```
 
-统一脚本入口：
+运行主要检查：
 
 ```bash
 scripts/dev/run_tests.sh lint
 scripts/dev/run_tests.sh format
 scripts/dev/run_tests.sh typecheck
 scripts/dev/run_tests.sh all
+scripts/dev/run_tests.sh maintainability
 ```
 
-发布前或诊断类型债时运行 BasedPyright：
+补充类型诊断：
 
 ```bash
 scripts/dev/run_tests.sh basedpyright
 ```
 
-GitHub Actions 中 Ruff、format、`ty check` 和维护性 ratchet 是阻塞检查，BasedPyright 是非阻塞建议项。
+`fast` 和 `unit` 目前是 `all` 的兼容别名，都会运行完整的 `pytest` 测试集。不要把它们描述成更快的测试子集。
 
-## GitHub 发布偏好
+## 检查范围
 
-- 用户明确要求 commit、push 或发布本仓改动时，默认直接在 `main` 上提交并推送到 `origin/main`。
-- 不要默认新建 `codex/*` 分支或 draft PR；只有用户明确要求 PR、远端规则阻止直接推送、工作区存在难以拆分的混杂改动，或改动风险需要人工 review 时才走分支和 PR。
-- 本仓作为 `research-workspace` 子模块使用时，推送本仓后还要回到顶层仓库提交更新后的 submodule gitlink。
+| 命令 | 当前范围 | 是否阻塞 CI |
+| --- | --- | --- |
+| `lint` | 使用 Ruff 检查整个仓库 | 是 |
+| `format` | 使用 Ruff 检查整个仓库的格式 | 是 |
+| `typecheck` | 使用 `ty` 检查 `pyproject.toml` 配置的类型范围 | 是 |
+| `all` | 运行完整的 `pytest` 测试集 | 是 |
+| `maintainability` | 检查静态可维护性指标是否超过当前阈值 | 是 |
+| `basedpyright` | 检查 `pyproject.toml` 中列出的文件 | 否 |
 
-## 文档归属
+当前类型检查只覆盖配置中列出的范围。不要把通过类型检查表述为整个包已经具备完整类型覆盖。
 
-新增组合或回测说明时，优先放在本仓 `docs/`：
+## 代码修改规则
 
-- Top-K、buffer、分组约束、手数约束和持仓后处理。
-- 回测收益、交易成本、换手、容量、暴露、benchmark ladder 和报告字段。
-- `positions_by_rebalance.csv`、`positions_current*.csv` 及其下游消费约定。
-- A 股 round-lot 可执行性、执行模拟和组合层敏感性分析。
+- 保持仓库可以独立安装和测试。
+- 不通过相邻仓库的源码路径补齐导入。
+- 不在运行时导入 `cstree.alpha` 或 `cstree.pipeline`。
+- 修改顶层公开入口时，同步更新 `src/cstree/backtesting/__init__.py`、包级冒烟测试和 `README.md`。
+- 修改 `positions_by_rebalance.csv` 契约时，同步更新 `contracts.py`、契约测试和持仓文档。
+- 修改成本、滑点、交易日历或退出价格逻辑时，补充能够覆盖边界条件的测试。
+- 新增专用组合构造器时，至少覆盖正常构造、空输入、重复证券、持仓重叠和跨期变化。
+- 对外公开的默认参数需要有测试保护，文档中应说明其用途和局限。
+- 避免在同一次改动中无意改变历史结果。确需改变时，在 PR 中说明影响范围和迁移方式。
 
-留在 `strategy-pipeline` 的说明应聚焦编排、CLI、配置合成、运行目录和执行目标导出。
+## 测试要求
 
-## 编辑规则
+修复缺陷时，先添加能够复现问题的测试。新增功能时，至少覆盖一个正常路径和一个异常或边界路径。
 
-- 保持本仓可独立安装和测试，不通过 sibling source path 补齐 import。
-- 不提交 `.pytest_cache/`、`__pycache__/`、`artifacts/`、`outputs/`、provider 凭证或本地 `.env*`。
-- 修改持仓或回测产物契约时，同步更新 README、docs 和对应测试。
-- 涉及跨仓库文件约定时，同步检查顶层 `research-workspace` 的 contract 文档和 submodule gitlink。
+可以按文件运行测试：
+
+```bash
+uv run --extra dev pytest tests/test_position_backtest.py
+uv run --extra dev pytest tests/test_execution.py -k participation
+```
+
+仓库当前未配置覆盖率阈值。不要声称测试覆盖率达到某个比例，除非 PR 同时加入可复现的覆盖率报告。
+
+## 文档要求
+
+中文说明应以中文母语读者为主要对象。
+
+- 使用中文标点
+- 保留必要的行内代码和 API 名称
+- 首次出现的英文术语应给出中文解释
+- 避免把内部迁移记录放在用户指南中
+- 避免中英混杂的长句
+- 避免翻译腔和口号式表达
+- 避免先否定再转折的表达，直接陈述结论
+- 尽量不用双引号、分号、破折号和加粗
+- 示例应能够直接运行，或明确标注省略的输入
+- 文档中的命令、字段和默认值应由代码或测试支持
+
+历史背景、迁移记录和用户操作说明应分开保存。根目录 `README.md` 优先回答项目用途、安装方式、输入要求和快速示例。
+
+## Git 工作流
+
+默认通过短期分支和 PR 提交改动。直接推送 `main` 只适用于维护者明确要求的情况。
+
+PR 描述至少应包含：
+
+- 修改内容
+- 修改原因
+- 验证方式
+- 对公开接口、输出契约和历史结果的影响
+- 尚未处理的已知问题
+
+## 安全与公开发布
+
+请勿提交以下内容：
+
+- `.env` 或其他本地环境文件
+- API 密钥、访问令牌、私钥和账户凭证
+- 数据提供商的授权数据
+- 客户名称、账户号、订单记录和真实持仓
+- 本地绝对路径、内部主机名和仅内部可访问的仓库地址
+- `artifacts/`、`outputs/`、缓存和临时文件
+
+提交前检查暂存区。准备公开发布时，还应扫描完整 Git 历史，因为删除当前文件中的密钥无法清除旧提交。
+
+本仓库当前没有许可证文件。引入许可证属于项目所有者决策，不应由代码代理自行选择。
