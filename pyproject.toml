@@ -5,7 +5,7 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "portfolio-backtester"
 version = "0.1.0"
-description = "Portfolio construction and backtesting tooling for research-workspace"
+description = "Reusable portfolio construction and research backtesting toolkit"
 readme = "README.md"
 requires-python = ">=3.12"
 dependencies = [

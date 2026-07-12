@@ -31,7 +31,6 @@ OWNED_MODULES = (
     "cstree.backtesting.position_backtest",
     "cstree.backtesting.post_buffer_exposure_repair",
     "cstree.backtesting.strategy",
-    "cstree.backtesting.style_replica_portfolio",
     "cstree.backtesting.turnover_attribution",
 )
 FORBIDDEN_RUNTIME_PREFIXES = ("cstree.alpha", "cstree.pipeline")
@@ -64,13 +63,8 @@ def test_backtesting_package_exports_core_entrypoints() -> None:
         "PositionBacktestResult",
         "PositionsByRebalanceFrameContract",
         "StrategySpec",
-        "StyleReplicaPortfolioConfig",
         "assert_positions_by_rebalance_frame",
         "backtest_topk",
-        "build_style_replica_positions",
-        "compute_daily_changes",
-        "compute_daily_exposure",
-        "compute_style_exposure_summary",
         "construct_positions_from_strategy",
         "l2_price_tiered_slippage",
         "run_position_backtest",
