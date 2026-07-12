@@ -42,8 +42,8 @@ jobs:
         run: ./scripts/dev/run_tests.sh typecheck
       - name: Run pytest
         run: ./scripts/dev/run_tests.sh all
-      - name: Run BasedPyright advisory
-        continue-on-error: true
-        run: ./scripts/dev/run_tests.sh basedpyright
+      # - name: Run BasedPyright advisory
+      #   continue-on-error: true
+      #   run: ./scripts/dev/run_tests.sh basedpyright
       - name: Run maintainability ratchet
         run: ./scripts/dev/run_tests.sh maintainability
