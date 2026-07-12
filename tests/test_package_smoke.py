@@ -31,7 +31,9 @@ OWNED_MODULES = (
     "cstree.backtesting.position_backtest",
     "cstree.backtesting.post_buffer_exposure_repair",
     "cstree.backtesting.strategy",
+    "cstree.backtesting.turnover",
     "cstree.backtesting.turnover_attribution",
+    "cstree.backtesting.types",
 )
 FORBIDDEN_RUNTIME_PREFIXES = ("cstree.alpha", "cstree.pipeline")
 
@@ -51,6 +53,7 @@ def test_owned_backtesting_modules_import(module_name: str) -> None:
 
 def test_backtesting_package_exports_core_entrypoints() -> None:
     assert set(backtesting.__all__) == {
+        "CostBreakdown",
         "DailyWatch20Config",
         "DailyWatch20Receipt",
         "DailyWatch20Result",
@@ -63,14 +66,18 @@ def test_backtesting_package_exports_core_entrypoints() -> None:
         "PositionBacktestResult",
         "PositionsByRebalanceFrameContract",
         "StrategySpec",
+        "TurnoverBreakdown",
+        "annualize_turnover",
         "assert_positions_by_rebalance_frame",
         "backtest_topk",
         "construct_positions_from_strategy",
         "l2_price_tiered_slippage",
+        "name_turnover",
         "run_position_backtest",
         "select_daily_watch20",
         "strategy_from_config",
         "summarize_period_returns",
+        "turnover_from_trade_weights",
         "validate_positions_by_rebalance_frame",
     }
 
