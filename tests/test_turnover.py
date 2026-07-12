@@ -45,7 +45,10 @@ def test_turnover_breakdown_keeps_cash_change_visible() -> None:
 
 
 def test_name_turnover_is_distinct_from_weight_turnover() -> None:
-    assert name_turnover({"A", "B", "C", "D"}, {"A", "E", "F", "G"}) == pytest.approx(0.75)
+    assert name_turnover(
+        {"A", "B", "C", "D"},
+        {"A", "E", "F", "G"},
+    ) == pytest.approx(0.75)
     assert name_turnover(None, {"A", "B"}) == pytest.approx(1.0)
     assert name_turnover(set(), set()) == pytest.approx(0.0)
 
