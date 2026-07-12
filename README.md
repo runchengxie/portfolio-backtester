@@ -14,6 +14,41 @@
 - `StrategySpec` 和 `construct_positions_from_strategy`，用于把信号转成目标持仓。
 - `PositionBacktestConfig` 和 `run_position_backtest`，用于基于价格数据回放已有目标持仓。
 
+## 换手率口径
+
+项目区分两类容易被混用的换手率：
+
+- `name_turnover`：持仓名称替换比例，适合描述 Top-K 名单稳定性。
+- `TurnoverBreakdown.one_way_turnover`：基于目标权重变化的单边换手率，用于成本核算。
+
+`TurnoverBreakdown` 同时保留以下字段，避免只报告一个含义模糊的 `turnover`：
+
+- `buy_weight`
+- `sell_weight`
+- `gross_traded_weight`
+- `half_l1_turnover`
+- `one_way_turnover`
+
+对于非初始调仓：
+
+```text
+half_l1_turnover = 0.5 * sum(abs(target_weight - drifted_weight))
+```
+
+初始建仓沿用历史成本口径，`one_way_turnover` 等于实际买入的 gross exposure；
+`half_l1_turnover` 仍保留其严格的数学定义。`annualize_turnover` 只做线性年化，
+用于描述交易强度，不代表可复利收益。
+
+## 成本口径
+
+`CostBreakdown` 为回测结果提供统一的费用视图：
+
+- `fee_cost`：显式费用；
+- `slippage_cost`：隐式滑点；
+- `total_cost`：两者之和。
+
+后续新增佣金、税费、价差、市场冲击或机会成本时，应继续保持分项字段，避免把全部成本压缩成一个无法审计的 bps 数字。
+
 ## 负责的文档
 
 后续新增或迁移文档时，以下主题应优先放在本仓库：
