@@ -13,7 +13,6 @@
 - 估算固定基点成本、分方向费用和参与率滑点
 - 处理停牌或不可交易状态下的退出价格
 - 生成收益、换手、成本、容量和暴露分析结果
-- 构造专用的风格复制组合，并计算持仓变化和暴露摘要
 
 ## 环境要求
 
@@ -168,13 +167,12 @@ from cstree.backtesting import StrategySpec, construct_positions_from_strategy
 | 持仓契约 | `POSITIONS_BY_REBALANCE_CONTRACT`、`validate_positions_by_rebalance_frame`、`assert_positions_by_rebalance_frame` |
 | 成本与滑点 | `DetailedTradeFeeModel`、`l2_price_tiered_slippage` |
 | 收益汇总 | `summarize_period_returns` |
-| 风格复制组合 | `StyleReplicaPortfolioConfig`、`build_style_replica_positions`、`compute_daily_changes`、`compute_daily_exposure`、`compute_style_exposure_summary` |
 
 未列在顶层导出中的模块仍可供仓库内部使用，其接口稳定性低于上表中的公开入口。
 
 ## 项目边界
 
-本包从调用方接收信号、持仓和行情数据。数据下载、因子研究、模型训练、任务编排和实盘下单由调用方或其他项目负责。
+本包从调用方接收信号、持仓和行情数据。数据下载、因子研究、模型训练、具体策略规则、任务编排和实盘下单由调用方或其他项目负责。
 
 仓库曾经作为更大研究工作区的一部分维护，目前已经移除对私有数据仓库的运行时依赖。其他项目仍可把它作为子模块或普通 Python 依赖使用。
 
@@ -182,7 +180,6 @@ from cstree.backtesting import StrategySpec, construct_positions_from_strategy
 
 - [文档入口](docs/README.md)
 - [成本与执行假设](docs/concepts/execution-costs.md)
-- [风格复制组合构造器](docs/concepts/style-replica-portfolio.md)
 - [持仓输出约定](docs/reference/outputs/positions.md)
 - [测试和质量检查](docs/testing.md)
 
