@@ -13,9 +13,14 @@ from cstree import backtesting
 
 CORE_MODULES = (
     "cstree.backtesting.api",
+    "cstree.backtesting.backends",
     "cstree.backtesting.backtest_spec",
     "cstree.backtesting.engine",
     "cstree.backtesting.metrics",
+    "cstree.backtesting.parity",
+    "cstree.backtesting.integrations",
+    "cstree.backtesting.integrations.lean",
+    "cstree.backtesting.integrations.qlib",
     "cstree.backtesting.a_share_executable_oos_topk",
     "cstree.backtesting.execution",
     "cstree.backtesting.execution_sim",
@@ -44,6 +49,7 @@ PRODUCT_MODULES = (
 OWNED_MODULES = (*CORE_MODULES, *PRODUCT_MODULES)
 FORBIDDEN_RUNTIME_PREFIXES = ("cstree.alpha", "cstree.pipeline")
 FORBIDDEN_ML_PREFIXES = ("sklearn", "xgboost")
+FORBIDDEN_FRAMEWORK_PREFIXES = ("qlib", "QuantConnect", "AlgorithmImports")
 
 
 def test_cstree_namespace_includes_backtesting_package_root() -> None:
@@ -63,23 +69,32 @@ def test_owned_backtesting_modules_import(module_name: str) -> None:
 def test_backtesting_package_exports_core_entrypoints() -> None:
     assert set(backtesting.__all__) == {
         "BacktestSpec",
+        "BacktestBackend",
+        "BacktestBackendResult",
+        "BacktestDifferentialReport",
         "CostBreakdown",
         "DailyWatch20Config",
         "DailyWatch20Receipt",
         "DailyWatch20Result",
         "DailyWatch20SelectionError",
         "DetailedTradeFeeModel",
+        "DifferenceDimension",
+        "DifferenceExplanation",
         "GroupCap",
         "GuardFactorSpec",
+        "NativeAShareReplayBackend",
+        "ParityTolerance",
         "POSITIONS_BY_REBALANCE_CONTRACT",
         "PositionBacktestConfig",
         "PositionBacktestResult",
+        "PositionReplayRequest",
         "PositionsByRebalanceFrameContract",
         "StrategySpec",
         "TurnoverBreakdown",
         "annualize_turnover",
         "assert_positions_by_rebalance_frame",
         "backtest_topk",
+        "compare_backtest_results",
         "construct_positions_from_strategy",
         "l2_price_tiered_slippage",
         "name_turnover",
@@ -136,6 +151,15 @@ for prefix in {FORBIDDEN_ML_PREFIXES!r}:
     ]
     if offenders:
         raise SystemExit("loaded ML module(s): " + ", ".join(sorted(offenders)))
+
+for prefix in {FORBIDDEN_FRAMEWORK_PREFIXES!r}:
+    offenders = [
+        module_name
+        for module_name in sys.modules
+        if module_name == prefix or module_name.startswith(prefix + ".")
+    ]
+    if offenders:
+        raise SystemExit("loaded framework module(s): " + ", ".join(sorted(offenders)))
 
 product_offenders = [
     module_name

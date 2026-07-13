@@ -7,9 +7,10 @@
 1. [根目录 README](../README.md)
 2. [组合式回测规范](concepts/backtest-spec.md)
 3. [DailyWatch20 产品模块](products/daily-watch20.md)
-4. [持仓输出约定](reference/outputs/positions.md)
-5. [成本与执行假设](concepts/execution-costs.md)
-6. [测试和质量检查](testing.md)
+4. [回测后端和差分证据](concepts/backtest-backends.md)
+5. [持仓输出约定](reference/outputs/positions.md)
+6. [成本与执行假设](concepts/execution-costs.md)
+7. [测试和质量检查](testing.md)
 
 ## 文档导航
 
@@ -18,6 +19,7 @@
 | [根目录 README](../README.md) | 项目用途、安装方式、快速示例和公开入口 |
 | [组合式回测规范](concepts/backtest-spec.md) | `BacktestSpec`、配置序列化和历史入口迁移 |
 | [DailyWatch20 产品模块](products/daily-watch20.md) | 产品命名空间、依赖边界和历史导入兼容 |
+| [回测后端和差分证据](concepts/backtest-backends.md) | 原生后端、Qlib 适配、差分分类和 LEAN 黄金基准交换 |
 | [持仓输出约定](reference/outputs/positions.md) | `positions_by_rebalance.csv` 的字段和校验规则 |
 | [成本与执行假设](concepts/execution-costs.md) | 成本模型、滑点模型、价格选择和适用边界 |
 | [测试和质量检查](testing.md) | 本地命令、CI 阻塞项和实际检查范围 |
@@ -33,6 +35,9 @@
 - 输入和输出契约：`src/cstree/backtesting/contracts.py`
 - 成本与滑点：`src/cstree/backtesting/execution.py`
 - 持仓回放：`src/cstree/backtesting/position_backtest.py`
+- 回测后端：`src/cstree/backtesting/backends.py`
+- 差分证据：`src/cstree/backtesting/parity.py`
+- 可选框架边界：`src/cstree/backtesting/integrations/`
 - 测试入口：`scripts/dev/run_tests.sh`
 - CI 配置：`.github/workflows/tests.yml`
 

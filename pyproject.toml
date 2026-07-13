@@ -17,6 +17,11 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
+qlib = [
+  "mlflow>=2,<4",
+  "pandas>=2.2,<3",
+  "pyqlib>=0.9.7",
+]
 dev = [
   "basedpyright>=1.39.9",
   "pytest>=9.0.3",
@@ -55,7 +60,11 @@ combine-as-imports = true
 [tool.ty.src]
 include = [
   "src/cstree/backtesting/api.py",
+  "src/cstree/backtesting/backends.py",
   "src/cstree/backtesting/backtest_spec.py",
+  "src/cstree/backtesting/parity.py",
+  "src/cstree/backtesting/integrations/lean.py",
+  "src/cstree/backtesting/integrations/qlib.py",
   "src/cstree/backtesting/types.py",
 ]
 exclude = [
@@ -71,11 +80,15 @@ include = [
   "src/cstree/__init__.py",
   "src/cstree/backtesting/__init__.py",
   "src/cstree/backtesting/api.py",
+  "src/cstree/backtesting/backends.py",
   "src/cstree/backtesting/backtest_spec.py",
   "src/cstree/backtesting/capacity.py",
   "src/cstree/backtesting/period_outputs.py",
   "src/cstree/backtesting/portfolio.py",
   "src/cstree/backtesting/reports.py",
+  "src/cstree/backtesting/parity.py",
+  "src/cstree/backtesting/integrations/lean.py",
+  "src/cstree/backtesting/integrations/qlib.py",
   "src/cstree/backtesting/types.py",
   "src/cstree/backtesting/execution_sim/__init__.py",
   "src/cstree/backtesting/execution_sim/results.py",

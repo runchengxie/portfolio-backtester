@@ -14,6 +14,8 @@
 - 估算固定基点成本、分方向费用和参与率滑点
 - 处理停牌或不可交易状态下的退出价格
 - 生成收益、换手、成本、容量和暴露分析结果
+- 通过统一后端结果比较原生回放和 Qlib，要求分类并解释语义差异
+- 通过版本化 JSON 与外部 LEAN 黄金基准交换场景、结果和成交证据
 - 在独立的 `cstree.backtesting.products` 命名空间提供 DailyWatch20 产品选择逻辑
 
 ## 环境要求
@@ -36,6 +38,14 @@ uv run --extra dev pytest
 ```
 
 基础安装不包含 scikit-learn 或 XGBoost。组合与回测层接收调用方已经计算完成的分数，不负责训练模型。IC 显著性统计直接依赖 SciPy，Parquet 和 YAML 支持继续由 PyArrow 与 PyYAML 提供。
+
+运行 Qlib 差分回测时安装可选依赖：
+
+```bash
+uv sync --locked --extra dev --extra qlib
+```
+
+Qlib 不属于基础安装。可选依赖把 pandas 限制在 Qlib 已验证的 2.x 范围，并使用 MLflow 2.x 或 3.x，避免 pyqlib 的宽松依赖解析到不兼容组合。LEAN 参考运行通过 JSON 文件在外部进程完成，本包没有 LEAN 运行时依赖。
 
 ## 快速开始
 
@@ -217,6 +227,7 @@ from cstree.backtesting.products import DailyWatch20Config, select_daily_watch20
 | 类别 | 入口 |
 | --- | --- |
 | 分数驱动回测 | `BacktestSpec`、`run_backtest`、`backtest_topk` |
+| 后端和差分 | `BacktestBackend`、`NativeAShareReplayBackend`、`compare_backtest_results` |
 | 策略和持仓构造 | `StrategySpec`、`GroupCap`、`strategy_from_config`、`construct_positions_from_strategy` |
 | 持仓回放 | `PositionBacktestConfig`、`PositionBacktestResult`、`run_position_backtest` |
 | 持仓契约 | `POSITIONS_BY_REBALANCE_CONTRACT`、`validate_positions_by_rebalance_frame`、`assert_positions_by_rebalance_frame` |
@@ -272,6 +283,7 @@ half_l1_turnover = 0.5 * sum(abs(target_weight - drifted_weight))
 
 - [文档入口](docs/README.md)
 - [组合式回测规范](docs/concepts/backtest-spec.md)
+- [回测后端和差分证据](docs/concepts/backtest-backends.md)
 - [DailyWatch20 产品模块](docs/products/daily-watch20.md)
 - [成本与执行假设](docs/concepts/execution-costs.md)
 - [持仓输出约定](docs/reference/outputs/positions.md)

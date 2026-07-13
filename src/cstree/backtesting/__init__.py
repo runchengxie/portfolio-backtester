@@ -14,6 +14,12 @@ if TYPE_CHECKING:
     )
 
 from .api import backtest_topk, run_backtest
+from .backends import (
+    BacktestBackend,
+    BacktestBackendResult,
+    NativeAShareReplayBackend,
+    PositionReplayRequest,
+)
 from .backtest_spec import BacktestSpec
 from .contracts import (
     POSITIONS_BY_REBALANCE_CONTRACT,
@@ -25,6 +31,13 @@ from .contracts import (
 )
 from .execution import DetailedTradeFeeModel, l2_price_tiered_slippage
 from .metrics import summarize_period_returns
+from .parity import (
+    BacktestDifferentialReport,
+    DifferenceDimension,
+    DifferenceExplanation,
+    ParityTolerance,
+    compare_backtest_results,
+)
 from .position_backtest import PositionBacktestConfig, PositionBacktestResult, run_position_backtest
 from .strategy import construct_positions_from_strategy, strategy_from_config
 from .turnover import (
@@ -62,6 +75,9 @@ def __dir__() -> list[str]:
 
 __all__ = [
     "POSITIONS_BY_REBALANCE_CONTRACT",
+    "BacktestBackend",
+    "BacktestBackendResult",
+    "BacktestDifferentialReport",
     "BacktestSpec",
     "CostBreakdown",
     "DailyWatch20Config",
@@ -69,16 +85,22 @@ __all__ = [
     "DailyWatch20Result",
     "DailyWatch20SelectionError",
     "DetailedTradeFeeModel",
+    "DifferenceDimension",
+    "DifferenceExplanation",
     "GroupCap",
     "GuardFactorSpec",
+    "NativeAShareReplayBackend",
+    "ParityTolerance",
     "PositionBacktestConfig",
     "PositionBacktestResult",
+    "PositionReplayRequest",
     "PositionsByRebalanceFrameContract",
     "StrategySpec",
     "TurnoverBreakdown",
     "annualize_turnover",
     "assert_positions_by_rebalance_frame",
     "backtest_topk",
+    "compare_backtest_results",
     "construct_positions_from_strategy",
     "l2_price_tiered_slippage",
     "name_turnover",
