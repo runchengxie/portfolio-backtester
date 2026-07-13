@@ -14,6 +14,7 @@
 - 估算固定基点成本、分方向费用和参与率滑点
 - 处理停牌或不可交易状态下的退出价格
 - 生成收益、换手、成本、容量和暴露分析结果
+- 在独立的 `cstree.backtesting.products` 命名空间提供 DailyWatch20 产品选择逻辑
 
 ## 环境要求
 
@@ -33,6 +34,8 @@ uv sync --locked --extra dev
 ```bash
 uv run --extra dev pytest
 ```
+
+基础安装不包含 scikit-learn 或 XGBoost。组合与回测层接收调用方已经计算完成的分数，不负责训练模型。IC 显著性统计直接依赖 SciPy，Parquet 和 YAML 支持继续由 PyArrow 与 PyYAML 提供。
 
 ## 快速开始
 
@@ -163,6 +166,16 @@ from cstree.backtesting import StrategySpec, construct_positions_from_strategy
 
 使用 `PositionBacktestConfig` 和 `run_position_backtest`。这种方式适合从其他模型、优化器或人工流程接收持仓。
 
+### 5. 使用产品选择模块
+
+DailyWatch20 是消费预计算分数的产品规则，不属于通用回测内核。新代码从产品命名空间导入：
+
+```python
+from cstree.backtesting.products import DailyWatch20Config, select_daily_watch20
+```
+
+历史顶层导入继续兼容。`cstree.backtesting.daily_watch20` 模块路径属于弃用兼容层，导入时会发出 `DeprecationWarning`。
+
 ## 输入约定
 
 ### 目标持仓
@@ -210,6 +223,7 @@ from cstree.backtesting import StrategySpec, construct_positions_from_strategy
 | 成本与滑点 | `DetailedTradeFeeModel`、`l2_price_tiered_slippage` |
 | 换手与成本 | `TurnoverBreakdown`、`CostBreakdown`、`name_turnover`、`annualize_turnover`、`turnover_from_trade_weights` |
 | 收益汇总 | `summarize_period_returns` |
+| 产品选择 | `cstree.backtesting.products` 中的 DailyWatch20 API |
 
 未列在顶层导出中的模块仍可供仓库内部使用，其接口稳定性低于上表中的公开入口。
 
@@ -250,7 +264,7 @@ half_l1_turnover = 0.5 * sum(abs(target_weight - drifted_weight))
 
 ## 项目边界
 
-本包从调用方接收信号、持仓和行情数据。数据下载、因子研究、模型训练、具体策略规则、任务编排和实盘下单由调用方或其他项目负责。
+本包从调用方接收信号、持仓和行情数据。数据下载、因子研究、模型训练、任务编排和实盘下单由调用方或其他项目负责。现有 DailyWatch20 规则位于明确的产品命名空间，不会在导入通用回测包时加载。
 
 仓库曾经作为更大研究工作区的一部分维护，目前已经移除对私有数据仓库的运行时依赖。其他项目仍可把它作为子模块或普通 Python 依赖使用。
 
@@ -258,6 +272,7 @@ half_l1_turnover = 0.5 * sum(abs(target_weight - drifted_weight))
 
 - [文档入口](docs/README.md)
 - [组合式回测规范](docs/concepts/backtest-spec.md)
+- [DailyWatch20 产品模块](docs/products/daily-watch20.md)
 - [成本与执行假设](docs/concepts/execution-costs.md)
 - [持仓输出约定](docs/reference/outputs/positions.md)
 - [测试和质量检查](docs/testing.md)

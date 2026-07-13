@@ -1,15 +1,6 @@
-"""Compatibility imports for the DailyWatch20 product module."""
+"""Product-specific portfolio selection applications."""
 
-from warnings import warn
-
-warn(
-    "cstree.backtesting.daily_watch20 is deprecated; "
-    "import DailyWatch20 APIs from cstree.backtesting.products instead",
-    DeprecationWarning,
-    stacklevel=2,
-)
-
-from .products.daily_watch20 import (  # noqa: E402
+from .daily_watch20 import (
     DailyWatch20Config,
     DailyWatch20Receipt,
     DailyWatch20Result,

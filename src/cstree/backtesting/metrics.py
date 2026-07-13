@@ -4,15 +4,11 @@ from typing import cast
 
 import numpy as np
 import pandas as pd
+from scipy import stats as scipy_stats
 
 from cstree.backtesting._symbol_utils import canonicalize_symbol_columns
 
 from .portfolio_selection import apply_rank_offset, apply_rebalance_buffer
-
-try:
-    from scipy import stats as scipy_stats
-except Exception:  # pragma: no cover - optional dependency
-    scipy_stats = None
 
 __all__ = [
     "daily_ic_series",
@@ -81,7 +77,7 @@ def summarize_ic(ic_series: pd.Series) -> dict[str, float]:
     ir = mean / std if std > 0 else np.nan
     t_stat = mean / (std / np.sqrt(n)) if std > 0 else np.nan
     p_value = np.nan
-    if scipy_stats is not None and np.isfinite(t_stat) and n > 1:
+    if np.isfinite(t_stat) and n > 1:
         p_value = float(2 * scipy_stats.t.sf(abs(t_stat), df=n - 1))
     return {
         "n": n,

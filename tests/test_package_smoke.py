@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import importlib
+import importlib.metadata
 import subprocess
 import sys
 from pathlib import Path
@@ -10,7 +11,7 @@ import pytest
 import cstree
 from cstree import backtesting
 
-OWNED_MODULES = (
+CORE_MODULES = (
     "cstree.backtesting.api",
     "cstree.backtesting.backtest_spec",
     "cstree.backtesting.engine",
@@ -21,7 +22,6 @@ OWNED_MODULES = (
     "cstree.backtesting.a_share_round_lot_diagnostics",
     "cstree.backtesting.benchmark_ladder",
     "cstree.backtesting.contracts",
-    "cstree.backtesting.daily_watch20",
     "cstree.backtesting.exposure",
     "cstree.backtesting.exposure_screen",
     "cstree.backtesting.reporting",
@@ -37,7 +37,13 @@ OWNED_MODULES = (
     "cstree.backtesting.turnover_attribution",
     "cstree.backtesting.types",
 )
+PRODUCT_MODULES = (
+    "cstree.backtesting.products",
+    "cstree.backtesting.products.daily_watch20",
+)
+OWNED_MODULES = (*CORE_MODULES, *PRODUCT_MODULES)
 FORBIDDEN_RUNTIME_PREFIXES = ("cstree.alpha", "cstree.pipeline")
+FORBIDDEN_ML_PREFIXES = ("sklearn", "xgboost")
 
 
 def test_cstree_namespace_includes_backtesting_package_root() -> None:
@@ -103,6 +109,97 @@ for prefix in {FORBIDDEN_RUNTIME_PREFIXES!r}:
     ]
     if offenders:
         raise SystemExit("loaded forbidden module(s): " + ", ".join(sorted(offenders)))
+"""
+    result = subprocess.run(
+        [sys.executable, "-c", code],
+        capture_output=True,
+        check=False,
+        text=True,
+    )
+
+    assert result.returncode == 0, result.stderr + result.stdout
+
+
+def test_core_import_does_not_load_product_or_ml_modules() -> None:
+    code = f"""
+import importlib
+import sys
+
+for module_name in {CORE_MODULES!r}:
+    importlib.import_module(module_name)
+
+for prefix in {FORBIDDEN_ML_PREFIXES!r}:
+    offenders = [
+        module_name
+        for module_name in sys.modules
+        if module_name == prefix or module_name.startswith(prefix + ".")
+    ]
+    if offenders:
+        raise SystemExit("loaded ML module(s): " + ", ".join(sorted(offenders)))
+
+product_offenders = [
+    module_name
+    for module_name in sys.modules
+    if module_name == "cstree.backtesting.products"
+    or module_name.startswith("cstree.backtesting.products.")
+    or module_name == "cstree.backtesting.daily_watch20"
+]
+if product_offenders:
+    raise SystemExit("loaded product module(s): " + ", ".join(sorted(product_offenders)))
+"""
+    result = subprocess.run(
+        [sys.executable, "-c", code],
+        capture_output=True,
+        check=False,
+        text=True,
+    )
+
+    assert result.returncode == 0, result.stderr + result.stdout
+
+
+def test_installed_base_metadata_does_not_require_ml_frameworks() -> None:
+    requirements = importlib.metadata.requires("portfolio-backtester") or []
+    normalized = [requirement.lower() for requirement in requirements]
+
+    assert not any(requirement.startswith("scikit-learn") for requirement in normalized)
+    assert not any(requirement.startswith("xgboost") for requirement in normalized)
+    assert any(requirement.startswith("scipy") for requirement in normalized)
+
+
+def test_top_level_product_exports_are_lazy_compatibility_aliases() -> None:
+    code = """
+import sys
+import cstree.backtesting as backtesting
+
+assert "cstree.backtesting.products" not in sys.modules
+from cstree.backtesting.products import DailyWatch20Config as canonical
+assert backtesting.DailyWatch20Config is canonical
+"""
+    result = subprocess.run(
+        [sys.executable, "-c", code],
+        capture_output=True,
+        check=False,
+        text=True,
+    )
+
+    assert result.returncode == 0, result.stderr + result.stdout
+
+
+def test_legacy_daily_watch20_module_reexports_with_deprecation_warning() -> None:
+    code = """
+import warnings
+
+with warnings.catch_warnings(record=True) as caught:
+    warnings.simplefilter("always", DeprecationWarning)
+    from cstree.backtesting.daily_watch20 import DailyWatch20Config as legacy
+
+from cstree.backtesting.products import DailyWatch20Config as canonical
+assert legacy is canonical
+messages = [str(item.message) for item in caught if item.category is DeprecationWarning]
+assert messages == [
+    "cstree.backtesting.daily_watch20 is deprecated; "
+    "import DailyWatch20 APIs from cstree.backtesting.products instead"
+]
 """
     result = subprocess.run(
         [sys.executable, "-c", code],
