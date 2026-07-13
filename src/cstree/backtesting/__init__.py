@@ -1,3 +1,5 @@
+from .api import backtest_topk, run_backtest
+from .backtest_spec import BacktestSpec
 from .contracts import (
     POSITIONS_BY_REBALANCE_CONTRACT,
     GroupCap,
@@ -14,7 +16,6 @@ from .daily_watch20 import (
     GuardFactorSpec,
     select_daily_watch20,
 )
-from .engine import backtest_topk
 from .execution import DetailedTradeFeeModel, l2_price_tiered_slippage
 from .metrics import summarize_period_returns
 from .position_backtest import PositionBacktestConfig, PositionBacktestResult, run_position_backtest
@@ -29,6 +30,7 @@ from .types import CostBreakdown
 
 __all__ = [
     "POSITIONS_BY_REBALANCE_CONTRACT",
+    "BacktestSpec",
     "CostBreakdown",
     "DailyWatch20Config",
     "DailyWatch20Receipt",
@@ -48,6 +50,7 @@ __all__ = [
     "construct_positions_from_strategy",
     "l2_price_tiered_slippage",
     "name_turnover",
+    "run_backtest",
     "run_position_backtest",
     "select_daily_watch20",
     "strategy_from_config",

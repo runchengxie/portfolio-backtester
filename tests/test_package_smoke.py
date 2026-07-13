@@ -11,6 +11,8 @@ import cstree
 from cstree import backtesting
 
 OWNED_MODULES = (
+    "cstree.backtesting.api",
+    "cstree.backtesting.backtest_spec",
     "cstree.backtesting.engine",
     "cstree.backtesting.metrics",
     "cstree.backtesting.a_share_executable_oos_topk",
@@ -39,9 +41,10 @@ FORBIDDEN_RUNTIME_PREFIXES = ("cstree.alpha", "cstree.pipeline")
 
 
 def test_cstree_namespace_includes_backtesting_package_root() -> None:
-    namespace_paths = {Path(path).as_posix() for path in cstree.__path__}
+    namespace_paths = {Path(path).resolve() for path in cstree.__path__}
+    package_root = (Path(__file__).parents[1] / "src" / "cstree").resolve()
 
-    assert any(path.endswith("portfolio-backtester/src/cstree") for path in namespace_paths)
+    assert package_root in namespace_paths
 
 
 @pytest.mark.parametrize("module_name", OWNED_MODULES)
@@ -53,6 +56,7 @@ def test_owned_backtesting_modules_import(module_name: str) -> None:
 
 def test_backtesting_package_exports_core_entrypoints() -> None:
     assert set(backtesting.__all__) == {
+        "BacktestSpec",
         "CostBreakdown",
         "DailyWatch20Config",
         "DailyWatch20Receipt",
@@ -74,6 +78,7 @@ def test_backtesting_package_exports_core_entrypoints() -> None:
         "l2_price_tiered_slippage",
         "name_turnover",
         "run_position_backtest",
+        "run_backtest",
         "select_daily_watch20",
         "strategy_from_config",
         "summarize_period_returns",

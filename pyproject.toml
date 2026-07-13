@@ -54,7 +54,11 @@ max-complexity = 18
 combine-as-imports = true
 
 [tool.ty.src]
-include = ["src/cstree/backtesting/types.py"]
+include = [
+  "src/cstree/backtesting/api.py",
+  "src/cstree/backtesting/backtest_spec.py",
+  "src/cstree/backtesting/types.py",
+]
 exclude = [
   ".venv",
   "artifacts",
@@ -67,6 +71,8 @@ exclude = [
 include = [
   "src/cstree/__init__.py",
   "src/cstree/backtesting/__init__.py",
+  "src/cstree/backtesting/api.py",
+  "src/cstree/backtesting/backtest_spec.py",
   "src/cstree/backtesting/capacity.py",
   "src/cstree/backtesting/period_outputs.py",
   "src/cstree/backtesting/portfolio.py",

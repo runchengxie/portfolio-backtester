@@ -5,15 +5,17 @@
 第一次接触项目时，建议按下面的顺序阅读：
 
 1. [根目录 README](../README.md)
-2. [持仓输出约定](reference/outputs/positions.md)
-3. [成本与执行假设](concepts/execution-costs.md)
-4. [测试和质量检查](testing.md)
+2. [组合式回测规范](concepts/backtest-spec.md)
+3. [持仓输出约定](reference/outputs/positions.md)
+4. [成本与执行假设](concepts/execution-costs.md)
+5. [测试和质量检查](testing.md)
 
 ## 文档导航
 
 | 页面 | 主要内容 |
 | --- | --- |
 | [根目录 README](../README.md) | 项目用途、安装方式、快速示例和公开入口 |
+| [组合式回测规范](concepts/backtest-spec.md) | `BacktestSpec`、配置序列化和历史入口迁移 |
 | [持仓输出约定](reference/outputs/positions.md) | `positions_by_rebalance.csv` 的字段和校验规则 |
 | [成本与执行假设](concepts/execution-costs.md) | 成本模型、滑点模型、价格选择和适用边界 |
 | [测试和质量检查](testing.md) | 本地命令、CI 阻塞项和实际检查范围 |
@@ -23,6 +25,8 @@
 文档中的接口、字段和默认值应与以下位置保持一致：
 
 - 顶层公开入口：`src/cstree/backtesting/__init__.py`
+- 分数驱动回测规范：`src/cstree/backtesting/backtest_spec.py`
+- 分数驱动公开入口：`src/cstree/backtesting/api.py`
 - 输入和输出契约：`src/cstree/backtesting/contracts.py`
 - 成本与滑点：`src/cstree/backtesting/execution.py`
 - 持仓回放：`src/cstree/backtesting/position_backtest.py`
