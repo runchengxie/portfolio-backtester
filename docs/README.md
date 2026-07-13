@@ -5,19 +5,27 @@
 第一次接触项目时，建议按下面的顺序阅读：
 
 1. [根目录 README](../README.md)
-2. [组合式回测规范](concepts/backtest-spec.md)
-3. [持仓输出约定](reference/outputs/positions.md)
+2. [常用入口](guides/entry-points.md)
+3. [组合式回测规范](concepts/backtest-spec.md)
 4. [成本与执行假设](concepts/execution-costs.md)
-5. [测试和质量检查](testing.md)
+5. [换手率口径](concepts/turnover.md)
+6. [成本口径](concepts/cost-breakdown.md)
+7. [持仓输出约定](reference/outputs/positions.md)
+8. [公开入口](reference/public-api.md)
+9. [测试和质量检查](testing.md)
 
 ## 文档导航
 
 | 页面 | 主要内容 |
 | --- | --- |
-| [根目录 README](../README.md) | 项目用途、安装方式、快速示例和公开入口 |
+| [根目录 README](../README.md) | 项目用途、安装方式、快速示例和文档导航 |
+| [常用入口](guides/entry-points.md) | 四种调用方式的详细示例 |
 | [组合式回测规范](concepts/backtest-spec.md) | `BacktestSpec`、配置序列化和历史入口迁移 |
-| [持仓输出约定](reference/outputs/positions.md) | `positions_by_rebalance.csv` 的字段和校验规则 |
 | [成本与执行假设](concepts/execution-costs.md) | 成本模型、滑点模型、价格选择和适用边界 |
+| [换手率口径](concepts/turnover.md) | `name_turnover` 与 `one_way_turnover` 的定义和公式 |
+| [成本口径](concepts/cost-breakdown.md) | `CostBreakdown` 的分项字段说明 |
+| [持仓输出约定](reference/outputs/positions.md) | `positions_by_rebalance.csv` 的字段和校验规则 |
+| [公开入口](reference/public-api.md) | 完整的顶层公开 API 列表 |
 | [测试和质量检查](testing.md) | 本地命令、CI 阻塞项和实际检查范围 |
 
 ## 事实来源
