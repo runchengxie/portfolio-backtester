@@ -24,9 +24,7 @@ def test_turnover_breakdown_preserves_initial_charge_convention() -> None:
 
 
 def test_turnover_breakdown_exposes_buy_sell_and_gross_weights() -> None:
-    breakdown = turnover_from_trade_weights(
-        pd.Series({"kept": 0.0, "sold": -0.75, "bought": 0.75})
-    )
+    breakdown = turnover_from_trade_weights(pd.Series({"kept": 0.0, "sold": -0.75, "bought": 0.75}))
 
     assert breakdown.buy_weight == pytest.approx(0.75)
     assert breakdown.sell_weight == pytest.approx(0.75)
