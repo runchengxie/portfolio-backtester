@@ -6,7 +6,8 @@ from typing import Literal, cast
 
 import pandas as pd
 
-from .execution import CostModel, ExecutionModel, SelectionConstraints, SlippageModel
+from .api import backtest_topk as backtest_topk
+from .execution import CostModel, SelectionConstraints, SlippageModel
 from .leg_helpers import (
     _build_backtest_leg_result,
     _compute_trade_summary as _compute_trade_summary,
@@ -24,7 +25,6 @@ from .topk_context import (
     _BacktestRunContext,
     _BacktestTopKConfig,
     _build_backtest_return_bundle,
-    _build_backtest_topk_config,
     _prepare_backtest_run_context,
 )
 from .types import BacktestLegResult, BacktestPeriodResult, BacktestPositionState
@@ -747,40 +747,11 @@ def _run_backtest_periods(
     return accumulator
 
 
-def backtest_topk(
+def _run_backtest_config(
     data: pd.DataFrame,
-    pred_col: str,
-    price_col: str,
-    rebalance_dates: list[pd.Timestamp],
-    top_k: int,
-    shift_days: int,
-    cost_bps: float,
-    trading_days_per_year: int,
-    exit_mode: Literal["rebalance", "label_horizon"] = "rebalance",
-    exit_horizon_days: int | None = None,
-    long_only: bool = True,
-    short_k: int | None = None,
-    weighting: Literal["equal", "signal", "sqrt_liquidity"] = "equal",
-    buffer_exit: int = 0,
-    buffer_entry: int = 0,
-    tradable_col: str | None = None,
-    group_col: str | None = None,
-    max_names_per_group: int | None = None,
-    exit_price_policy: Literal["strict", "ffill", "delay"] = "strict",
-    exit_fallback_policy: Literal["ffill", "none"] = "ffill",
-    execution: ExecutionModel | None = None,
-    pricing_data: pd.DataFrame | None = None,
-    liquidity_floor_col: str | None = None,
-    liquidity_floor_quantile: float | None = None,
-    weighting_liquidity_col: str = "medadv20_amount",
-    max_turnover_per_rebalance: float | None = None,
-    rank_offset: int = 0,
-    selection_tiebreak_col: str | None = None,
-    selection_score_bucket_size: float | None = None,
-    selection_score_margin: float | None = None,
-    selection_score_margin_rank_limit: int | None = None,
+    *,
+    config: _BacktestTopKConfig,
 ):
-    config = _build_backtest_topk_config(locals())
     run_context = _prepare_backtest_run_context(data, config=config)
     if run_context is None:
         return None

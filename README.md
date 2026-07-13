@@ -8,6 +8,7 @@
 
 - 根据模型分数构造 Top-K 多头或多空组合
 - 设置持仓缓冲区、分组数量上限、流动性筛选和换手上限
+- 使用可序列化的 `BacktestSpec` 组合策略、执行假设和回测区间
 - 从 `StrategySpec` 生成标准目标持仓
 - 回放已有目标持仓，支持不同的开仓价和退出价
 - 估算固定基点成本、分方向费用和参与率滑点
@@ -91,17 +92,58 @@ print(result.summary['stats'])
 | `periods` | 每个持有期的价格、收益、换手和成本明细 |
 | `summary` | 配置快照和汇总统计 |
 
-## 三种常用入口
+## 常用入口
 
-### 1. 从分数直接运行 Top-K 回测
+### 1. 使用组合规范运行回测
 
-使用 `backtest_topk`。它支持多头、多空、持仓缓冲、分组约束、流动性筛选、换手上限、独立定价数据和执行模型。
+新代码建议使用 `BacktestSpec` 和 `run_backtest`。`StrategySpec` 负责选股和权重设置，`ExecutionModel` 负责开仓价、退出规则、成本、滑点和筛选约束。回测区间和调仓设置保存在 `BacktestSpec` 中。
+
+```python
+import pandas as pd
+
+from cstree.backtesting import BacktestSpec, StrategySpec, run_backtest
+from cstree.backtesting.execution import build_execution_model
+
+# scores 的 DataFrame 构造省略。它至少包含 trade_date、symbol、signal 和 close。
+execution = build_execution_model(
+    None,
+    default_cost_bps=10.0,
+    default_exit_price_policy='strict',
+    default_exit_fallback_policy='ffill',
+    default_price_col='close',
+)
+spec = BacktestSpec(
+    strategy=StrategySpec(
+        name='topk-demo',
+        type='topk_buffered_long_only',
+        score_col='signal',
+        top_k=20,
+        buffer_exit=5,
+        weighting='equal',
+    ),
+    execution=execution,
+    rebalance_dates=(
+        pd.Timestamp('2026-01-05'),
+        pd.Timestamp('2026-01-12'),
+    ),
+    shift_days=1,
+    trading_days_per_year=252,
+)
+
+result = run_backtest(scores, spec)
+```
+
+`BacktestSpec.to_mapping()` 可以生成适合写入 JSON 或 YAML 的配置，`BacktestSpec.from_mapping()` 可以恢复规范。行情表不进入配置。信号和定价数据在运行时传给 `run_backtest`。
+
+### 2. 使用历史 Top-K 兼容入口
+
+`backtest_topk` 保留原有签名和默认行为，并把参数转换为 `StrategySpec`、`ExecutionModel` 和 `BacktestSpec` 后调用同一条执行路径。现阶段该入口不会发出弃用警告。
 
 ```python
 from cstree.backtesting import backtest_topk
 ```
 
-该函数参数较多，建议先准备以下字段：
+这两个分数驱动入口通常需要以下字段：
 
 - `trade_date`
 - `symbol`
@@ -109,7 +151,7 @@ from cstree.backtesting import backtest_topk
 - 价格列，例如 `close`
 - 执行模型需要的流动性列或可交易标记
 
-### 2. 先构造持仓，再单独回测
+### 3. 先构造持仓，再单独回测
 
 使用 `StrategySpec` 和 `construct_positions_from_strategy` 生成标准持仓，再把结果交给 `run_position_backtest`。这种方式便于检查目标持仓、保存中间结果和复用定价逻辑。
 
@@ -117,7 +159,7 @@ from cstree.backtesting import backtest_topk
 from cstree.backtesting import StrategySpec, construct_positions_from_strategy
 ```
 
-### 3. 回放已有目标持仓
+### 4. 回放已有目标持仓
 
 使用 `PositionBacktestConfig` 和 `run_position_backtest`。这种方式适合从其他模型、优化器或人工流程接收持仓。
 
@@ -161,7 +203,7 @@ from cstree.backtesting import StrategySpec, construct_positions_from_strategy
 
 | 类别 | 入口 |
 | --- | --- |
-| Top-K 回测 | `backtest_topk` |
+| 分数驱动回测 | `BacktestSpec`、`run_backtest`、`backtest_topk` |
 | 策略和持仓构造 | `StrategySpec`、`GroupCap`、`strategy_from_config`、`construct_positions_from_strategy` |
 | 持仓回放 | `PositionBacktestConfig`、`PositionBacktestResult`、`run_position_backtest` |
 | 持仓契约 | `POSITIONS_BY_REBALANCE_CONTRACT`、`validate_positions_by_rebalance_frame`、`assert_positions_by_rebalance_frame` |
@@ -215,6 +257,7 @@ half_l1_turnover = 0.5 * sum(abs(target_weight - drifted_weight))
 ## 文档
 
 - [文档入口](docs/README.md)
+- [组合式回测规范](docs/concepts/backtest-spec.md)
 - [成本与执行假设](docs/concepts/execution-costs.md)
 - [持仓输出约定](docs/reference/outputs/positions.md)
 - [测试和质量检查](docs/testing.md)

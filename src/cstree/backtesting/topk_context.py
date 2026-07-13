@@ -1,12 +1,12 @@
 from __future__ import annotations
 
-from collections.abc import Mapping
 from dataclasses import dataclass, field
-from typing import Any, Literal
+from typing import Literal, cast
 
 import numpy as np
 import pandas as pd
 
+from .backtest_spec import BacktestSpec
 from .execution import ExecutionModel
 from .metrics import summarize_period_returns
 from .portfolio_weights import normalize_weighting_mode
@@ -90,38 +90,45 @@ class _BacktestPeriodEvaluation:
     short_state: BacktestPositionState
 
 
-def _build_backtest_topk_config(values: Mapping[str, Any]) -> _BacktestTopKConfig:
+def _build_backtest_spec_config(
+    spec: BacktestSpec,
+    *,
+    pricing_data: pd.DataFrame | None,
+) -> _BacktestTopKConfig:
+    strategy = spec.strategy
+    group_cap = strategy.group_cap
+    execution = spec.execution
     return _BacktestTopKConfig(
-        pred_col=values["pred_col"],
-        price_col=values["price_col"],
-        rebalance_dates=values["rebalance_dates"],
-        top_k=values["top_k"],
-        rank_offset=values["rank_offset"],
-        shift_days=values["shift_days"],
-        cost_bps=values["cost_bps"],
-        trading_days_per_year=values["trading_days_per_year"],
-        exit_mode=values["exit_mode"],
-        exit_horizon_days=values["exit_horizon_days"],
-        long_only=values["long_only"],
-        short_k=values["short_k"],
-        weighting=values["weighting"],
-        buffer_exit=values["buffer_exit"],
-        buffer_entry=values["buffer_entry"],
-        tradable_col=values["tradable_col"],
-        group_col=values["group_col"],
-        max_names_per_group=values["max_names_per_group"],
-        exit_price_policy=values["exit_price_policy"],
-        exit_fallback_policy=values["exit_fallback_policy"],
-        execution=values["execution"],
-        pricing_data=values["pricing_data"],
-        liquidity_floor_col=values["liquidity_floor_col"],
-        liquidity_floor_quantile=values["liquidity_floor_quantile"],
-        weighting_liquidity_col=values["weighting_liquidity_col"],
-        max_turnover_per_rebalance=values["max_turnover_per_rebalance"],
-        selection_tiebreak_col=values["selection_tiebreak_col"],
-        selection_score_bucket_size=values["selection_score_bucket_size"],
-        selection_score_margin=values["selection_score_margin"],
-        selection_score_margin_rank_limit=values["selection_score_margin_rank_limit"],
+        pred_col=strategy.score_col,
+        price_col=execution.entry_policy.price_col,
+        rebalance_dates=list(spec.rebalance_dates),
+        top_k=strategy.top_k,
+        rank_offset=spec.rank_offset,
+        shift_days=spec.shift_days,
+        cost_bps=0.0,
+        trading_days_per_year=spec.trading_days_per_year,
+        exit_mode=spec.exit_mode,
+        exit_horizon_days=spec.exit_horizon_days,
+        long_only=strategy.long_only,
+        short_k=strategy.short_k,
+        weighting=cast(Literal["equal", "signal", "sqrt_liquidity"], strategy.weighting),
+        buffer_exit=strategy.buffer_exit,
+        buffer_entry=strategy.buffer_entry,
+        tradable_col=spec.tradable_col,
+        group_col=group_cap.column if group_cap is not None else None,
+        max_names_per_group=group_cap.max_names if group_cap is not None else None,
+        exit_price_policy=execution.exit_policy.price_policy,
+        exit_fallback_policy=execution.exit_policy.fallback_policy,
+        execution=execution,
+        pricing_data=pricing_data,
+        liquidity_floor_col=spec.liquidity_floor_col,
+        liquidity_floor_quantile=spec.liquidity_floor_quantile,
+        weighting_liquidity_col=spec.weighting_liquidity_col,
+        max_turnover_per_rebalance=spec.max_turnover_per_rebalance,
+        selection_tiebreak_col=spec.selection_tiebreak_col,
+        selection_score_bucket_size=spec.selection_score_bucket_size,
+        selection_score_margin=spec.selection_score_margin,
+        selection_score_margin_rank_limit=spec.selection_score_margin_rank_limit,
     )
 
 
