@@ -1,50 +1,10 @@
-name: owner-native namespace migration v3
+name: superseded namespace migration v3
 
 on:
-  pull_request:
-    branches: [main]
-
-permissions:
-  contents: write
+  workflow_dispatch:
 
 jobs:
-  migrate:
-    if: github.head_ref == 'refactor/owner-native-namespace'
+  superseded:
     runs-on: ubuntu-latest
-    timeout-minutes: 20
     steps:
-      - uses: actions/checkout@v6
-        with:
-          ref: ${{ github.event.pull_request.head.ref }}
-          fetch-depth: 0
-          token: ${{ github.token }}
-      - uses: actions/setup-python@v6
-        with:
-          python-version: '3.12'
-      - name: Apply migrated tree
-        shell: bash
-        run: |
-          set -euo pipefail
-          git show 2a9dbed7dc8d32edea17af1fccfe88e7ff8f0049:.github/workflows/owner-native-namespace-migration-v2.yml > /tmp/migration.yml
-          python - <<'PY'
-          from pathlib import Path
-          text = Path('/tmp/migration.yml').read_text(encoding='utf-8')
-          start = text.index("          python - <<'PY'\n") + len("          python - <<'PY'\n")
-          end = text.index("\n          PY", start)
-          body = text[start:end]
-          lines = [line[10:] if line.startswith('          ') else line for line in body.splitlines()]
-          Path('/tmp/migrate.py').write_text('\n'.join(lines) + '\n', encoding='utf-8')
-          PY
-          python /tmp/migrate.py
-          git rm .github/workflows/owner-native-namespace-migration.yml
-          git rm .github/workflows/owner-native-namespace-migration-v2.yml
-          git rm .github/workflows/owner-native-namespace-migration-v3.yml
-      - name: Commit migrated tree
-        shell: bash
-        run: |
-          set -euo pipefail
-          git config user.name 'github-actions[bot]'
-          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
-          git add -A
-          git commit -m 'refactor(namespace): move backtesting APIs to portfolio_backtester'
-          git push origin HEAD:${{ github.event.pull_request.head.ref }}
+      - run: echo 'Superseded by owner-native-namespace-migration-v4.yml'
