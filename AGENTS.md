@@ -4,7 +4,7 @@
 
 ## 仓库职责
 
-本仓库维护 `cstree.backtesting` 包，主要负责：
+本仓库维护 `portfolio_backtester` 包，主要负责：
 
 - Top-K 组合构造
 - 目标持仓生成和校验
@@ -67,8 +67,8 @@ scripts/dev/run_tests.sh basedpyright
 
 - 保持仓库可以独立安装和测试。
 - 不通过相邻仓库的源码路径补齐导入。
-- 不在运行时导入 `cstree.alpha` 或 `cstree.pipeline`。
-- 修改顶层公开入口时，同步更新 `src/cstree/backtesting/__init__.py`、包级冒烟测试和 `README.md`。
+- 不在运行时导入 `alpha_research` 或 `strategy_pipeline.pipeline`。
+- 修改顶层公开入口时，同步更新 `src/portfolio_backtester/__init__.py`、包级冒烟测试和 `README.md`。
 - 修改 `positions_by_rebalance.csv` 契约时，同步更新 `contracts.py`、契约测试和持仓文档。
 - 修改成本、滑点、交易日历或退出价格逻辑时，补充能够覆盖边界条件的测试。
 - 新增通用组合构造能力时，至少覆盖正常构造、空输入、重复证券、持仓重叠和跨期变化。

@@ -4,7 +4,7 @@ import numpy as np
 import pandas as pd
 import pytest
 
-from cstree.backtesting.execution_sim import (
+from portfolio_backtester.execution_sim import (
     ExecutionSimConfig,
     TradeFeeModel,
     build_execution_sim_config,

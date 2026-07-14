@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import pandas as pd
 
-from cstree.backtesting.strategy import construct_positions_from_strategy, strategy_from_config
+from portfolio_backtester.strategy import construct_positions_from_strategy, strategy_from_config
 
 
 def _signals() -> pd.DataFrame:

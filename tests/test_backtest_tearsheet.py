@@ -2,7 +2,7 @@ from datetime import datetime
 
 import pandas as pd
 
-from cstree.backtesting.tearsheet import (
+from portfolio_backtester.tearsheet import (
     build_backtest_tearsheet_html,
     write_backtest_tearsheet,
 )

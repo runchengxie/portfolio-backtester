@@ -3,7 +3,7 @@ from __future__ import annotations
 import pandas as pd
 import pytest
 
-from cstree.backtesting.liquidity_proxy import (
+from portfolio_backtester.liquidity_proxy import (
     derive_execution_liquidity_proxy_columns,
     parse_execution_liquidity_proxy_column,
 )

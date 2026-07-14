@@ -1,7 +1,7 @@
 import pandas as pd
 import pytest
 
-from cstree.backtesting.freshness_overlay import apply_freshness_overlay
+from portfolio_backtester.freshness_overlay import apply_freshness_overlay
 
 
 def test_volume_only_freshness_overlay_blends_base_and_volume_ranks():

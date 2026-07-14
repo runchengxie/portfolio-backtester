@@ -4,7 +4,7 @@ import numpy as np
 import pandas as pd
 import pytest
 
-from cstree.backtesting.portfolio import build_position_weights, build_positions_by_rebalance
+from portfolio_backtester.portfolio import build_position_weights, build_positions_by_rebalance
 
 
 def test_sqrt_liquidity_weighting_uses_liquidity_and_caps_concentration():

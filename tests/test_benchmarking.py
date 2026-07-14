@@ -3,7 +3,7 @@ import logging
 import pandas as pd
 import pytest
 
-from cstree.backtesting.benchmarking import build_benchmark_series, warn_if_delay_exit_lag
+from portfolio_backtester.benchmarking import build_benchmark_series, warn_if_delay_exit_lag
 
 
 def test_build_benchmark_series_compounds_daily_returns_over_periods():

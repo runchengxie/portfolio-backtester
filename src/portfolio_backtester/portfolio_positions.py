@@ -5,7 +5,7 @@ from dataclasses import dataclass
 import numpy as np
 import pandas as pd
 
-from cstree.backtesting._symbol_utils import canonicalize_symbol_columns
+from portfolio_backtester._symbol_utils import canonicalize_symbol_columns
 
 from .execution import ExecutionModel, SelectionConstraints
 from .execution_calendar import build_execution_date_map

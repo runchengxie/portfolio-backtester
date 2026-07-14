@@ -19,8 +19,8 @@
 ```python
 import pandas as pd
 
-from cstree.backtesting import BacktestSpec, StrategySpec, run_backtest
-from cstree.backtesting.execution import build_execution_model
+from portfolio_backtester import BacktestSpec, StrategySpec, run_backtest
+from portfolio_backtester.execution import build_execution_model
 
 execution = build_execution_model(
     {

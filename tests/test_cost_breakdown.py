@@ -3,7 +3,7 @@ from __future__ import annotations
 import pandas as pd
 import pytest
 
-from cstree.backtesting.types import BacktestLegResult, CostBreakdown
+from portfolio_backtester.types import BacktestLegResult, CostBreakdown
 
 
 def test_cost_breakdown_reports_components_and_total() -> None:

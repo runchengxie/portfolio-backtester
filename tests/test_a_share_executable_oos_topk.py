@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import pytest
 
-from cstree.backtesting import a_share_executable_oos_topk as executable_topk
+from portfolio_backtester import a_share_executable_oos_topk as executable_topk
 
 
 def test_flat_cost_mode_preserves_cost_bps_compatibility(

@@ -3,8 +3,8 @@ from __future__ import annotations
 import pandas as pd
 import pytest
 
-from cstree.backtesting.a_share_round_lot import RoundLotVariant
-from cstree.backtesting.a_share_round_lot_diagnostics import simulate_round_lot_variant
+from portfolio_backtester.a_share_round_lot import RoundLotVariant
+from portfolio_backtester.a_share_round_lot_diagnostics import simulate_round_lot_variant
 
 
 def test_simulate_round_lot_variant_preserves_probe_outputs() -> None:

@@ -9,8 +9,8 @@
 ```python
 import pandas as pd
 
-from cstree.backtesting import BacktestSpec, StrategySpec, run_backtest
-from cstree.backtesting.execution import build_execution_model
+from portfolio_backtester import BacktestSpec, StrategySpec, run_backtest
+from portfolio_backtester.execution import build_execution_model
 
 # scores 的 DataFrame 构造省略。它至少包含 trade_date、symbol、signal 和 close。
 execution = build_execution_model(
@@ -56,7 +56,7 @@ result = run_backtest(scores, spec)
 `backtest_topk` 保留原有签名和默认行为，并把参数转换为 `StrategySpec`、`ExecutionModel` 和 `BacktestSpec` 后调用同一条执行路径。现阶段该入口不会发出弃用警告。
 
 ```python
-from cstree.backtesting import backtest_topk
+from portfolio_backtester import backtest_topk
 ```
 
 ## 3. 先构造持仓，再单独回测
@@ -64,7 +64,7 @@ from cstree.backtesting import backtest_topk
 使用 `StrategySpec` 和 `construct_positions_from_strategy` 生成标准持仓，再把结果交给 `run_position_backtest`。这种方式便于检查目标持仓、保存中间结果和复用定价逻辑。
 
 ```python
-from cstree.backtesting import StrategySpec, construct_positions_from_strategy
+from portfolio_backtester import StrategySpec, construct_positions_from_strategy
 ```
 
 ## 4. 回放已有目标持仓

@@ -4,7 +4,7 @@ import math
 
 import pandas as pd
 
-from cstree.backtesting.post_buffer_exposure_repair import (
+from portfolio_backtester.post_buffer_exposure_repair import (
     PostBufferExposureRepairConfig,
     repair_post_buffer_exposure,
 )

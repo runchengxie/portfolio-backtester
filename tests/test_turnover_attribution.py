@@ -3,7 +3,7 @@ from __future__ import annotations
 import pandas as pd
 import pytest
 
-from cstree.backtesting.turnover_attribution import compute_turnover_attribution
+from portfolio_backtester.turnover_attribution import compute_turnover_attribution
 
 
 def test_compute_turnover_attribution_explains_window_industry_feature_and_regime() -> None:

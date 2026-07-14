@@ -7,7 +7,7 @@ from typing import Any, cast
 import numpy as np
 import pandas as pd
 
-from cstree.backtesting._symbol_utils import canonicalize_symbol_columns
+from portfolio_backtester._symbol_utils import canonicalize_symbol_columns
 
 DEFAULT_INDUSTRY_COLUMNS = (
     "first_industry_name",

@@ -139,7 +139,7 @@
 下面的配置使用分方向费用、参与率滑点、开盘建仓和延迟退出：
 
 ```python
-from cstree.backtesting.execution import build_execution_model
+from portfolio_backtester.execution import build_execution_model
 
 execution = build_execution_model(
     {

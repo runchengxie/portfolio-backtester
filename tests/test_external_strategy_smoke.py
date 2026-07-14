@@ -8,7 +8,7 @@ from pathlib import Path
 import pandas as pd
 import pytest
 
-from cstree.backtesting import (
+from portfolio_backtester import (
     PositionBacktestConfig,
     StrategySpec,
     construct_positions_from_strategy,
@@ -87,7 +87,7 @@ import sys
 import pandas as pd
 
 import cstree
-from cstree.backtesting import (
+from portfolio_backtester import (
     PositionBacktestConfig,
     StrategySpec,
     construct_positions_from_strategy,
@@ -135,10 +135,10 @@ if abs(float(result.periods.loc[0, "gross_return"]) - 0.10) > 1e-12:
 offenders = sorted(
     name
     for name in sys.modules
-    if name == "cstree.alpha"
-    or name.startswith("cstree.alpha.")
-    or name == "cstree.pipeline"
-    or name.startswith("cstree.pipeline.")
+    if name == "alpha_research"
+    or name.startswith("alpha_research.")
+    or name == "strategy_pipeline.pipeline"
+    or name.startswith("strategy_pipeline.pipeline.")
 )
 if offenders:
     raise SystemExit("loaded forbidden module(s): " + ", ".join(offenders))

@@ -2,7 +2,7 @@ import pandas as pd
 import pytest
 import yaml
 
-from cstree.backtesting import benchmark_ladder
+from portfolio_backtester import benchmark_ladder
 
 
 def _write_returns(path, column, dates, values):

@@ -65,7 +65,7 @@ rebalance_date,entry_date,symbol,weight,side,signal,rank
 可以使用以下函数进行校验：
 
 ```python
-from cstree.backtesting import (
+from portfolio_backtester import (
     assert_positions_by_rebalance_frame,
     validate_positions_by_rebalance_frame,
 )

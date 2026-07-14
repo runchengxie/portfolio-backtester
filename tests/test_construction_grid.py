@@ -5,8 +5,8 @@ import pandas as pd
 import pytest
 import yaml
 
-from cstree.backtesting import construction_grid
-from cstree.backtesting.engine import backtest_topk
+from portfolio_backtester import construction_grid
+from portfolio_backtester.engine import backtest_topk
 
 
 def _scored_data() -> pd.DataFrame:

@@ -3,7 +3,7 @@ from __future__ import annotations
 import numpy as np
 import pandas as pd
 
-from cstree.backtesting.rebalance import (
+from portfolio_backtester.rebalance import (
     estimate_rebalance_gap,
     get_rebalance_dates,
     sample_rebalance_frame,

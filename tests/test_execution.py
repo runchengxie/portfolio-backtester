@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import pytest
 
-from cstree.backtesting.execution import (
+from portfolio_backtester.execution import (
     BpsCostModel,
     DetailedTradeFeeModel,
     ExitPolicy,

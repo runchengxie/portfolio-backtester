@@ -4,7 +4,7 @@ import math
 
 import pandas as pd
 
-from cstree.backtesting.position_backtest import (
+from portfolio_backtester.position_backtest import (
     PositionBacktestConfig,
     run_position_backtest,
 )

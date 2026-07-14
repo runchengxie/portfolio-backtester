@@ -1,6 +1,6 @@
 # 公开入口
 
-下面这些对象可以直接从 `cstree.backtesting` 导入：
+下面这些对象可以直接从 `portfolio_backtester` 导入：
 
 | 类别 | 入口 |
 |------|------|
@@ -14,4 +14,4 @@
 
 未列在顶层导出中的模块仍可供仓库内部使用，其接口稳定性低于上表中的公开入口。
 
-完整导出列表见 `src/cstree/backtesting/__init__.py`。
+完整导出列表见 `src/portfolio_backtester/__init__.py`。
