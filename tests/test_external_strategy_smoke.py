@@ -80,13 +80,15 @@ def test_external_signal_can_build_positions_and_run_position_backtest() -> None
     assert result.periods.loc[0, "gross_return"] == pytest.approx(0.10)
 
 
-def test_external_signal_smoke_runs_without_alpha_or_pipeline_namespace() -> None:
+def test_external_signal_smoke_uses_only_owner_native_package() -> None:
     code = """
+import os
 import sys
+from pathlib import Path
 
 import pandas as pd
 
-import cstree
+import portfolio_backtester
 from portfolio_backtester import (
     PositionBacktestConfig,
     StrategySpec,
@@ -94,9 +96,10 @@ from portfolio_backtester import (
     run_position_backtest,
 )
 
-namespace_paths = [str(path) for path in cstree.__path__]
-if any("alpha-research" in path or "strategy-pipeline" in path for path in namespace_paths):
-    raise SystemExit("unexpected sibling cstree namespace path(s): " + ", ".join(namespace_paths))
+package_root = Path(portfolio_backtester.__file__).resolve().parent
+expected_package_root = Path(os.environ["PYTHONPATH"]).resolve() / "portfolio_backtester"
+if package_root != expected_package_root:
+    raise SystemExit(f"unexpected portfolio_backtester package root: {package_root}")
 
 signals = pd.DataFrame(
     {
@@ -135,7 +138,9 @@ if abs(float(result.periods.loc[0, "gross_return"]) - 0.10) > 1e-12:
 offenders = sorted(
     name
     for name in sys.modules
-    if name == "alpha_research"
+    if name == "cstree"
+    or name.startswith("cstree.")
+    or name == "alpha_research"
     or name.startswith("alpha_research.")
     or name == "strategy_pipeline.pipeline"
     or name.startswith("strategy_pipeline.pipeline.")

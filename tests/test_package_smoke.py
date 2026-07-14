@@ -7,8 +7,7 @@ from pathlib import Path
 
 import pytest
 
-import cstree
-from cstree import backtesting
+import portfolio_backtester
 
 OWNED_MODULES = (
     "portfolio_backtester.api",
@@ -37,25 +36,25 @@ OWNED_MODULES = (
     "portfolio_backtester.turnover_attribution",
     "portfolio_backtester.types",
 )
-FORBIDDEN_RUNTIME_PREFIXES = ("alpha_research", "strategy_pipeline.pipeline")
+FORBIDDEN_RUNTIME_PREFIXES = ("cstree", "alpha_research", "strategy_pipeline.pipeline")
 
 
-def test_cstree_namespace_includes_backtesting_package_root() -> None:
-    namespace_paths = {Path(path).resolve() for path in cstree.__path__}
-    package_root = (Path(__file__).parents[1] / "src" / "cstree").resolve()
+def test_portfolio_backtester_package_uses_owner_native_root() -> None:
+    package_root = Path(portfolio_backtester.__file__).resolve().parent
+    expected_package_root = (Path(__file__).parents[1] / "src" / "portfolio_backtester").resolve()
 
-    assert package_root in namespace_paths
+    assert package_root == expected_package_root
 
 
 @pytest.mark.parametrize("module_name", OWNED_MODULES)
-def test_owned_backtesting_modules_import(module_name: str) -> None:
+def test_owned_modules_import(module_name: str) -> None:
     module = importlib.import_module(module_name)
 
     assert module.__name__ == module_name
 
 
-def test_backtesting_package_exports_core_entrypoints() -> None:
-    assert set(backtesting.__all__) == {
+def test_portfolio_backtester_package_exports_core_entrypoints() -> None:
+    assert set(portfolio_backtester.__all__) == {
         "BacktestSpec",
         "CostBreakdown",
         "DailyWatch20Config",
@@ -87,7 +86,7 @@ def test_backtesting_package_exports_core_entrypoints() -> None:
     }
 
 
-def test_owned_backtesting_modules_do_not_load_alpha_or_pipeline() -> None:
+def test_owned_modules_do_not_load_legacy_or_sibling_namespaces() -> None:
     code = f"""
 import importlib
 import sys

@@ -17,8 +17,9 @@ def _escapes_owner(path: Path, level: int) -> bool:
 
 def main() -> int:
     offenders: list[str] = []
-    if (SRC / "cstree").exists():
-        offenders.append("src/cstree must not be shipped by portfolio-backtester")
+    for path in sorted((SRC / "cstree").rglob("*.py")):
+        relative = path.relative_to(ROOT)
+        offenders.append(f"legacy namespace source must not be shipped: {relative}")
 
     for path in sorted(PACKAGE.rglob("*.py")):
         text = path.read_text(encoding="utf-8")
@@ -33,11 +34,14 @@ def main() -> int:
             if isinstance(node, ast.Import):
                 for alias in node.names:
                     if alias.name.startswith(FORBIDDEN_OWNERS):
-                        offenders.append(f"cross-owner import: {relative}:{node.lineno}:{alias.name}")
+                        offenders.append(
+                            f"cross-owner import: {relative}:{node.lineno}:{alias.name}"
+                        )
             elif isinstance(node, ast.ImportFrom):
                 if node.level and _escapes_owner(path, node.level):
                     offenders.append(
-                        f"relative import escapes owner: {relative}:{node.lineno}:level={node.level}"
+                        "relative import escapes owner: "
+                        f"{relative}:{node.lineno}:level={node.level}"
                     )
                 module = node.module or ""
                 if module.startswith(FORBIDDEN_OWNERS):
