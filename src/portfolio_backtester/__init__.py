@@ -24,6 +24,12 @@ from .daily_watch20 import (
     GuardFactorSpec,
     select_daily_watch20,
 )
+from .evidence_receipts import (
+    build_portfolio_sizing_receipt,
+    series_sha256,
+    sha256_file,
+    write_receipt,
+)
 from .execution import DetailedTradeFeeModel, l2_price_tiered_slippage
 from .hrp import HrpConfig, HrpResult, hierarchical_risk_parity, rolling_hrp_weights
 from .metrics import summarize_period_returns
@@ -69,6 +75,7 @@ __all__ = [
     "assert_positions_by_rebalance_frame",
     "average_active_bets",
     "backtest_topk",
+    "build_portfolio_sizing_receipt",
     "build_sized_weights",
     "build_sizing_receipt",
     "construct_positions_from_strategy",
@@ -84,10 +91,13 @@ __all__ = [
     "run_backtest",
     "run_position_backtest",
     "select_daily_watch20",
+    "series_sha256",
+    "sha256_file",
     "strategy_failure_probability",
     "strategy_from_config",
     "summarize_period_returns",
     "summarize_strategy_risk",
     "turnover_from_trade_weights",
     "validate_positions_by_rebalance_frame",
+    "write_receipt",
 ]
