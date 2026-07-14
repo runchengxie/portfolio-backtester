@@ -70,7 +70,7 @@ def normalized_hhi(values: pd.Series) -> float:
 def return_concentration(
     returns: pd.Series,
     *,
-    time_frequency: str = "ME",
+    time_frequency: str = "M",
 ) -> dict[str, float]:
     """Calculate positive, negative, and time concentration of bet returns."""
 
@@ -78,7 +78,8 @@ def return_concentration(
     positive = normalized_hhi(values.loc[values > 0])
     negative = normalized_hhi(values.loc[values < 0])
     if isinstance(values.index, pd.DatetimeIndex):
-        time_values = values.abs().resample(time_frequency).sum()
+        periods = values.index.to_period(time_frequency)
+        time_values = values.abs().groupby(periods).sum()
         time_hhi = normalized_hhi(time_values.loc[time_values > 0])
     else:
         time_hhi = float("nan")
