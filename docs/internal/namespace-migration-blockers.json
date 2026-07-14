@@ -1,0 +1,20 @@
+{
+  "blockers": [
+    {
+      "kind": "parent-relative",
+      "level": 2,
+      "line": 12,
+      "module": "execution",
+      "path": "src/portfolio_backtester/execution_sim/core.py"
+    },
+    {
+      "kind": "parent-relative",
+      "level": 2,
+      "line": 13,
+      "module": "metrics",
+      "path": "src/portfolio_backtester/execution_sim/core.py"
+    }
+  ],
+  "owner": "portfolio_backtester",
+  "schema": "namespace_migration_blockers.v1"
+}

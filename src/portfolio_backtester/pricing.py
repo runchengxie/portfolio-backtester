@@ -4,7 +4,7 @@ from typing import Literal
 
 import pandas as pd
 
-from cstree.backtesting._symbol_utils import canonicalize_symbol_columns
+from portfolio_backtester._symbol_utils import canonicalize_symbol_columns
 
 from .contracts import assert_backtest_pricing_frame
 from .execution import (

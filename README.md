@@ -30,7 +30,7 @@ uv run --extra dev pytest
 ```python
 import pandas as pd
 
-from cstree.backtesting import PositionBacktestConfig, run_position_backtest
+from portfolio_backtester import PositionBacktestConfig, run_position_backtest
 
 positions = pd.DataFrame(
     [
@@ -122,3 +122,9 @@ scripts/dev/run_tests.sh basedpyright
 ## 许可证
 
 本仓库当前未附带开源许可证。公开可见不等同于授予复制、修改或再分发权限。计划接受外部使用或贡献时，应先补充明确的许可证。
+
+## Python namespace
+
+The canonical package is `portfolio_backtester`. New code must not add
+`cstree.backtesting` imports. The coordinated `strategy-pipeline` compatibility
+facade owns the old path during workspace 1.x; removal is scheduled for 2.0.

@@ -1,8 +1,8 @@
 import pandas as pd
 import pytest
 
-from cstree.backtesting.execution import build_execution_model
-from cstree.backtesting.position_postprocess import (
+from portfolio_backtester.execution import build_execution_model
+from portfolio_backtester.position_postprocess import (
     apply_position_postprocess,
     rebuild_backtest_from_positions,
 )

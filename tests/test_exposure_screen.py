@@ -3,8 +3,8 @@ from pathlib import Path
 
 import pandas as pd
 
-from cstree.backtesting import exposure_screen
-from cstree.backtesting.exposure import _build_active_exposure_summary_table
+from portfolio_backtester import exposure_screen
+from portfolio_backtester.exposure import _build_active_exposure_summary_table
 
 
 def test_active_exposure_summary_matches_integer_rebalance_dates():

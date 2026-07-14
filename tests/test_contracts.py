@@ -3,7 +3,7 @@ from __future__ import annotations
 import pandas as pd
 import pytest
 
-from cstree.backtesting.contracts import (
+from portfolio_backtester.contracts import (
     BACKTEST_PRICING_CONTRACT,
     BACKTEST_PRICING_CONTRACT_NAME,
     BACKTEST_PRICING_KEY_COLUMNS,

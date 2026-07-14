@@ -5,7 +5,7 @@ from typing import cast
 import numpy as np
 import pandas as pd
 
-from cstree.backtesting._symbol_utils import canonicalize_symbol_columns
+from portfolio_backtester._symbol_utils import canonicalize_symbol_columns
 
 from .portfolio_selection import apply_rank_offset, apply_rebalance_buffer
 

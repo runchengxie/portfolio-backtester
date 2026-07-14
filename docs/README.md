@@ -32,12 +32,12 @@
 
 文档中的接口、字段和默认值应与以下位置保持一致：
 
-- 顶层公开入口：`src/cstree/backtesting/__init__.py`
-- 分数驱动回测规范：`src/cstree/backtesting/backtest_spec.py`
-- 分数驱动公开入口：`src/cstree/backtesting/api.py`
-- 输入和输出契约：`src/cstree/backtesting/contracts.py`
-- 成本与滑点：`src/cstree/backtesting/execution.py`
-- 持仓回放：`src/cstree/backtesting/position_backtest.py`
+- 顶层公开入口：`src/portfolio_backtester/__init__.py`
+- 分数驱动回测规范：`src/portfolio_backtester/backtest_spec.py`
+- 分数驱动公开入口：`src/portfolio_backtester/api.py`
+- 输入和输出契约：`src/portfolio_backtester/contracts.py`
+- 成本与滑点：`src/portfolio_backtester/execution.py`
+- 持仓回放：`src/portfolio_backtester/position_backtest.py`
 - 测试入口：`scripts/dev/run_tests.sh`
 - CI 配置：`.github/workflows/tests.yml`
 

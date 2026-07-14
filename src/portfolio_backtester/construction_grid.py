@@ -11,7 +11,7 @@ import numpy as np
 import pandas as pd
 import yaml
 
-from cstree.backtesting._symbol_utils import canonicalize_symbol_columns
+from portfolio_backtester._symbol_utils import canonicalize_symbol_columns
 
 from . import construction_grid_reports as _construction_grid_reports
 from .benchmarking import build_benchmark_series
@@ -921,7 +921,7 @@ def _resolve_backtest_topk_fn(candidate: Any) -> BacktestTopKFn:
     if candidate is None:
         raise SystemExit(
             "Construction grid requires an injected backtest_topk_fn. "
-            "Use the cstree CLI or pass cstree.backtesting.engine.backtest_topk explicitly."
+            "Use the cstree CLI or pass portfolio_backtester.engine.backtest_topk explicitly."
         )
     if not callable(candidate):
         raise SystemExit("Construction grid backtest_topk_fn must be callable.")

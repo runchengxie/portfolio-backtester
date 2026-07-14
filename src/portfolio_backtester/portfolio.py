@@ -1,7 +1,7 @@
 """Portfolio construction public surface.
 
-Implementation details live in :mod:`cstree.backtesting.portfolio_positions`
-and :mod:`cstree.backtesting.portfolio_weights`.
+Implementation details live in :mod:`portfolio_backtester.portfolio_positions`
+and :mod:`portfolio_backtester.portfolio_weights`.
 """
 
 from __future__ import annotations

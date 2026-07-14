@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "portfolio-backtester"
-version = "0.1.0"
+version = "0.2.0"
 description = "Reusable portfolio construction and research backtesting toolkit"
 readme = "README.md"
 requires-python = ">=3.12"
@@ -30,7 +30,7 @@ package-dir = {"" = "src"}
 
 [tool.setuptools.packages.find]
 where = ["src"]
-include = ["cstree", "cstree.backtesting*"]
+include = ["portfolio_backtester", "portfolio_backtester.*"]
 
 
 [tool.ruff]
@@ -52,12 +52,13 @@ max-complexity = 18
 
 [tool.ruff.lint.isort]
 combine-as-imports = true
+known-first-party = ["portfolio_backtester"]
 
 [tool.ty.src]
 include = [
-  "src/cstree/backtesting/api.py",
-  "src/cstree/backtesting/backtest_spec.py",
-  "src/cstree/backtesting/types.py",
+  "src/portfolio_backtester/api.py",
+  "src/portfolio_backtester/backtest_spec.py",
+  "src/portfolio_backtester/types.py",
 ]
 exclude = [
   ".venv",
@@ -69,17 +70,16 @@ exclude = [
 
 [tool.basedpyright]
 include = [
-  "src/cstree/__init__.py",
-  "src/cstree/backtesting/__init__.py",
-  "src/cstree/backtesting/api.py",
-  "src/cstree/backtesting/backtest_spec.py",
-  "src/cstree/backtesting/capacity.py",
-  "src/cstree/backtesting/period_outputs.py",
-  "src/cstree/backtesting/portfolio.py",
-  "src/cstree/backtesting/reports.py",
-  "src/cstree/backtesting/types.py",
-  "src/cstree/backtesting/execution_sim/__init__.py",
-  "src/cstree/backtesting/execution_sim/results.py",
+  "src/portfolio_backtester/__init__.py",
+  "src/portfolio_backtester/api.py",
+  "src/portfolio_backtester/backtest_spec.py",
+  "src/portfolio_backtester/capacity.py",
+  "src/portfolio_backtester/period_outputs.py",
+  "src/portfolio_backtester/portfolio.py",
+  "src/portfolio_backtester/reports.py",
+  "src/portfolio_backtester/types.py",
+  "src/portfolio_backtester/execution_sim/__init__.py",
+  "src/portfolio_backtester/execution_sim/results.py",
 ]
 stubPath = "typings"
 exclude = [

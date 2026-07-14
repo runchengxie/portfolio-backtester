@@ -8,8 +8,8 @@ import numpy as np
 import pandas as pd
 import pytest
 
-from cstree.backtesting import BacktestSpec, GroupCap, StrategySpec, backtest_topk, run_backtest
-from cstree.backtesting.execution import (
+from portfolio_backtester import BacktestSpec, GroupCap, StrategySpec, backtest_topk, run_backtest
+from portfolio_backtester.execution import (
     ExecutionModel,
     SideBpsCostModel,
     build_execution_model,

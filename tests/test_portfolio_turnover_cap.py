@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import pandas as pd
 
-from cstree.backtesting.portfolio import build_positions_by_rebalance
+from portfolio_backtester.portfolio import build_positions_by_rebalance
 
 
 def test_build_positions_by_rebalance_limits_target_weight_turnover() -> None:

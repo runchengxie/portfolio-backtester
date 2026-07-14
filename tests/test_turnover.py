@@ -3,7 +3,7 @@ from __future__ import annotations
 import pandas as pd
 import pytest
 
-from cstree.backtesting.turnover import (
+from portfolio_backtester.turnover import (
     annualize_turnover,
     name_turnover,
     turnover_from_trade_weights,

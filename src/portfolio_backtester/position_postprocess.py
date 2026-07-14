@@ -9,7 +9,7 @@ from typing import Any
 import numpy as np
 import pandas as pd
 
-from cstree.backtesting._symbol_utils import resolve_data_input_path
+from portfolio_backtester._symbol_utils import resolve_data_input_path
 
 from .exposure import compute_backtest_exposure_analysis
 from .position_backtest import PositionBacktestConfig, run_position_backtest

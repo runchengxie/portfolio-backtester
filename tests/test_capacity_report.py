@@ -8,7 +8,7 @@ import pandas as pd
 import pytest
 import yaml
 
-from cstree.backtesting import capacity_report
+from portfolio_backtester import capacity_report
 
 
 def _write_capacity_run(tmp_path: Path) -> tuple[Path, Path]:

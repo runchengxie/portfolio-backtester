@@ -4,7 +4,7 @@ import numpy as np
 import pandas as pd
 import pytest
 
-from cstree.backtesting.daily_watch20 import (
+from portfolio_backtester.daily_watch20 import (
     DailyWatch20Config,
     DailyWatch20SelectionError,
     GuardFactorSpec,

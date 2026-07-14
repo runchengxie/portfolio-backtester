@@ -1,7 +1,7 @@
 import pandas as pd
 import pytest
 
-from cstree.backtesting.reporting import (
+from portfolio_backtester.reporting import (
     build_backtest_layer_comparison_frame,
     build_backtest_report,
     build_benchmark_compare_summary_frame,

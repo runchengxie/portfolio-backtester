@@ -2,7 +2,7 @@ import numpy as np
 import pandas as pd
 import pytest
 
-from cstree.backtesting.signal_postprocess import (
+from portfolio_backtester.signal_postprocess import (
     apply_score_postprocess,
     neutralize_cross_sectional_series,
     rank_blend_cross_sectional_series,
