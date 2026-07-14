@@ -3,6 +3,8 @@ from __future__ import annotations
 import numpy as np
 import pandas as pd
 
+from .bet_sizing import SizingConfig, build_sized_weights
+
 __all__ = [
     "build_position_weights",
     "limit_weight_turnover",
@@ -10,11 +12,22 @@ __all__ = [
     "normalize_weighting_mode",
 ]
 
+_WEIGHTING_MODES = {
+    "equal",
+    "signal",
+    "sqrt_liquidity",
+    "probability",
+    "probability_vol_target",
+    "signal_vol_target",
+    "confidence_budget",
+    "risk_budget",
+}
+
 
 def normalize_weighting_mode(weighting: str | None) -> str:
     mode = str(weighting or "equal").strip().lower()
-    if mode not in {"equal", "signal", "sqrt_liquidity"}:
-        raise ValueError("weighting must be one of: equal, signal, sqrt_liquidity.")
+    if mode not in _WEIGHTING_MODES:
+        raise ValueError("weighting must be one of: " + ", ".join(sorted(_WEIGHTING_MODES)) + ".")
     return mode
 
 
@@ -97,6 +110,24 @@ def _sqrt_liquidity_weights(
     return _cap_and_redistribute_positive_weights(raw, caps)
 
 
+def _calibrated_weights(
+    day: pd.DataFrame,
+    holdings: list[str],
+    pred_col: str,
+    *,
+    mode: str,
+) -> pd.Series:
+    selected = day.set_index("symbol").reindex(holdings).copy()
+    if selected.empty:
+        return pd.Series(dtype=float)
+    sized = build_sized_weights(
+        selected,
+        score_col=pred_col,
+        config=SizingConfig(method=mode),  # type: ignore[arg-type]
+    )
+    return normalize_position_weights(sized.reindex(holdings).fillna(0.0))
+
+
 def build_position_weights(
     day: pd.DataFrame,
     holdings: list[str],
@@ -116,6 +147,15 @@ def build_position_weights(
 
     if side not in {"long", "short"}:
         raise ValueError("side must be one of: long, short.")
+
+    if mode in {
+        "probability",
+        "probability_vol_target",
+        "signal_vol_target",
+        "confidence_budget",
+        "risk_budget",
+    }:
+        return _calibrated_weights(day, holdings, pred_col, mode=mode)
 
     signal = pd.to_numeric(
         day.set_index("symbol").reindex(holdings)[pred_col],
