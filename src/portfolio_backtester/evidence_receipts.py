@@ -51,16 +51,14 @@ def build_portfolio_sizing_receipt(
         "schema_version": 1,
         "method": str(method).strip().lower() or "unknown",
         "config": dict(configuration or {}),
-        "target_count": int(len(active)),
+        "target_count": len(active),
         "gross_exposure": float(active.abs().sum()),
         "net_exposure": float(active.sum()),
         "maximum_weight": float(active.abs().max()) if not active.empty else 0.0,
         "minimum_active_weight": float(active.abs().min()) if not active.empty else 0.0,
         "weights_sha256": series_sha256(cleaned),
         "source_positions": str(Path(source_positions)) if source_positions else None,
-        "calibration_artifact": (
-            str(Path(calibration_artifact)) if calibration_artifact else None
-        ),
+        "calibration_artifact": (str(Path(calibration_artifact)) if calibration_artifact else None),
         "covariance_artifact": str(Path(covariance_artifact)) if covariance_artifact else None,
     }
     if source_positions is not None:

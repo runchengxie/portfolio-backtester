@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from dataclasses import asdict, dataclass
+from itertools import pairwise
 
 import numpy as np
 import pandas as pd
@@ -121,8 +122,8 @@ def cluster_stability(
 ) -> float:
     """Measure adjacent-pair stability between two quasi-diagonal orders."""
 
-    previous_pairs = {frozenset(pair) for pair in zip(previous_order, previous_order[1:])}
-    current_pairs = {frozenset(pair) for pair in zip(current_order, current_order[1:])}
+    previous_pairs = {frozenset(pair) for pair in pairwise(previous_order)}
+    current_pairs = {frozenset(pair) for pair in pairwise(current_order)}
     union = previous_pairs | current_pairs
     return len(previous_pairs & current_pairs) / len(union) if union else 1.0
 

@@ -54,9 +54,9 @@ def probability_to_size(
     values = pd.to_numeric(probability, errors="coerce").clip(0.0, 1.0)
     denominator = np.sqrt(values * (1.0 - values))
     z = (values - 1.0 / classes).div(denominator.replace(0.0, np.nan))
-    size = 2.0 * z.map(
-        lambda value: _normal_cdf(float(value)) if np.isfinite(value) else np.nan
-    ) - 1.0
+    size = (
+        2.0 * z.map(lambda value: _normal_cdf(float(value)) if np.isfinite(value) else np.nan) - 1.0
+    )
     side_values = (
         pd.to_numeric(side, errors="coerce").reindex(values.index)
         if isinstance(side, pd.Series)
@@ -228,9 +228,7 @@ def _cap_and_redistribute(
             break
         base = values.loc[free]
         weights.loc[free] = (
-            residual * base / float(base.sum())
-            if base.sum() > 0
-            else residual / int(free.sum())
+            residual * base / float(base.sum()) if base.sum() > 0 else residual / int(free.sum())
         )
     return weights
 

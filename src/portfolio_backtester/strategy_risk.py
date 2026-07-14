@@ -115,10 +115,7 @@ def implementation_shortfall_metrics(
     total_implied_cost = float(implied_cost.sum())
     if execution_costs is not None:
         explicit_cost = float(
-            pd.to_numeric(execution_costs, errors="coerce")
-            .reindex(aligned.index)
-            .fillna(0.0)
-            .sum()
+            pd.to_numeric(execution_costs, errors="coerce").reindex(aligned.index).fillna(0.0).sum()
         )
     else:
         explicit_cost = total_implied_cost
@@ -198,7 +195,7 @@ def strategy_failure_probability(
     )
     if not np.isfinite(required):
         return float("nan")
-    sample_size = max(1, int(round(bets_per_year * evaluation_years)))
+    sample_size = max(1, round(bets_per_year * evaluation_years))
     rng = (
         random_state
         if isinstance(random_state, np.random.Generator)
