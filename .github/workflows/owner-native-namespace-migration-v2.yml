@@ -1,0 +1,120 @@
+name: owner-native namespace migration v2
+
+on:
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: write
+
+jobs:
+  migrate:
+    if: github.head_ref == 'refactor/owner-native-namespace'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          ref: ${{ github.event.pull_request.head.ref }}
+          fetch-depth: 0
+          token: ${{ github.token }}
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.12'
+      - name: Build migrated tree and blocker report
+        shell: bash
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          from __future__ import annotations
+
+          import ast
+          import json
+          import re
+          import subprocess
+          from pathlib import Path
+
+          root = Path.cwd()
+          old = root / 'src/cstree/backtesting'
+          new = root / 'src/portfolio_backtester'
+          if old.exists():
+              subprocess.run(['git', 'mv', 'src/cstree/backtesting', 'src/portfolio_backtester'], check=True)
+              subprocess.run(['git', 'rm', 'src/cstree/__init__.py'], check=True)
+              (root / 'src/cstree').rmdir()
+
+          suffixes = {'.py', '.pyi', '.md', '.toml', '.yml', '.yaml', '.sh', '.txt'}
+          replacements = (
+              ('src/cstree/backtesting', 'src/portfolio_backtester'),
+              ('cstree.backtesting', 'portfolio_backtester'),
+              ('cstree.alpha', 'alpha_research'),
+              ('cstree.pipeline', 'strategy_pipeline.pipeline'),
+              ('cstree.contracts', 'strategy_pipeline.contracts'),
+          )
+          for raw in subprocess.check_output(['git', 'ls-files', '-z']).decode().split('\0'):
+              if not raw:
+                  continue
+              path = root / raw
+              if not path.exists() or path.suffix.lower() not in suffixes:
+                  continue
+              try:
+                  text = path.read_text(encoding='utf-8')
+              except UnicodeDecodeError:
+                  continue
+              updated = text
+              for before, after in replacements:
+                  updated = updated.replace(before, after)
+              if updated != text:
+                  path.write_text(updated, encoding='utf-8')
+
+          pyproject = root / 'pyproject.toml'
+          text = pyproject.read_text(encoding='utf-8')
+          text = text.replace('version = "0.1.0"', 'version = "0.2.0"', 1)
+          text = text.replace('include = ["cstree", "portfolio_backtester*"]', 'include = ["portfolio_backtester", "portfolio_backtester.*"]')
+          text = text.replace('  "src/cstree/__init__.py",\n', '')
+          if '[tool.ruff.lint.isort]' in text and 'known-first-party' not in text:
+              text = text.replace('[tool.ruff.lint.isort]\ncombine-as-imports = true', '[tool.ruff.lint.isort]\ncombine-as-imports = true\nknown-first-party = ["portfolio_backtester"]')
+          pyproject.write_text(text, encoding='utf-8')
+
+          lock = root / 'uv.lock'
+          if lock.exists():
+              lock_text = lock.read_text(encoding='utf-8')
+              lock_text = re.sub(r'(\[\[package\]\]\nname = "portfolio-backtester"\nversion = ")[^"]+', r'\g<1>0.2.0', lock_text, count=1)
+              lock.write_text(lock_text, encoding='utf-8')
+
+          readme = root / 'README.md'
+          readme_text = readme.read_text(encoding='utf-8')
+          if '## Python namespace\n' not in readme_text:
+              readme.write_text(readme_text.rstrip() + '''\n\n## Python namespace\n\nThe canonical package is `portfolio_backtester`. New code must not add\n`cstree.backtesting` imports. The coordinated `strategy-pipeline` compatibility\nfacade owns the old path during workspace 1.x; removal is scheduled for 2.0.\n''', encoding='utf-8')
+
+          (root / 'docs/namespace-migration.md').write_text('''# Portfolio namespace migration\n\n- Canonical package: `portfolio_backtester.*`\n- Deprecated package: `cstree.backtesting.*`\n- Compatibility owner: `strategy-pipeline`\n- Compatibility window: portfolio-backtester 0.2 / workspace 1.x\n- Removal target: workspace 2.0\n\nThis distribution no longer installs `cstree` or uses `pkgutil.extend_path`.\n''', encoding='utf-8')
+
+          (root / 'tests/test_namespace_migration.py').write_text('''from __future__ import annotations\n\nfrom pathlib import Path\n\nROOT = Path(__file__).resolve().parents[1]\nSRC = ROOT / "src"\n\n\ndef test_owner_native_layout() -> None:\n    assert (SRC / "portfolio_backtester" / "__init__.py").is_file()\n    assert not (SRC / "cstree").exists()\n\n\ndef test_legacy_namespace_cannot_regrow() -> None:\n    offenders = []\n    for path in (SRC / "portfolio_backtester").rglob("*.py"):\n        text = path.read_text(encoding="utf-8")\n        if "cstree.backtesting" in text or "pkgutil import extend_path" in text:\n            offenders.append(str(path.relative_to(ROOT)))\n    assert offenders == []\n''', encoding='utf-8')
+
+          blockers: list[dict[str, object]] = []
+          for path in new.rglob('*.py'):
+              text = path.read_text(encoding='utf-8')
+              tree = ast.parse(text, filename=str(path))
+              for node in ast.walk(tree):
+                  if isinstance(node, ast.ImportFrom) and node.level > 1:
+                      blockers.append({'path': str(path.relative_to(root)), 'line': node.lineno, 'kind': 'parent-relative', 'module': node.module, 'level': node.level})
+              for owner in ('strategy_pipeline', 'alpha_research'):
+                  if owner in text:
+                      blockers.append({'path': str(path.relative_to(root)), 'kind': 'cross-owner-reference', 'owner': owner})
+          report = root / 'docs/internal/namespace-migration-blockers.json'
+          report.parent.mkdir(parents=True, exist_ok=True)
+          report.write_text(json.dumps({'schema': 'namespace_migration_blockers.v1', 'owner': 'portfolio_backtester', 'blockers': blockers}, indent=2, sort_keys=True) + '\n', encoding='utf-8')
+
+          subprocess.run(['python', '-m', 'compileall', '-q', 'src'], check=True)
+          PY
+          git rm .github/workflows/owner-native-namespace-migration.yml
+          git rm .github/workflows/owner-native-namespace-migration-v2.yml
+          git diff --check
+      - name: Commit migrated tree
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add -A
+          git commit -m 'refactor(namespace): move backtesting APIs to portfolio_backtester'
+          git push origin HEAD:${{ github.event.pull_request.head.ref }}
