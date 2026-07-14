@@ -1,0 +1,25 @@
+name: namespace source export
+
+on:
+  push:
+    branches:
+      - artifact/namespace-integration-export
+
+permissions:
+  contents: read
+
+jobs:
+  export:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          ref: artifact/namespace-integration-export
+          fetch-depth: 1
+      - name: Build source snapshot
+        run: tar --exclude=.git --exclude=.venv --exclude=artifacts -czf /tmp/portfolio-backtester-source.tar.gz .
+      - uses: actions/upload-artifact@v4
+        with:
+          name: portfolio-backtester-source
+          path: /tmp/portfolio-backtester-source.tar.gz
+          if-no-files-found: error
