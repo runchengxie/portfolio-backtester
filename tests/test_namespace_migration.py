@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import subprocess
+import sys
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -11,10 +13,9 @@ def test_owner_native_layout() -> None:
     assert not (SRC / "cstree").exists()
 
 
-def test_legacy_namespace_cannot_regrow() -> None:
-    offenders = []
-    for path in (SRC / "portfolio_backtester").rglob("*.py"):
-        text = path.read_text(encoding="utf-8")
-        if "cstree.backtesting" in text or "pkgutil import extend_path" in text:
-            offenders.append(str(path.relative_to(ROOT)))
-    assert offenders == []
+def test_namespace_boundary_ratchet() -> None:
+    subprocess.run(
+        [sys.executable, "scripts/dev/namespace_boundary.py"],
+        cwd=ROOT,
+        check=True,
+    )
