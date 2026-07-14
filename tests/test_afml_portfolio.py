@@ -9,6 +9,7 @@ from portfolio_backtester.bet_sizing import (
     build_sized_weights,
     discretize_weights,
 )
+from portfolio_backtester.evidence_receipts import build_portfolio_sizing_receipt
 from portfolio_backtester.hrp import HrpConfig, hierarchical_risk_parity, rolling_hrp_weights
 from portfolio_backtester.portfolio_weights import build_position_weights
 from portfolio_backtester.strategy_risk import (
@@ -62,6 +63,20 @@ def test_calibrated_weighting_mode_is_used_by_position_builder() -> None:
     assert np.isclose(weights.sum(), 1.0)
     assert weights.index.tolist() == ["A", "B", "C"]
     assert weights["B"] > weights["A"] > weights["C"]
+
+
+def test_sizing_receipt_supports_legacy_and_calibrated_methods() -> None:
+    weights = pd.Series([0.5, 0.3, 0.2], index=["A", "B", "C"])
+    receipt = build_portfolio_sizing_receipt(
+        weights,
+        method="equal",
+        configuration={"top_k": 3},
+    )
+
+    assert receipt["method"] == "equal"
+    assert receipt["target_count"] == 3
+    assert receipt["gross_exposure"] == 1.0
+    assert receipt["weights_sha256"]
 
 
 def test_active_bets_are_averaged_and_discretized() -> None:
