@@ -9,7 +9,15 @@ ENTRY_DOCS = (
     ROOT / "docs" / "README.md",
     ROOT / "docs" / "testing.md",
 )
-FORBIDDEN_FRAGMENTS = ("不是", "而是", "**", "；", "——", "“", "”")
+FORBIDDEN_FRAGMENTS = (
+    "不是",
+    "而是",
+    "**",
+    "\uff1b",
+    "\u2014\u2014",
+    "\u201c",
+    "\u201d",
+)
 
 
 def test_entry_docs_use_concise_chinese_style() -> None:
