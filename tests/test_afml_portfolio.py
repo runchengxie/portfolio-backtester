@@ -10,6 +10,7 @@ from portfolio_backtester.bet_sizing import (
     discretize_weights,
 )
 from portfolio_backtester.hrp import HrpConfig, hierarchical_risk_parity, rolling_hrp_weights
+from portfolio_backtester.portfolio_weights import build_position_weights
 from portfolio_backtester.strategy_risk import (
     implementation_shortfall_metrics,
     probabilistic_sharpe_ratio,
@@ -39,6 +40,28 @@ def test_probability_volatility_sizing_applies_caps_and_discretization() -> None
     assert np.isclose(weights.sum(), 1.0)
     assert weights.max() <= 0.5 + 1e-12
     assert np.allclose((weights / 0.01).round(), weights / 0.01, atol=1e-8)
+
+
+def test_calibrated_weighting_mode_is_used_by_position_builder() -> None:
+    day = pd.DataFrame(
+        {
+            "symbol": ["A", "B", "C"],
+            "signal": [0.3, 0.2, 0.1],
+            "calibrated_probability": [0.8, 0.7, 0.55],
+            "predicted_volatility": [0.2, 0.1, 0.15],
+        }
+    )
+    weights = build_position_weights(
+        day,
+        ["A", "B", "C"],
+        "signal",
+        side="long",
+        weighting="probability_vol_target",
+    )
+
+    assert np.isclose(weights.sum(), 1.0)
+    assert weights.index.tolist() == ["A", "B", "C"]
+    assert weights["B"] > weights["A"] > weights["C"]
 
 
 def test_active_bets_are_averaged_and_discretized() -> None:
