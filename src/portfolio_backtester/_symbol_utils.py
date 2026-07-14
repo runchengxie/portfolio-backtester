@@ -122,11 +122,7 @@ def _resolve_repo_path(path_text: str | Path) -> Path:
 
 
 def _resolve_artifacts_root(path_text: str | Path | None = None) -> Path:
-    configured = (
-        _normalize_path_text(path_text)
-        or _resolve_env_path(ENV_DATA_PLATFORM_ROOT)
-        or _resolve_env_path("CSTREE_ARTIFACTS_ROOT")
-    )
+    configured = _normalize_path_text(path_text) or _resolve_env_path(ENV_DATA_PLATFORM_ROOT)
     return _resolve_repo_path(configured or "artifacts")
 
 

@@ -141,7 +141,7 @@ def build_inertia_selection_report(
         raise SystemExit("construction_grid.rolling_selection must be a mapping.")
     return {
         "schema_version": 1,
-        "artifact_type": "cstree.construction_grid_rolling_selection",
+        "artifact_type": "portfolio_backtester.construction_grid_rolling_selection",
         **select_construction_variant_with_inertia(
             rows,
             previous_variant=selection_cfg.get("previous_variant"),

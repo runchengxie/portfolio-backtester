@@ -53,7 +53,7 @@ def test_build_benchmark_series_keeps_exit_dated_period_returns_compatible():
 
 
 def test_warn_if_delay_exit_lag_emits_warning(caplog):
-    caplog.set_level(logging.WARNING, logger="cstree")
+    caplog.set_level(logging.WARNING, logger="portfolio_backtester")
 
     warn_if_delay_exit_lag(
         label_prefix="[wf] ",
@@ -70,7 +70,7 @@ def test_warn_if_delay_exit_lag_emits_warning(caplog):
 
 
 def test_warn_if_delay_exit_lag_skips_non_delay_policy(caplog):
-    caplog.set_level(logging.WARNING, logger="cstree")
+    caplog.set_level(logging.WARNING, logger="portfolio_backtester")
 
     warn_if_delay_exit_lag(
         label_prefix="[wf] ",

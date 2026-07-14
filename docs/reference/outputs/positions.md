@@ -10,7 +10,7 @@
 positions_by_rebalance.csv
 ```
 
-对应的契约名称为 `cstree.positions_by_rebalance`，当前版本为 `1`。
+对应的契约名称为 `portfolio_backtester.positions_by_rebalance`，当前版本为 `1`。
 
 ## 必需字段
 

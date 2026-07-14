@@ -12,6 +12,7 @@ from portfolio_backtester.contracts import (
     POSITIONS_BY_REBALANCE_CONTRACT_NAME,
     POSITIONS_BY_REBALANCE_REQUIRED_COLUMNS,
     STRATEGY_SPEC_CONTRACT,
+    STRATEGY_SPEC_CONTRACT_NAME,
     STRATEGY_SPEC_REQUIRED_FIELDS,
     GroupCap,
     StrategySpec,
@@ -68,6 +69,7 @@ def test_backtest_pricing_contract_validates_required_columns() -> None:
         require_two_trade_dates=True,
     )
 
+    assert BACKTEST_PRICING_CONTRACT_NAME == "portfolio_backtester.backtest_pricing"
     assert BACKTEST_PRICING_CONTRACT.name == BACKTEST_PRICING_CONTRACT_NAME
     assert BACKTEST_PRICING_CONTRACT.key_columns == BACKTEST_PRICING_KEY_COLUMNS
     assert required == ("trade_date", "symbol", "open", "close", "amount", "is_tradable")
@@ -99,6 +101,7 @@ def test_backtest_pricing_contract_reports_invalid_frame() -> None:
 def test_positions_by_rebalance_contract_validates_artifact_shape() -> None:
     issues = validate_positions_by_rebalance_frame(_positions_frame())
 
+    assert POSITIONS_BY_REBALANCE_CONTRACT_NAME == "portfolio_backtester.positions_by_rebalance"
     assert POSITIONS_BY_REBALANCE_CONTRACT.name == POSITIONS_BY_REBALANCE_CONTRACT_NAME
     assert POSITIONS_BY_REBALANCE_CONTRACT.file_name == CANONICAL_POSITIONS_BY_REBALANCE_FILE
     assert (
@@ -121,6 +124,8 @@ def test_positions_by_rebalance_contract_reports_invalid_frame() -> None:
 
 
 def test_strategy_contract_validates_and_serializes_spec() -> None:
+    assert STRATEGY_SPEC_CONTRACT_NAME == "portfolio_backtester.strategy_spec"
+    assert STRATEGY_SPEC_CONTRACT.name == STRATEGY_SPEC_CONTRACT_NAME
     spec = StrategySpec(
         name="topk-demo",
         type="topk_buffered_long_only",

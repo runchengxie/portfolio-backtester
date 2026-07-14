@@ -1,9 +1,9 @@
 # Portfolio namespace migration
 
 - Canonical package: `portfolio_backtester.*`
-- Deprecated package: `cstree.backtesting.*`
-- Compatibility owner: `strategy-pipeline`
-- Compatibility window: portfolio-backtester 0.2 / workspace 1.x
-- Removal target: workspace 2.0
+- Canonical contract prefix: `portfolio_backtester.*`
+- Removal release: workspace 2.0
+- Current status: the workspace 1.x compatibility namespace and facade are removed
 
-This distribution no longer installs `cstree` or uses `pkgutil.extend_path`.
+This distribution installs only its owner-native package. It does not ship a
+shared namespace package or a compatibility alias.

@@ -18,7 +18,7 @@ from .post_buffer_exposure_repair import (
     repair_post_buffer_exposure,
 )
 
-logger = logging.getLogger("cstree")
+logger = logging.getLogger("portfolio_backtester")
 
 
 def positions_postprocess_enabled(context: Mapping[str, Any]) -> bool:

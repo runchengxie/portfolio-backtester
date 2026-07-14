@@ -1,12 +1,12 @@
 {
   "canonical_package": "portfolio_backtester",
-  "compatibility_owner": "strategy-pipeline",
+  "canonical_contract_prefix": "portfolio_backtester",
+  "compatibility_facade_present": false,
   "distribution": "portfolio-backtester",
-  "legacy_package": "cstree.backtesting",
   "legacy_source_tree_present": false,
   "namespace_boundary_gate": "scripts/dev/namespace_boundary.py",
-  "pkgutil_extend_path_present": false,
+  "shared_namespace_mechanism_present": false,
   "removal_release": "workspace-2.0",
-  "schema": "owner_native_namespace_evidence.v1",
-  "status": "migrated"
+  "schema": "owner_native_namespace_evidence.v2",
+  "status": "removed"
 }

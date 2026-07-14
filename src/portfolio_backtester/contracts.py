@@ -7,12 +7,12 @@ from typing import Any, cast
 import pandas as pd
 from pandas.api.types import is_bool_dtype, is_numeric_dtype
 
-BACKTEST_PRICING_CONTRACT_NAME = "cstree.backtest_pricing"
+BACKTEST_PRICING_CONTRACT_NAME = "portfolio_backtester.backtest_pricing"
 BACKTEST_PRICING_SCHEMA_VERSION = 1
 BACKTEST_PRICING_KEY_COLUMNS = ("trade_date", "symbol")
 DEFAULT_TRADABLE_FLAG_COLUMNS = ("is_tradable", "is_buy_tradable", "is_sell_tradable")
 
-STRATEGY_SPEC_CONTRACT_NAME = "cstree.strategy_spec"
+STRATEGY_SPEC_CONTRACT_NAME = "portfolio_backtester.strategy_spec"
 STRATEGY_SPEC_SCHEMA_VERSION = 1
 STRATEGY_SPEC_REQUIRED_FIELDS = (
     "name",
@@ -25,7 +25,7 @@ STRATEGY_SPEC_REQUIRED_FIELDS = (
     "long_only",
 )
 
-POSITIONS_BY_REBALANCE_CONTRACT_NAME = "cstree.positions_by_rebalance"
+POSITIONS_BY_REBALANCE_CONTRACT_NAME = "portfolio_backtester.positions_by_rebalance"
 POSITIONS_BY_REBALANCE_SCHEMA_VERSION = 1
 CANONICAL_POSITIONS_BY_REBALANCE_FILE = "positions_by_rebalance.csv"
 POSITIONS_BY_REBALANCE_REQUIRED_COLUMNS = ("rebalance_date", "symbol", "weight")

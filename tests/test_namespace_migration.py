@@ -10,7 +10,6 @@ SRC = ROOT / "src"
 
 def test_owner_native_layout() -> None:
     assert (SRC / "portfolio_backtester" / "__init__.py").is_file()
-    assert not list((SRC / "cstree").rglob("*.py"))
 
 
 def test_namespace_boundary_ratchet() -> None:

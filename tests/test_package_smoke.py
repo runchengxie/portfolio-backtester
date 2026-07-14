@@ -36,7 +36,7 @@ OWNED_MODULES = (
     "portfolio_backtester.turnover_attribution",
     "portfolio_backtester.types",
 )
-FORBIDDEN_RUNTIME_PREFIXES = ("cstree", "alpha_research", "strategy_pipeline.pipeline")
+FORBIDDEN_RUNTIME_PREFIXES = ("alpha_research", "strategy_pipeline.pipeline")
 
 
 def test_portfolio_backtester_package_uses_owner_native_root() -> None:
@@ -86,7 +86,7 @@ def test_portfolio_backtester_package_exports_core_entrypoints() -> None:
     }
 
 
-def test_owned_modules_do_not_load_legacy_or_sibling_namespaces() -> None:
+def test_owned_modules_do_not_load_sibling_namespaces() -> None:
     code = f"""
 import importlib
 import sys

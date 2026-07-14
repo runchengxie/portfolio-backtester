@@ -5,7 +5,7 @@ import re
 
 import pandas as pd
 
-logger = logging.getLogger("cstree")
+logger = logging.getLogger("portfolio_backtester")
 EXECUTION_LIQUIDITY_PROXY_PATTERN = re.compile(r"^(?P<kind>adv|medadv)(?P<window>\d+)_amount$")
 
 

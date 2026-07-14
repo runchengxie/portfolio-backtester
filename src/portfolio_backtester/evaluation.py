@@ -23,7 +23,7 @@ from .position_postprocess import apply_position_postprocess
 from .rebalance import get_rebalance_dates
 from .signal_postprocess import apply_score_postprocess_inplace
 
-logger = logging.getLogger("cstree")
+logger = logging.getLogger("portfolio_backtester")
 
 
 def _record_backtest_outputs(

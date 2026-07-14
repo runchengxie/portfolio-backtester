@@ -14,7 +14,7 @@ def warn_if_delay_exit_lag(
     exit_price_policy: str,
     stats: Mapping[str, Any] | None,
 ) -> None:
-    logger = logging.getLogger("cstree")
+    logger = logging.getLogger("portfolio_backtester")
     if str(exit_price_policy).strip().lower() != "delay":
         return
     if not isinstance(stats, Mapping):

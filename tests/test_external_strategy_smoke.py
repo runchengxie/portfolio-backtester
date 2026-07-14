@@ -138,9 +138,7 @@ if abs(float(result.periods.loc[0, "gross_return"]) - 0.10) > 1e-12:
 offenders = sorted(
     name
     for name in sys.modules
-    if name == "cstree"
-    or name.startswith("cstree.")
-    or name == "alpha_research"
+    if name == "alpha_research"
     or name.startswith("alpha_research.")
     or name == "strategy_pipeline.pipeline"
     or name.startswith("strategy_pipeline.pipeline.")

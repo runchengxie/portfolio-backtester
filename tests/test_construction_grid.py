@@ -459,5 +459,5 @@ def test_construction_grid_writes_inertia_selection_report(tmp_path):
     construction_grid.run(_args(config_path))
 
     payload = json.loads(output_path.read_text(encoding="utf-8"))
-    assert payload["artifact_type"] == "cstree.construction_grid_rolling_selection"
+    assert payload["artifact_type"] == "portfolio_backtester.construction_grid_rolling_selection"
     assert payload["selected_variant"] == "k1"
