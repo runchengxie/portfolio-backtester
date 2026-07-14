@@ -561,7 +561,11 @@ def build_capacity_report(
 
 
 def add_capacity_report_args(parser: argparse.ArgumentParser) -> argparse.ArgumentParser:
-    parser.add_argument("--run-dir", required=True, help="Existing cstree run directory.")
+    parser.add_argument(
+        "--run-dir",
+        required=True,
+        help="Existing pipeline run directory created by strategy-pipeline.",
+    )
     parser.add_argument(
         "--config",
         default=None,

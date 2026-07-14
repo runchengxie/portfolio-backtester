@@ -921,7 +921,8 @@ def _resolve_backtest_topk_fn(candidate: Any) -> BacktestTopKFn:
     if candidate is None:
         raise SystemExit(
             "Construction grid requires an injected backtest_topk_fn. "
-            "Use the cstree CLI or pass portfolio_backtester.engine.backtest_topk explicitly."
+            "Use the strategy CLI provided by strategy-pipeline or pass "
+            "portfolio_backtester.engine.backtest_topk explicitly."
         )
     if not callable(candidate):
         raise SystemExit("Construction grid backtest_topk_fn must be callable.")

@@ -187,7 +187,9 @@ def _command_run_functions_over_150(function_metrics: Sequence[FunctionMetric]) 
     return sum(
         1
         for item in function_metrics
-        if item.name == "run" and item.lines > 150 and item.path.startswith("src/cstree/commands/")
+        if item.name == "run"
+        and item.lines > 150
+        and item.path.startswith("src/portfolio_backtester/commands/")
     )
 
 

@@ -143,7 +143,8 @@ def _update_run_summary(
         backtest.pop("stats_inherited_from_run", None)
         backtest["inheritance_note"] = (
             "Backtest stats and return files were replaced by explicit "
-            "positions_by_rebalance returns via cstree position-backtest."
+            "positions_by_rebalance returns via strategy position-backtest, "
+            "provided by strategy-pipeline."
         )
     summary_path.write_text(
         json.dumps(summary, ensure_ascii=False, indent=2, default=str) + "\n",
