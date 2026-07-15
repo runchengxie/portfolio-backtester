@@ -36,7 +36,7 @@ from portfolio_backtester import (
 )
 ```
 
-`run_position_backtest` 保持 benchmark-agnostic；需要 Information Ratio、tracking error、alpha 和 beta 时，使用 `evaluate_position_backtest`。
+`run_position_backtest` 保持 benchmark-agnostic。需要 Information Ratio、tracking error、alpha 和 beta 时使用 `evaluate_position_backtest`。
 
 输入表、最小示例和返回值说明见 [docs/guides/entry-points.md](docs/guides/entry-points.md)。
 
