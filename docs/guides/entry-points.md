@@ -1,6 +1,6 @@
 # 常用入口
 
-`portfolio-backtester` 提供四种调用方式，从高层规范到低层持仓回放逐步深入。刚接触项目时，建议从入口 1 开始。
+`portfolio-backtester` 提供五种调用方式，从高层规范到低层持仓回放逐步深入。刚接触项目时，建议从入口 1 开始。
 
 ## 1. 使用组合规范运行回测（推荐）
 
@@ -69,6 +69,26 @@ from portfolio_backtester import StrategySpec, construct_positions_from_strategy
 
 ## 4. 回放已有目标持仓
 
-使用 `PositionBacktestConfig` 和 `run_position_backtest`。这种方式适合从其他模型、优化器或人工流程接收持仓。
+使用 `PositionBacktestConfig` 和 `run_position_backtest`。这种方式适合从其他模型、优化器或人工流程接收持仓。这个底层入口只负责策略自身收益、成本和风险汇总，不持有 benchmark 数据。
 
-具体用法见根目录 README 的快速开始示例。
+## 5. 对持仓回测做 benchmark 评估
+
+需要 tracking error、Information Ratio、alpha、beta、相关系数和主动收益时，使用 `evaluate_position_backtest`。benchmark 日收益会先按每个持有期的 entry/exit 日期复合，随后才与策略 period returns 对齐。
+
+```python
+from portfolio_backtester import PositionBacktestConfig, evaluate_position_backtest
+
+evaluation = evaluate_position_backtest(
+    positions=positions,
+    pricing=pricing,
+    periods=periods,
+    config=PositionBacktestConfig(transaction_cost_bps=10.0),
+    benchmark_return_series=benchmark_daily_returns,
+)
+
+strategy_stats = evaluation.backtest.summary["stats"]
+benchmark_stats = evaluation.benchmark_stats
+active_stats = evaluation.active_stats
+```
+
+benchmark 行情表也可以通过 `benchmark_df` 传入；价格列与策略不一致时，显式设置 `benchmark_entry_price_col` 和 `benchmark_exit_price_col`。

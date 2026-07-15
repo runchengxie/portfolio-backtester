@@ -3,10 +3,14 @@
 from __future__ import annotations
 
 from dataclasses import asdict, dataclass
-from math import erf, sqrt
+from math import sqrt
 
 import numpy as np
 import pandas as pd
+
+from .sharpe_inference import (
+    probabilistic_sharpe_ratio as probabilistic_sharpe_ratio_from_stats,
+)
 
 
 @dataclass(frozen=True)
@@ -40,19 +44,20 @@ def probabilistic_sharpe_ratio(
     n = len(values)
     if n < 3:
         return float("nan")
-    mean = float(values.mean())
     std = float(values.std(ddof=1))
     if not np.isfinite(std) or std <= 0:
         return float("nan")
-    observed = mean / std
-    benchmark = float(benchmark_sharpe) / sqrt(periods_per_year)
-    skew = float(values.skew())
-    kurtosis = float(values.kurtosis() + 3.0)
-    denominator_sq = 1.0 - skew * observed + ((kurtosis - 1.0) / 4.0) * observed**2
-    if denominator_sq <= 0:
+    if not np.isfinite(periods_per_year) or periods_per_year <= 0:
         return float("nan")
-    statistic = (observed - benchmark) * sqrt(n - 1.0) / sqrt(denominator_sq)
-    return _normal_cdf(statistic)
+    observed_periodic = float(values.mean()) / std
+    benchmark_periodic = float(benchmark_sharpe) / sqrt(periods_per_year)
+    return probabilistic_sharpe_ratio_from_stats(
+        sharpe=observed_periodic,
+        benchmark_sharpe=benchmark_periodic,
+        periods=n,
+        skew=float(values.skew()),
+        kurtosis_excess=float(values.kurtosis()),
+    )
 
 
 def normalized_hhi(values: pd.Series) -> float:
@@ -269,10 +274,6 @@ def summarize_strategy_risk(
             random_state=random_state,
         ),
     )
-
-
-def _normal_cdf(value: float) -> float:
-    return 0.5 * (1.0 + erf(value / sqrt(2.0)))
 
 
 def _elapsed_years(index: pd.Index, observations: int, periods_per_year: float) -> float:

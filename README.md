@@ -8,6 +8,7 @@
 - 收益、成本和换手分析
 - 滑点、交易约束和执行容量模拟
 - benchmark、暴露和报告
+- PSR、DSR 和多重试验 Sharpe 推断
 - 输入输出契约与稳定高层 API
 
 仓库可以独立安装和测试，运行时不依赖 `strategy-pipeline` 或私有研究仓库。
@@ -30,9 +31,12 @@ uv run --extra dev python -m pytest
 ```python
 from portfolio_backtester import (
     PositionBacktestConfig,
+    evaluate_position_backtest,
     run_position_backtest,
 )
 ```
+
+`run_position_backtest` 保持 benchmark-agnostic。需要 Information Ratio、tracking error、alpha 和 beta 时使用 `evaluate_position_backtest`。
 
 输入表、最小示例和返回值说明见 [docs/guides/entry-points.md](docs/guides/entry-points.md)。
 
@@ -64,7 +68,7 @@ scripts/dev/run_tests.sh basedpyright
 
 ## 仓库边界
 
-本仓库维护通用组合构造、回测、成本、容量、暴露和报告能力。
+本仓库维护通用组合构造、回测、成本、容量、暴露、报告和回测统计推断能力。
 
 数据采集、特征工程、模型训练、具体策略规则、任务编排和券商执行由调用方或其他仓库负责。
 

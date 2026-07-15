@@ -1,0 +1,54 @@
+name: ci
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  quality:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v6
+        with:
+          enable-cache: true
+          python-version: "3.12"
+      - name: Sync development environment
+        run: uv sync --locked --extra dev
+      - name: Lint
+        run: scripts/dev/run_tests.sh lint
+      - name: Format check
+        id: format
+        continue-on-error: true
+        run: scripts/dev/run_tests.sh format
+      - name: Generate Ruff format patch
+        if: steps.format.outcome == 'failure'
+        run: |
+          uv run --extra dev ruff format .
+          git diff --binary > ruff-format.patch
+      - name: Upload Ruff format patch
+        if: steps.format.outcome == 'failure'
+        uses: actions/upload-artifact@v4
+        with:
+          name: ruff-format-patch
+          path: ruff-format.patch
+      - name: Enforce format check
+        if: steps.format.outcome == 'failure'
+        run: exit 1
+      - name: Typecheck
+        run: scripts/dev/run_tests.sh typecheck
+      - name: Tests
+        id: tests
+        run: |
+          set -o pipefail
+          scripts/dev/run_tests.sh all 2>&1 | tee pytest.log
+      - name: Upload pytest failure log
+        if: failure() && steps.tests.outcome == 'failure'
+        uses: actions/upload-artifact@v4
+        with:
+          name: pytest-failure-log
+          path: pytest.log

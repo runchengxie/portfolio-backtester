@@ -34,6 +34,15 @@ from .execution import DetailedTradeFeeModel, l2_price_tiered_slippage
 from .hrp import HrpConfig, HrpResult, hierarchical_risk_parity, rolling_hrp_weights
 from .metrics import summarize_period_returns
 from .position_backtest import PositionBacktestConfig, PositionBacktestResult, run_position_backtest
+from .position_evaluation import PositionBacktestEvaluation, evaluate_position_backtest
+from .sharpe_inference import (
+    annualized_sharpe_to_periodic,
+    annualized_variance_to_periodic,
+    deflated_sharpe_ratio,
+    expected_max_sharpe,
+    probabilistic_sharpe_ratio as probabilistic_sharpe_ratio_from_stats,
+    sharpe_standard_error,
+)
 from .strategy import construct_positions_from_strategy, strategy_from_config
 from .strategy_risk import (
     StrategyRiskReport,
@@ -65,6 +74,7 @@ __all__ = [
     "HrpConfig",
     "HrpResult",
     "PositionBacktestConfig",
+    "PositionBacktestEvaluation",
     "PositionBacktestResult",
     "PositionsByRebalanceFrameContract",
     "SizingConfig",
@@ -72,6 +82,8 @@ __all__ = [
     "StrategySpec",
     "TurnoverBreakdown",
     "annualize_turnover",
+    "annualized_sharpe_to_periodic",
+    "annualized_variance_to_periodic",
     "assert_positions_by_rebalance_frame",
     "average_active_bets",
     "backtest_topk",
@@ -79,12 +91,16 @@ __all__ = [
     "build_sized_weights",
     "build_sizing_receipt",
     "construct_positions_from_strategy",
+    "deflated_sharpe_ratio",
     "discretize_weights",
+    "evaluate_position_backtest",
+    "expected_max_sharpe",
     "hierarchical_risk_parity",
     "implementation_shortfall_metrics",
     "l2_price_tiered_slippage",
     "name_turnover",
     "probabilistic_sharpe_ratio",
+    "probabilistic_sharpe_ratio_from_stats",
     "probability_to_size",
     "return_concentration",
     "rolling_hrp_weights",
@@ -93,6 +109,7 @@ __all__ = [
     "select_daily_watch20",
     "series_sha256",
     "sha256_file",
+    "sharpe_standard_error",
     "strategy_failure_probability",
     "strategy_from_config",
     "summarize_period_returns",
