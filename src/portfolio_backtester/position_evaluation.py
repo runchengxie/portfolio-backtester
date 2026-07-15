@@ -52,6 +52,30 @@ def _period_records(result: PositionBacktestResult) -> list[dict[str, Any]]:
     return records.to_dict(orient="records")
 
 
+def _prepare_benchmark_frame(
+    benchmark_df: pd.DataFrame | None,
+    *,
+    entry_price_col: str,
+    exit_price_col: str,
+) -> pd.DataFrame | None:
+    if benchmark_df is None:
+        return None
+    if benchmark_df.empty:
+        return benchmark_df.copy()
+    required = {"trade_date", entry_price_col, exit_price_col}
+    missing = sorted(required - set(benchmark_df.columns))
+    if missing:
+        raise ValueError("Benchmark frame is missing required column(s): " + ", ".join(missing))
+    out = benchmark_df.copy()
+    out["trade_date"] = pd.to_datetime(out["trade_date"], errors="coerce").dt.normalize()
+    for column in {entry_price_col, exit_price_col}:
+        out[column] = pd.to_numeric(out[column], errors="coerce")
+    out = out.dropna(subset=["trade_date", entry_price_col, exit_price_col]).copy()
+    if out["trade_date"].duplicated(keep=False).any():
+        raise ValueError("Benchmark frame must contain at most one row per trade_date.")
+    return out.sort_values("trade_date").reset_index(drop=True)
+
+
 def _return_frame(series: pd.Series, *, return_col: str) -> pd.DataFrame:
     if series is None or series.empty:
         return pd.DataFrame(columns=["period_end", return_col])
@@ -87,10 +111,17 @@ def evaluate_position_backtest(
     )
     strategy_returns = _strategy_return_series(backtest)
     period_info = _period_records(backtest)
-    benchmark_returns, benchmark_periods = build_benchmark_series(
+    entry_price_col = benchmark_entry_price_col or config.effective_entry_price_col
+    exit_price_col = benchmark_exit_price_col or config.effective_exit_price_col
+    prepared_benchmark_df = _prepare_benchmark_frame(
         benchmark_df,
-        benchmark_entry_price_col or config.effective_entry_price_col,
-        benchmark_exit_price_col or config.effective_exit_price_col,
+        entry_price_col=entry_price_col,
+        exit_price_col=exit_price_col,
+    )
+    benchmark_returns, benchmark_periods = build_benchmark_series(
+        prepared_benchmark_df,
+        entry_price_col,
+        exit_price_col,
         period_info,
         benchmark_return_series=benchmark_return_series,
     )
