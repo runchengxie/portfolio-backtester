@@ -26,4 +26,13 @@ jobs:
       - name: Typecheck
         run: scripts/dev/run_tests.sh typecheck
       - name: Tests
-        run: scripts/dev/run_tests.sh all
+        id: tests
+        run: |
+          set -o pipefail
+          scripts/dev/run_tests.sh all 2>&1 | tee pytest.log
+      - name: Upload pytest failure log
+        if: failure() && steps.tests.outcome == 'failure'
+        uses: actions/upload-artifact@v4
+        with:
+          name: pytest-failure-log
+          path: pytest.log
