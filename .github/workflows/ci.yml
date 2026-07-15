@@ -22,7 +22,23 @@ jobs:
       - name: Lint
         run: scripts/dev/run_tests.sh lint
       - name: Format check
+        id: format
+        continue-on-error: true
         run: scripts/dev/run_tests.sh format
+      - name: Generate Ruff format patch
+        if: steps.format.outcome == 'failure'
+        run: |
+          uv run --extra dev ruff format .
+          git diff --binary > ruff-format.patch
+      - name: Upload Ruff format patch
+        if: steps.format.outcome == 'failure'
+        uses: actions/upload-artifact@v4
+        with:
+          name: ruff-format-patch
+          path: ruff-format.patch
+      - name: Enforce format check
+        if: steps.format.outcome == 'failure'
+        run: exit 1
       - name: Typecheck
         run: scripts/dev/run_tests.sh typecheck
       - name: Tests
