@@ -10,9 +10,7 @@ from portfolio_backtester.position_evaluation import evaluate_position_backtest
 
 
 def _single_period_inputs() -> tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame]:
-    positions = pd.DataFrame(
-        [{"rebalance_date": "20200101", "symbol": "AAA", "weight": 1.0}]
-    )
+    positions = pd.DataFrame([{"rebalance_date": "20200101", "symbol": "AAA", "weight": 1.0}])
     pricing = pd.DataFrame(
         [
             {"trade_date": "20200102", "symbol": "AAA", "close": 100.0},
