@@ -76,7 +76,9 @@ def test_evaluate_position_backtest_compounds_daily_benchmark_returns() -> None:
         benchmark_return_series=benchmark,
     )
 
-    assert evaluation.benchmark_returns["benchmark_return"].tolist() == [0.03, 0.04]
+    assert evaluation.benchmark_returns["benchmark_return"].tolist() == pytest.approx(
+        [0.03, 0.04]
+    )
     assert evaluation.active_stats["n"] == 2
     assert math.isfinite(evaluation.active_stats["tracking_error"])
     assert evaluation.summary["active_stats"] == evaluation.active_stats
