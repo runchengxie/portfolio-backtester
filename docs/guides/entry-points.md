@@ -91,4 +91,4 @@ benchmark_stats = evaluation.benchmark_stats
 active_stats = evaluation.active_stats
 ```
 
-benchmark 行情表也可以通过 `benchmark_df` 传入；价格列与策略不一致时，显式设置 `benchmark_entry_price_col` 和 `benchmark_exit_price_col`。
+基准行情表也可以通过 `benchmark_df` 传入。价格列与策略不一致时，显式设置 `benchmark_entry_price_col` 和 `benchmark_exit_price_col`。

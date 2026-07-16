@@ -8,11 +8,14 @@
 2. [常用入口](guides/entry-points.md)
 3. [组合式回测规范](concepts/backtest-spec.md)
 4. [成本与执行假设](concepts/execution-costs.md)
-5. [换手率口径](concepts/turnover.md)
-6. [成本口径](concepts/cost-breakdown.md)
-7. [持仓输出约定](reference/outputs/positions.md)
-8. [公开 API](reference/public-api.md)
-9. [测试和质量检查](testing.md)
+5. [执行容量与每日净值模拟](guides/execution-simulation.md)
+6. [AFML 仓位与策略风险](concepts/afml-sizing-and-risk.md)
+7. [换手率口径](concepts/turnover.md)
+8. [成本口径](concepts/cost-breakdown.md)
+9. [持仓输出约定](reference/outputs/positions.md)
+10. [公开 API](reference/public-api.md)
+11. [测试和质量检查](testing.md)
+12. [会计与执行路线图](accounting_execution_roadmap.md)
 
 ## 事实来源
 

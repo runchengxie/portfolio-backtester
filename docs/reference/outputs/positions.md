@@ -88,6 +88,8 @@ assert_positions_by_rebalance_frame(positions)
 - 默认把有效权重重新归一化
 - `preserve_gross_exposure=True` 时允许保留现金权重
 
+`PositionBacktestConfig` 当前仍保留 `long_only` 字段，但 `long_only=False` 不会启用空头回放。标准化步骤仍只保留 `side=long` 和正权重，字段值只进入结果摘要。需要多空分数回测时，应使用支持多空构造的分数驱动入口。修改这项行为需要同步升级实现、测试和本页。
+
 持有期由单独的 `periods` 表决定。该表至少需要 `rebalance_date`、`entry_date` 和 `exit_date`。持仓文件中的 `entry_date` 主要用于记录和跨系统交换，回放时仍以 `periods` 表为准。
 
 ## 价格缺失

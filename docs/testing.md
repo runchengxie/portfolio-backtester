@@ -44,6 +44,12 @@ scripts/dev/run_tests.sh maintainability
 scripts/dev/run_tests.sh basedpyright
 ```
 
+## 推送前检查
+
+在 `research-workspace` 受管检出中，顶层共享 `pre-push` 会按照工作区清单运行本仓库的导入检查、Ruff、格式检查、`ty` 和完整测试集。
+
+单独克隆本仓库时不会继承共享钩子。推送前应手动运行上方列出的 `lint`、`format`、`typecheck`、`all`、`maintainability` 和 `basedpyright`。
+
 ## 类型检查范围
 
 `ty` 和 BasedPyright 只检查 `pyproject.toml` 中登记的文件。检查通过只说明这些路径没有发现阻塞问题。
@@ -70,4 +76,4 @@ scripts/dev/run_tests.sh basedpyright
 
 ## 自动化状态
 
-当前仓库没有启用 GitHub Actions 测试 workflow。本地脚本和 `pyproject.toml` 是检查范围的事实来源。
+当前仓库没有启用 GitHub Actions 远端测试。本地脚本和 `pyproject.toml` 共同构成本地质量门禁。

@@ -23,7 +23,7 @@
 half_l1_turnover = 0.5 * sum(abs(target_weight - drifted_weight))
 ```
 
-初始建仓沿用历史成本口径，`one_way_turnover` 等于实际买入的 gross exposure；`half_l1_turnover` 仍保留其严格的数学定义。
+初始建仓沿用历史成本口径，`one_way_turnover` 等于实际买入的总敞口。`half_l1_turnover` 仍保留严格的数学定义。
 
 ## 年化
 

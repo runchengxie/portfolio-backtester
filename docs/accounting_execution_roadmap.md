@@ -1,132 +1,111 @@
-# Backtest accounting and execution roadmap
+# 会计与执行路线图
 
-This document records the staged migration toward one auditable accounting path for signal,
-position, and capacity backtests. It is intentionally split into reviewable changes rather
-than one repository-wide rewrite.
+本页记录信号回测、持仓回放和容量分析逐步共用一套可审计账本的计划。当前已完成术语与结果契约统一，后续阶段仍属于路线图，不能当作现有能力使用。
 
-## Invariants
+## 长期约束
 
-Every backtest path should eventually satisfy the same invariants:
+各类回测最终应遵守同一组约束：
 
-1. Target weights generate signed orders.
-2. Orders generate zero or more fills.
-3. Fills update shares and cash.
-4. Daily NAV equals cash plus marked position value.
-5. Explicit fees and implicit execution costs are reported separately.
-6. Turnover fields have one documented formula across every entry point.
-7. Missing configured execution inputs fail closed instead of silently disabling constraints.
+1. 目标权重生成带方向的订单。
+2. 订单生成零笔或多笔成交。
+3. 成交更新持股数量和现金。
+4. 每日净值等于现金与持仓市值之和。
+5. 显式费用和隐含执行成本分别报告。
+6. 所有入口使用有文档说明的统一换手率公式。
+7. 已配置的执行输入缺失时终止计算，不能静默关闭约束。
 
-## Phase 1: terminology and result contracts
+## 第一阶段：术语与结果契约
 
-Implemented by the first accounting PR:
+当前已经完成：
 
-- distinguish holding-name replacement from weight turnover;
-- expose buy, sell, gross traded, half-L1, and one-way turnover fields;
-- preserve the historical initial-build cost convention without hiding half-L1 turnover;
-- expose a typed cost breakdown on leg and period results;
-- document the accounting formulas in the public README.
+- 区分持仓名称替换率和权重换手率
+- 输出买入、卖出、总交易权重、半 L1 换手率和单边换手率
+- 保留历史建仓成本约定，同时单独披露半 L1 换手率
+- 在单腿和分期结果中提供有类型约束的成本明细
+- 在用户文档中说明会计公式
 
-## Phase 2: shared daily ledger
+## 第二阶段：共享每日账本
 
-Move `backtest_topk`, `run_position_backtest`, ideal NAV, and capacity-adjusted NAV onto a
-shared ledger core:
+计划让 `backtest_topk`、`run_position_backtest`、理想净值和容量调整净值共用以下账本链路：
 
 ```text
-Targets -> Orders -> Fills -> Shares/Cash -> Daily NAV -> Reports
+目标持仓 -> 订单 -> 成交 -> 持股与现金 -> 每日净值 -> 报告
 ```
 
-The signal backtester should stop maintaining its own return-and-cost arithmetic. It should
-construct targets and delegate accounting to the same engine used by externally supplied
-positions.
+信号回测届时只负责构造目标持仓，会计计算交给与外部持仓回放相同的引擎。计划统一输出：
 
-Required outputs:
+- `targets`
+- `orders`
+- `fills`
+- `daily_positions`
+- `daily_cash`
+- `daily_nav`
+- `cost_breakdown`
+- `turnover_breakdown`
 
-- `targets`;
-- `orders`;
-- `fills`;
-- `daily_positions`;
-- `daily_cash`;
-- `daily_nav`;
-- `cost_breakdown`;
-- `turnover_breakdown`.
+## 第三阶段：成本拆分
 
-## Phase 3: cost decomposition
+计划将费用模型拆成互不重复的项目：
 
-Replace the overloaded detailed fee model with components that cannot be double counted:
+- 佣金
+- 印花税、交易费和过户费
+- 买卖价差或半价差成本
+- 临时市场冲击
+- 经校准的永久冲击
+- 延迟或放弃订单的机会成本
+- 融券和融资成本
 
-- commission;
-- stamp duty and exchange/transfer fees;
-- quoted-spread or half-spread cost;
-- temporary market impact;
-- permanent impact, when calibrated;
-- opportunity cost from delayed or abandoned orders;
-- borrow and financing costs.
+最低佣金需要明确计费单位。默认建议按股票、买卖方向和交易日分别计费，同时允许券商专用规则覆盖。
 
-Minimum commission must declare its charging unit. The recommended default is one charge per
-symbol, side, and trading day, with an optional broker-specific policy.
+## 第四阶段：市场规则与时间戳
 
-## Phase 4: market rules and timestamps
+计划增加以下市场规则契约：
 
-Add a market rule contract for:
+- 买入整手和零股卖出
+- T+1 可卖数量
+- 涨跌停和方向相关的可交易状态
+- 上市、停牌和退市行为
+- 带生效日期的费用表
 
-- buy lot size and odd-lot liquidation;
-- T+1 sellability;
-- price limits and direction-specific tradability;
-- listing, suspension, and delisting behavior;
-- fee schedules with effective dates.
+信号时间、决策时间、下单时间、成交时间和估值时间也需要分别记录，以便自动检查前视偏差，并区分成交价与估值价。
 
-Execution and valuation timestamps should be explicit:
+## 第五阶段：容量与冲击校准
 
-- signal time;
-- decision time;
-- order submission time;
-- fill time;
-- mark time.
+容量约束应直接限制成交量。超过参与率上限的部分需要形成未成交订单，或明确标记为外推结果。
 
-This enables automated look-ahead checks and separates execution price from mark price.
+容量报告计划补充：
 
-## Phase 5: capacity and impact calibration
+- 盈亏平衡资金规模
+- 成交率达到 95% 时的资金规模
+- 达到指定 alpha 保留率时的资金规模
+- 每增加一单位资金的边际冲击
+- 按股票、行业和流动性分组统计的容量占用集中度
 
-Capacity constraints should limit fills. They should not merely cap the participation value
-used inside a cost formula. Exceeding a participation limit must create an unfilled remainder
-or an explicitly labelled extrapolation.
+策略只在较窄时段交易时，应优先使用对应执行窗口的流动性，避免直接使用全日成交额。
 
-Capacity reports should add:
+## 第六阶段：指标与复现
 
-- break-even AUM;
-- AUM at 95% fill ratio;
-- AUM at a configurable alpha-retention threshold;
-- marginal impact per additional capital increment;
-- concentration of capacity usage by symbol, industry, and liquidity bucket.
+收益和风险指标应统一从每日净值推导。自然周期汇总需要先在周期内复利，并保留年份维度。
 
-Execution-window liquidity should be preferred over full-day amount when the strategy trades
-inside a narrower window.
+每次运行计划保存：
 
-## Phase 6: metrics and reproducibility
+- 仓库提交号
+- 配置哈希
+- 输入数据哈希
+- 股票池和交易日历版本
+- 费率表与滑点校准版本
+- 依赖包版本
+- 随机种子
+- 运行时间
 
-All headline return and risk statistics should be derived from daily NAV. Calendar summaries
-must compound returns inside each calendar period and retain the year dimension.
+## 验证要求
 
-Each run should persist:
+统一账本落地时至少需要以下测试：
 
-- repository commit;
-- configuration hash;
-- input-data hashes;
-- universe and calendar versions;
-- fee schedule and slippage calibration versions;
-- package versions;
-- random seed;
-- run timestamp.
-
-## Test strategy
-
-The ledger migration should be guarded by:
-
-- cash and position-value conservation tests;
-- zero-return, zero-cost NAV invariants;
-- cost monotonicity tests;
-- capacity monotonicity tests;
-- replay equivalence between Top-K targets and position backtests;
-- order-level minimum-commission tests;
-- golden ledgers with manually verified daily cash, shares, and NAV;
-- property-based tests over sparse weights, missing prices, and delayed fills.
+- 现金与持仓市值守恒
+- 零收益、零成本下的净值恒等关系
+- 成本和容量的单调性
+- Top-K 目标持仓与持仓回放结果等价
+- 订单级最低佣金
+- 人工核对过的每日现金、持股和净值样例
+- 稀疏权重、价格缺失和延迟成交的性质测试
