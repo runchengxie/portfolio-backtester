@@ -64,6 +64,9 @@ BasedPyright 用于补充诊断：
 scripts/dev/run_tests.sh basedpyright
 ```
 
+GitHub Actions 当前有意关闭，`.github/workflows/ci.yml.disabled` 只保留为模板。
+上述本地命令是质量检查的事实来源，避免消耗远端 Actions 配额。
+
 详细范围见 [docs/testing.md](docs/testing.md)。
 
 ## 仓库边界
