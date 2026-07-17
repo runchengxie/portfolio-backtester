@@ -1,14 +1,67 @@
 from __future__ import annotations
 
+from collections.abc import Callable
 from typing import Literal, cast
 
 import pandas as pd
 
 from .execution import CostModel, SlippageModel
-from .portfolio_weights import normalize_position_weights
+from .portfolio_weights import (
+    build_position_weights,
+    limit_weight_turnover,
+    normalize_position_weights,
+)
 from .pricing import slippage_pricing_row
 from .turnover import turnover_from_trade_weights
 from .types import BacktestLegResult, BacktestPositionState
+
+
+def _build_target_weights_and_exit(
+    *,
+    day: pd.DataFrame,
+    holdings: list[str],
+    pred_col: str,
+    side: Literal["long", "short"],
+    weighting_mode: str,
+    weighting_liquidity_col: str,
+    previous: BacktestPositionState,
+    max_turnover_per_rebalance: float | None,
+    selection_min_score: float | None,
+    planned_exit_idx: int,
+    resolve_exit_prices: Callable[[list[str], int], tuple[pd.Series, int]],
+) -> tuple[pd.Series, pd.Series, int] | None:
+    if not holdings:
+        return pd.Series(dtype=float), pd.Series(dtype=float), planned_exit_idx
+    weights = build_position_weights(
+        day,
+        holdings,
+        pred_col,
+        side=side,
+        weighting=weighting_mode,
+        liquidity_col=weighting_liquidity_col,
+    )
+    weights = limit_weight_turnover(previous.weights, weights, max_turnover_per_rebalance)
+    if selection_min_score is not None:
+        weights = normalize_position_weights(weights.reindex(holdings).dropna())
+    exit_prices, period_exit_idx = resolve_exit_prices(list(weights.index), planned_exit_idx)
+    if exit_prices.empty:
+        return None
+    return weights, exit_prices, period_exit_idx
+
+
+def _next_position_state(
+    leg: BacktestLegResult,
+    *,
+    entry_date: pd.Timestamp,
+) -> BacktestPositionState:
+    if not leg.holdings and leg.is_initial:
+        return BacktestPositionState()
+    return BacktestPositionState(
+        holdings=set(leg.holdings),
+        weights=leg.weights,
+        entry_date=entry_date,
+        entry_prices=leg.entry_prices,
+    )
 
 
 def _compute_trade_summary(
@@ -20,16 +73,24 @@ def _compute_trade_summary(
     *,
     price_table: pd.DataFrame,
 ) -> tuple[float, float, float, pd.Series]:
-    if target_weights is None or target_weights.empty:
-        return 0.0, 0.0, 0.0, pd.Series(dtype=float)
-
     target_clean = normalize_position_weights(target_weights)
-    if target_clean.empty:
-        return 0.0, 0.0, 0.0, pd.Series(dtype=float)
 
-    if prev_weights is None or prev_weights.empty:
+    if prev_weights is None:
+        if target_clean.empty:
+            return 0.0, 0.0, 0.0, pd.Series(dtype=float)
         trade_weights = target_clean.copy()
         turnover = turnover_from_trade_weights(trade_weights, is_initial=True)
+        return (
+            turnover.one_way_turnover,
+            turnover.buy_weight,
+            turnover.sell_weight,
+            trade_weights,
+        )
+    if prev_weights.empty:
+        if target_clean.empty:
+            return 0.0, 0.0, 0.0, pd.Series(dtype=float)
+        trade_weights = target_clean.copy()
+        turnover = turnover_from_trade_weights(trade_weights)
         return (
             turnover.one_way_turnover,
             turnover.buy_weight,

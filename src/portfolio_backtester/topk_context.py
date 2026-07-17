@@ -55,6 +55,8 @@ class _BacktestTopKConfig:
     selection_score_bucket_size: float | None
     selection_score_margin: float | None
     selection_score_margin_rank_limit: int | None
+    selection_min_score: float | None
+    max_new_names_per_rebalance: int | None
 
 
 @dataclass(frozen=True)
@@ -129,6 +131,8 @@ def _build_backtest_spec_config(
         selection_score_bucket_size=spec.selection_score_bucket_size,
         selection_score_margin=spec.selection_score_margin,
         selection_score_margin_rank_limit=spec.selection_score_margin_rank_limit,
+        selection_min_score=spec.selection_min_score,
+        max_new_names_per_rebalance=spec.max_new_names_per_rebalance,
     )
 
 

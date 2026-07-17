@@ -6,6 +6,14 @@ import numpy as np
 import pandas as pd
 
 from .execution import SelectionConstraints
+from .selection_controls import (
+    apply_selection_score_threshold,
+    entry_amount_values,
+    entry_tradable_flags,
+    ranked_selection_frame,
+    validate_max_new_names_per_rebalance,
+    validate_selection_min_score,
+)
 
 
 def apply_rebalance_buffer(
@@ -53,49 +61,6 @@ def apply_rank_offset(ranked_codes: list[str], rank_offset: int = 0) -> list[str
     if offset <= 0:
         return ranked_codes
     return ranked_codes[offset:]
-
-
-def _ranked_selection_frame(
-    day: pd.DataFrame,
-    pred_col: str,
-    *,
-    ascending: bool,
-    selection_tiebreak_col: str | None = None,
-    selection_score_bucket_size: float | None = None,
-) -> pd.DataFrame:
-    sort_frame = day.copy()
-    sort_cols: list[str] = []
-    ascending_flags: list[bool] = []
-    score_bucket_size = (
-        float(selection_score_bucket_size) if selection_score_bucket_size is not None else None
-    )
-    if score_bucket_size is not None and score_bucket_size <= 0:
-        raise ValueError("selection_score_bucket_size must be > 0 when provided.")
-    if score_bucket_size is not None:
-        score = pd.to_numeric(sort_frame[pred_col], errors="coerce")
-        sort_frame["_selection_score_bucket"] = np.floor(score / score_bucket_size)
-        sort_cols.append("_selection_score_bucket")
-        ascending_flags.append(ascending)
-
-    if score_bucket_size is None:
-        sort_cols.append(pred_col)
-        ascending_flags.append(ascending)
-
-    if selection_tiebreak_col:
-        if selection_tiebreak_col not in sort_frame.columns:
-            raise ValueError(f"Selection tiebreaker column not found: {selection_tiebreak_col}")
-        sort_frame["_selection_tiebreak"] = pd.to_numeric(
-            sort_frame[selection_tiebreak_col],
-            errors="coerce",
-        ).fillna(-np.inf)
-        sort_cols.append("_selection_tiebreak")
-        ascending_flags.append(False)
-    if score_bucket_size is not None:
-        sort_cols.append(pred_col)
-        ascending_flags.append(ascending)
-    sort_cols.append("symbol")
-    ascending_flags.append(True)
-    return sort_frame.sort_values(sort_cols, ascending=ascending_flags, kind="mergesort")
 
 
 def _apply_score_margin_holdover(
@@ -237,7 +202,11 @@ def select_holdings(
     selection_score_bucket_size: float | None = None,
     selection_score_margin: float | None = None,
     selection_score_margin_rank_limit: int | None = None,
+    selection_min_score: float | None = None,
+    max_new_names_per_rebalance: int | None = None,
 ) -> tuple[list[str], pd.Series]:
+    selection_min_score = validate_selection_min_score(selection_min_score)
+    max_new_names_per_rebalance = validate_max_new_names_per_rebalance(max_new_names_per_rebalance)
     inputs = _build_selection_inputs(
         day=day,
         entry_date=entry_date,
@@ -259,6 +228,10 @@ def select_holdings(
         selection_score_bucket_size=selection_score_bucket_size,
         selection_score_margin=selection_score_margin,
         selection_score_margin_rank_limit=selection_score_margin_rank_limit,
+        selection_min_score=selection_min_score,
+        deduplicate_symbols=(
+            selection_min_score is not None or max_new_names_per_rebalance is not None
+        ),
     )
     if inputs is None:
         return [], pd.Series(dtype=float)
@@ -272,6 +245,8 @@ def select_holdings(
         constraints=constraints or SelectionConstraints(),
         group_map=inputs.group_map,
         max_names_per_group=max_names_per_group,
+        prev_holdings=prev_holdings,
+        max_new_names_per_rebalance=max_new_names_per_rebalance,
     )
     if not holdings:
         return [], pd.Series(dtype=float)
@@ -300,6 +275,8 @@ def _build_selection_inputs(
     selection_score_bucket_size: float | None,
     selection_score_margin: float | None,
     selection_score_margin_rank_limit: int | None,
+    selection_min_score: float | None,
+    deduplicate_symbols: bool,
 ) -> _SelectionInputs | None:
     if day.empty or k <= 0:
         return None
@@ -307,12 +284,20 @@ def _build_selection_inputs(
     if lookup_date not in price_table.index:
         return None
 
-    ranked = _ranked_selection_frame(
+    ranked = ranked_selection_frame(
         day,
         pred_col,
         ascending=ascending,
         selection_tiebreak_col=selection_tiebreak_col,
         selection_score_bucket_size=selection_score_bucket_size,
+    )
+    if deduplicate_symbols:
+        ranked = ranked.drop_duplicates(subset=["symbol"], keep="first")
+    ranked = apply_selection_score_threshold(
+        ranked,
+        pred_col,
+        ascending=ascending,
+        selection_min_score=selection_min_score,
     )
     ranked_codes = apply_rank_offset(ranked["symbol"].tolist(), rank_offset)
     candidate_order = _candidate_order_with_score_margin(
@@ -327,14 +312,14 @@ def _build_selection_inputs(
         selection_score_margin=selection_score_margin,
         selection_score_margin_rank_limit=selection_score_margin_rank_limit,
     )
-    amount_values = _entry_amount_values(
+    amount_values = entry_amount_values(
         constraints=constraints,
         amount_table=amount_table,
         lookup_date=lookup_date,
     )
     if amount_values is None and constraints.min_amount is not None:
         return None
-    tradable_flags = _entry_tradable_flags(tradable_table, lookup_date)
+    tradable_flags = entry_tradable_flags(tradable_table, lookup_date)
     if tradable_table is not None and tradable_flags is None:
         return None
 
@@ -401,30 +386,6 @@ def _selection_group_map(
     return None
 
 
-def _entry_amount_values(
-    *,
-    constraints: SelectionConstraints,
-    amount_table: pd.DataFrame | None,
-    lookup_date: pd.Timestamp,
-) -> pd.Series | None:
-    if constraints.min_amount is None:
-        return None
-    if amount_table is None or lookup_date not in amount_table.index:
-        return None
-    return amount_table.loc[lookup_date]
-
-
-def _entry_tradable_flags(
-    tradable_table: pd.DataFrame | None,
-    lookup_date: pd.Timestamp,
-) -> pd.Series | None:
-    if tradable_table is None:
-        return None
-    if lookup_date not in tradable_table.index:
-        return None
-    return tradable_table.loc[lookup_date]
-
-
 def _select_candidate_holdings(
     *,
     candidate_order: list[str],
@@ -435,9 +396,12 @@ def _select_candidate_holdings(
     constraints: SelectionConstraints,
     group_map: dict[object, object] | None,
     max_names_per_group: int | None,
+    prev_holdings: set[str] | None,
+    max_new_names_per_rebalance: int | None,
 ) -> list[str]:
     holdings: list[str] = []
     group_counts: dict[object, int] = {}
+    new_names_selected = 0
     for symbol in candidate_order:
         if len(holdings) >= k:
             break
@@ -449,6 +413,13 @@ def _select_candidate_holdings(
             constraints=constraints,
         ):
             continue
+        is_new_name = prev_holdings is not None and symbol not in prev_holdings
+        if (
+            is_new_name
+            and max_new_names_per_rebalance is not None
+            and new_names_selected >= max_new_names_per_rebalance
+        ):
+            continue
         if _blocked_by_group_cap(
             symbol,
             group_map=group_map,
@@ -457,6 +428,8 @@ def _select_candidate_holdings(
         ):
             continue
         holdings.append(symbol)
+        if is_new_name:
+            new_names_selected += 1
     return holdings
 
 

@@ -1,6 +1,7 @@
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
+from functools import partial
 
 import numpy as np
 import pandas as pd
@@ -9,14 +10,20 @@ from portfolio_backtester._symbol_utils import canonicalize_symbol_columns
 
 from .execution import ExecutionModel, SelectionConstraints
 from .execution_calendar import build_execution_date_map
-from .portfolio_selection import (
-    _ranked_selection_frame,
-    select_holdings,
-)
+from .portfolio_selection import select_holdings
 from .portfolio_weights import (
     build_position_weights,
     limit_weight_turnover,
+    normalize_position_weights,
     normalize_weighting_mode,
+)
+from .selection_controls import (
+    apply_liquidity_floor_to_day as _apply_liquidity_floor_to_day,
+    controlled_selection_day,
+    merge_pricing_supplemental_columns as _merge_pricing_supplemental_columns,
+    ranked_selection_frame,
+    validate_max_new_names_per_rebalance,
+    validate_selection_min_score,
 )
 
 POSITION_COLUMNS = [
@@ -66,42 +73,47 @@ class PortfolioPositionSetup:
     weighting_mode: str
 
 
+@dataclass(frozen=True)
+class PortfolioPositionOptions:
+    pred_col: str
+    rebalance_dates: list[pd.Timestamp]
+    shift_days: int
+    top_k: int
+    weighting_mode: str
+    weighting_liquidity_col: str
+    buffer_exit: int
+    buffer_entry: int
+    long_only: bool
+    short_k: int | None
+    group_col: str | None
+    max_names_per_group: int | None
+    liquidity_floor_col: str | None
+    liquidity_floor_quantile: float | None
+    max_turnover_per_rebalance: float | None
+    rank_offset: int
+    selection_tiebreak_col: str | None
+    selection_score_bucket_size: float | None
+    selection_score_margin: float | None
+    selection_score_margin_rank_limit: int | None
+    selection_min_score: float | None
+    max_new_names_per_rebalance: int | None
+
+    def controlled_day(self, day: pd.DataFrame, *, ascending: bool) -> pd.DataFrame:
+        """Return the side-specific weighting frame without duplicate controlled symbols."""
+
+        return controlled_selection_day(
+            day,
+            self.pred_col,
+            ascending=ascending,
+            selection_tiebreak_col=self.selection_tiebreak_col,
+            selection_score_bucket_size=self.selection_score_bucket_size,
+            selection_min_score=self.selection_min_score,
+            max_new_names_per_rebalance=self.max_new_names_per_rebalance,
+        )
+
+
 def _empty_positions() -> pd.DataFrame:
     return pd.DataFrame(columns=POSITION_COLUMNS)
-
-
-def _merge_pricing_supplemental_columns(
-    data: pd.DataFrame,
-    pricing_source: pd.DataFrame,
-    supplemental_cols: list[str],
-) -> pd.DataFrame:
-    if not supplemental_cols:
-        return data
-    return data.merge(
-        pricing_source[["trade_date", "symbol", *supplemental_cols]],
-        on=["trade_date", "symbol"],
-        how="left",
-    )
-
-
-def _apply_liquidity_floor_to_day(
-    day: pd.DataFrame,
-    *,
-    liquidity_floor_col: str | None,
-    liquidity_floor_quantile: float | None,
-) -> pd.DataFrame:
-    if not liquidity_floor_col or liquidity_floor_quantile is None:
-        return day
-    if liquidity_floor_col not in day.columns:
-        raise ValueError(f"Portfolio liquidity floor column not found: {liquidity_floor_col}")
-    floor_q = float(liquidity_floor_quantile)
-    if floor_q <= 0:
-        return day
-    liquidity = pd.to_numeric(day[liquidity_floor_col], errors="coerce")
-    if liquidity.notna().sum() <= 1:
-        return day
-    cutoff = liquidity.quantile(floor_q)
-    return day.loc[liquidity.isna() | (liquidity >= cutoff)].copy()
 
 
 def _build_optional_tables(
@@ -249,7 +261,7 @@ def _rank_and_signal_maps(
     selection_tiebreak_col: str | None = None,
     selection_score_bucket_size: float | None = None,
 ) -> tuple[dict[str, int], dict[object, object]]:
-    ranked_codes = _ranked_selection_frame(
+    ranked_codes = ranked_selection_frame(
         day,
         pred_col,
         ascending=ascending,
@@ -303,6 +315,8 @@ def _select_side_holdings(
     selection_score_bucket_size: float | None,
     selection_score_margin: float | None,
     selection_score_margin_rank_limit: int | None,
+    selection_min_score: float | None,
+    max_new_names_per_rebalance: int | None,
 ) -> list[str]:
     holdings, _ = select_holdings(
         selection.day,
@@ -325,6 +339,8 @@ def _select_side_holdings(
         selection_score_bucket_size=selection_score_bucket_size,
         selection_score_margin=selection_score_margin,
         selection_score_margin_rank_limit=selection_score_margin_rank_limit,
+        selection_min_score=selection_min_score,
+        max_new_names_per_rebalance=max_new_names_per_rebalance,
     )
     return holdings
 
@@ -341,8 +357,22 @@ def _build_and_append_side(
     rank_ascending: bool,
     selection_tiebreak_col: str | None,
     selection_score_bucket_size: float | None,
+    selection_min_score: float | None,
+    max_new_names_per_rebalance: int | None,
     weight_sign: float = 1.0,
 ) -> bool:
+    selection = replace(
+        selection,
+        day=controlled_selection_day(
+            selection.day,
+            pred_col,
+            ascending=rank_ascending,
+            selection_tiebreak_col=selection_tiebreak_col,
+            selection_score_bucket_size=selection_score_bucket_size,
+            selection_min_score=selection_min_score,
+            max_new_names_per_rebalance=max_new_names_per_rebalance,
+        ),
+    )
     weights = build_position_weights(
         selection.day,
         holdings,
@@ -378,57 +408,59 @@ def _process_long_only_rebalance(
     context: PortfolioBuildContext,
     selection: RebalanceSelection,
     state: RebalanceState,
-    pred_col: str,
-    *,
-    weighting_mode: str,
-    weighting_liquidity_col: str,
-    buffer_exit: int,
-    buffer_entry: int,
-    group_col: str | None,
-    max_names_per_group: int | None,
-    max_turnover_per_rebalance: float | None,
-    rank_offset: int,
-    selection_tiebreak_col: str | None,
-    selection_score_bucket_size: float | None,
-    selection_score_margin: float | None,
-    selection_score_margin_rank_limit: int | None,
+    options: PortfolioPositionOptions,
 ) -> None:
     holdings = _select_side_holdings(
         context,
         selection,
-        pred_col,
+        options.pred_col,
         k=selection.k,
         ascending=False,
         prev_holdings=state.prev_holdings,
-        buffer_exit=buffer_exit,
-        buffer_entry=buffer_entry,
-        group_col=group_col,
-        max_names_per_group=max_names_per_group,
-        rank_offset=rank_offset,
-        selection_tiebreak_col=selection_tiebreak_col,
-        selection_score_bucket_size=selection_score_bucket_size,
-        selection_score_margin=selection_score_margin,
-        selection_score_margin_rank_limit=selection_score_margin_rank_limit,
+        buffer_exit=options.buffer_exit,
+        buffer_entry=options.buffer_entry,
+        group_col=options.group_col,
+        max_names_per_group=options.max_names_per_group,
+        rank_offset=options.rank_offset,
+        selection_tiebreak_col=options.selection_tiebreak_col,
+        selection_score_bucket_size=options.selection_score_bucket_size,
+        selection_score_margin=options.selection_score_margin,
+        selection_score_margin_rank_limit=options.selection_score_margin_rank_limit,
+        selection_min_score=options.selection_min_score,
+        max_new_names_per_rebalance=options.max_new_names_per_rebalance,
     )
     if not holdings:
+        if (
+            options.selection_min_score is not None
+            or options.max_new_names_per_rebalance is not None
+        ) and state.prev_holdings is not None:
+            state.prev_weights = pd.Series(dtype=float)
+            state.prev_holdings = set()
         return
+    selection = replace(selection, day=options.controlled_day(selection.day, ascending=False))
     weights = build_position_weights(
         selection.day,
         holdings,
-        pred_col,
+        options.pred_col,
         side="long",
-        weighting=weighting_mode,
-        liquidity_col=weighting_liquidity_col,
+        weighting=options.weighting_mode,
+        liquidity_col=options.weighting_liquidity_col,
     )
-    weights = limit_weight_turnover(state.prev_weights, weights, max_turnover_per_rebalance)
+    weights = limit_weight_turnover(
+        state.prev_weights,
+        weights,
+        options.max_turnover_per_rebalance,
+    )
+    if options.selection_min_score is not None:
+        weights = normalize_position_weights(weights.reindex(holdings).dropna())
     if weights.empty:
         return
     rank_map, signal_map = _rank_and_signal_maps(
         selection.day,
-        pred_col,
+        options.pred_col,
         ascending=False,
-        selection_tiebreak_col=selection_tiebreak_col,
-        selection_score_bucket_size=selection_score_bucket_size,
+        selection_tiebreak_col=options.selection_tiebreak_col,
+        selection_score_bucket_size=options.selection_score_bucket_size,
     )
     _append_position_rows(
         results,
@@ -443,95 +475,128 @@ def _process_long_only_rebalance(
     state.prev_holdings = set(weights.index)
 
 
+def _commit_long_short_state(
+    state: RebalanceState,
+    *,
+    long_holdings: list[str],
+    short_holdings: list[str],
+    completed: bool,
+) -> None:
+    if not completed:
+        return
+    if long_holdings or state.prev_holdings is not None:
+        state.prev_holdings = set(long_holdings)
+    if short_holdings or state.prev_short_holdings is not None:
+        state.prev_short_holdings = set(short_holdings)
+
+
+def _append_long_short_positions(
+    results: list[dict[str, object]],
+    selection: RebalanceSelection,
+    options: PortfolioPositionOptions,
+    *,
+    long_holdings: list[str],
+    short_holdings: list[str],
+) -> bool:
+    append_side = partial(
+        _build_and_append_side,
+        results,
+        selection,
+        pred_col=options.pred_col,
+        weighting_mode=options.weighting_mode,
+        weighting_liquidity_col=options.weighting_liquidity_col,
+        selection_tiebreak_col=options.selection_tiebreak_col,
+        selection_score_bucket_size=options.selection_score_bucket_size,
+        selection_min_score=options.selection_min_score,
+        max_new_names_per_rebalance=options.max_new_names_per_rebalance,
+    )
+    long_ok = not long_holdings or append_side(
+        long_holdings,
+        side="long",
+        rank_ascending=False,
+    )
+    short_ok = not short_holdings or append_side(
+        short_holdings,
+        side="short",
+        rank_ascending=True,
+        weight_sign=-1.0,
+    )
+    return long_ok and short_ok
+
+
 def _process_long_short_rebalance(
     results: list[dict[str, object]],
     context: PortfolioBuildContext,
     selection: RebalanceSelection,
     state: RebalanceState,
-    pred_col: str,
-    *,
-    short_k: int | None,
-    weighting_mode: str,
-    weighting_liquidity_col: str,
-    buffer_exit: int,
-    buffer_entry: int,
-    group_col: str | None,
-    max_names_per_group: int | None,
-    selection_tiebreak_col: str | None,
-    selection_score_bucket_size: float | None,
-    selection_score_margin: float | None,
-    selection_score_margin_rank_limit: int | None,
+    options: PortfolioPositionOptions,
 ) -> None:
-    short_k_final = short_k if short_k is not None else selection.k
-    short_k_final = min(int(short_k_final), len(selection.day) - selection.k)
+    controlled = (
+        options.selection_min_score is not None or options.max_new_names_per_rebalance is not None
+    )
+    short_k_final = int(options.short_k if options.short_k is not None else selection.k)
+    if not controlled:
+        short_k_final = min(short_k_final, len(selection.day) - selection.k)
     if short_k_final <= 0:
         return
-
     long_holdings = _select_side_holdings(
         context,
         selection,
-        pred_col,
+        options.pred_col,
         k=selection.k,
         ascending=False,
         prev_holdings=state.prev_holdings,
-        buffer_exit=buffer_exit,
-        buffer_entry=buffer_entry,
-        group_col=group_col,
-        max_names_per_group=max_names_per_group,
+        buffer_exit=options.buffer_exit,
+        buffer_entry=options.buffer_entry,
+        group_col=options.group_col,
+        max_names_per_group=options.max_names_per_group,
         rank_offset=0,
-        selection_tiebreak_col=selection_tiebreak_col,
-        selection_score_bucket_size=selection_score_bucket_size,
-        selection_score_margin=selection_score_margin,
-        selection_score_margin_rank_limit=selection_score_margin_rank_limit,
+        selection_tiebreak_col=options.selection_tiebreak_col,
+        selection_score_bucket_size=options.selection_score_bucket_size,
+        selection_score_margin=options.selection_score_margin,
+        selection_score_margin_rank_limit=options.selection_score_margin_rank_limit,
+        selection_min_score=options.selection_min_score,
+        max_new_names_per_rebalance=options.max_new_names_per_rebalance,
     )
+    short_selection = selection
+    if controlled:
+        short_day = selection.day.loc[~selection.day["symbol"].isin(long_holdings)].copy()
+        short_k_final = min(short_k_final, len(short_day))
+        short_selection = replace(selection, day=short_day, k=short_k_final)
     short_holdings = _select_side_holdings(
         context,
-        selection,
-        pred_col,
+        short_selection,
+        options.pred_col,
         k=short_k_final,
         ascending=True,
         prev_holdings=state.prev_short_holdings,
-        buffer_exit=buffer_exit,
-        buffer_entry=buffer_entry,
-        group_col=group_col,
-        max_names_per_group=max_names_per_group,
+        buffer_exit=options.buffer_exit,
+        buffer_entry=options.buffer_entry,
+        group_col=options.group_col,
+        max_names_per_group=options.max_names_per_group,
         rank_offset=0,
-        selection_tiebreak_col=selection_tiebreak_col,
-        selection_score_bucket_size=selection_score_bucket_size,
-        selection_score_margin=selection_score_margin,
-        selection_score_margin_rank_limit=selection_score_margin_rank_limit,
+        selection_tiebreak_col=options.selection_tiebreak_col,
+        selection_score_bucket_size=options.selection_score_bucket_size,
+        selection_score_margin=options.selection_score_margin,
+        selection_score_margin_rank_limit=options.selection_score_margin_rank_limit,
+        selection_min_score=options.selection_min_score,
+        max_new_names_per_rebalance=options.max_new_names_per_rebalance,
     )
-    if not long_holdings or not short_holdings:
+    if not controlled and (not long_holdings or not short_holdings):
         return
-
-    long_ok = _build_and_append_side(
+    completed = _append_long_short_positions(
         results,
         selection,
-        long_holdings,
-        pred_col,
-        side="long",
-        weighting_mode=weighting_mode,
-        weighting_liquidity_col=weighting_liquidity_col,
-        rank_ascending=False,
-        selection_tiebreak_col=selection_tiebreak_col,
-        selection_score_bucket_size=selection_score_bucket_size,
+        options,
+        long_holdings=long_holdings,
+        short_holdings=short_holdings,
     )
-    short_ok = _build_and_append_side(
-        results,
-        selection,
-        short_holdings,
-        pred_col,
-        side="short",
-        weighting_mode=weighting_mode,
-        weighting_liquidity_col=weighting_liquidity_col,
-        rank_ascending=True,
-        selection_tiebreak_col=selection_tiebreak_col,
-        selection_score_bucket_size=selection_score_bucket_size,
-        weight_sign=-1.0,
+    _commit_long_short_state(
+        state,
+        long_holdings=long_holdings,
+        short_holdings=short_holdings,
+        completed=completed,
     )
-    if long_ok and short_ok:
-        state.prev_holdings = set(long_holdings)
-        state.prev_short_holdings = set(short_holdings)
 
 
 def _normalize_portfolio_frames(
@@ -611,60 +676,28 @@ def _prepare_position_setup(
 
 def _build_position_rows_by_rebalance(
     context: PortfolioBuildContext,
-    *,
-    pred_col: str,
-    rebalance_dates: list[pd.Timestamp],
-    shift_days: int,
-    top_k: int,
-    weighting_mode: str,
-    weighting_liquidity_col: str,
-    buffer_exit: int,
-    buffer_entry: int,
-    long_only: bool,
-    short_k: int | None,
-    group_col: str | None,
-    max_names_per_group: int | None,
-    liquidity_floor_col: str | None,
-    liquidity_floor_quantile: float | None,
-    max_turnover_per_rebalance: float | None,
-    rank_offset: int,
-    selection_tiebreak_col: str | None,
-    selection_score_bucket_size: float | None,
-    selection_score_margin: float | None,
-    selection_score_margin_rank_limit: int | None,
+    options: PortfolioPositionOptions,
 ) -> list[dict[str, object]]:
     results: list[dict[str, object]] = []
     state = RebalanceState()
-    for rebalance_date in rebalance_dates:
+    for rebalance_date in options.rebalance_dates:
         selection = _resolve_rebalance_selection(
             context,
             rebalance_date,
-            shift_days=shift_days,
-            top_k=top_k,
-            liquidity_floor_col=liquidity_floor_col,
-            liquidity_floor_quantile=liquidity_floor_quantile,
+            shift_days=options.shift_days,
+            top_k=options.top_k,
+            liquidity_floor_col=options.liquidity_floor_col,
+            liquidity_floor_quantile=options.liquidity_floor_quantile,
         )
         if selection is None:
             continue
-        if long_only:
+        if options.long_only:
             _process_long_only_rebalance(
                 results,
                 context,
                 selection,
                 state,
-                pred_col,
-                weighting_mode=weighting_mode,
-                weighting_liquidity_col=weighting_liquidity_col,
-                buffer_exit=buffer_exit,
-                buffer_entry=buffer_entry,
-                group_col=group_col,
-                max_names_per_group=max_names_per_group,
-                max_turnover_per_rebalance=max_turnover_per_rebalance,
-                rank_offset=rank_offset,
-                selection_tiebreak_col=selection_tiebreak_col,
-                selection_score_bucket_size=selection_score_bucket_size,
-                selection_score_margin=selection_score_margin,
-                selection_score_margin_rank_limit=selection_score_margin_rank_limit,
+                options,
             )
         else:
             _process_long_short_rebalance(
@@ -672,18 +705,7 @@ def _build_position_rows_by_rebalance(
                 context,
                 selection,
                 state,
-                pred_col,
-                short_k=short_k,
-                weighting_mode=weighting_mode,
-                weighting_liquidity_col=weighting_liquidity_col,
-                buffer_exit=buffer_exit,
-                buffer_entry=buffer_entry,
-                group_col=group_col,
-                max_names_per_group=max_names_per_group,
-                selection_tiebreak_col=selection_tiebreak_col,
-                selection_score_bucket_size=selection_score_bucket_size,
-                selection_score_margin=selection_score_margin,
-                selection_score_margin_rank_limit=selection_score_margin_rank_limit,
+                options,
             )
     return results
 
@@ -724,11 +746,14 @@ def build_positions_by_rebalance(
     selection_score_bucket_size: float | None = None,
     selection_score_margin: float | None = None,
     selection_score_margin_rank_limit: int | None = None,
+    selection_min_score: float | None = None,
+    max_new_names_per_rebalance: int | None = None,
 ) -> pd.DataFrame:
+    selection_min_score = validate_selection_min_score(selection_min_score)
+    max_new_names_per_rebalance = validate_max_new_names_per_rebalance(max_new_names_per_rebalance)
     data, pricing_data = _normalize_portfolio_frames(data, pricing_data)
     if data.empty or not rebalance_dates or top_k <= 0:
         return _empty_positions()
-
     setup = _prepare_position_setup(
         data,
         price_col=price_col,
@@ -744,9 +769,7 @@ def build_positions_by_rebalance(
     )
     if setup is None:
         return _empty_positions()
-
-    results = _build_position_rows_by_rebalance(
-        setup.context,
+    options = PortfolioPositionOptions(
         pred_col=pred_col,
         rebalance_dates=rebalance_dates,
         shift_days=shift_days,
@@ -767,5 +790,8 @@ def build_positions_by_rebalance(
         selection_score_bucket_size=selection_score_bucket_size,
         selection_score_margin=selection_score_margin,
         selection_score_margin_rank_limit=selection_score_margin_rank_limit,
+        selection_min_score=selection_min_score,
+        max_new_names_per_rebalance=max_new_names_per_rebalance,
     )
+    results = _build_position_rows_by_rebalance(setup.context, options)
     return _positions_frame_from_rows(results)

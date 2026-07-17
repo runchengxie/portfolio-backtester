@@ -69,6 +69,8 @@ def backtest_topk(
     selection_score_bucket_size: float | None = None,
     selection_score_margin: float | None = None,
     selection_score_margin_rank_limit: int | None = None,
+    selection_min_score: float | None = None,
+    max_new_names_per_rebalance: int | None = None,
 ):
     """Compatibility facade for the historical Top-K parameter surface."""
 
@@ -118,6 +120,8 @@ def backtest_topk(
         selection_score_bucket_size=selection_score_bucket_size,
         selection_score_margin=selection_score_margin,
         selection_score_margin_rank_limit=selection_score_margin_rank_limit,
+        selection_min_score=selection_min_score,
+        max_new_names_per_rebalance=max_new_names_per_rebalance,
     )
     return run_backtest(data, spec, pricing_data=pricing_data)
 

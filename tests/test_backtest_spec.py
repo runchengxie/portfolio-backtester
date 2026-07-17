@@ -122,6 +122,8 @@ def test_backtest_spec_is_frozen_and_json_serializable() -> None:
         selection_score_bucket_size=0.01,
         selection_score_margin=0.02,
         selection_score_margin_rank_limit=10,
+        selection_min_score=0.25,
+        max_new_names_per_rebalance=3,
     )
 
     mapping = spec.to_mapping()
@@ -142,6 +144,15 @@ def test_backtest_spec_rejects_unknown_schema_version() -> None:
     mapping["schema_version"] = 2
 
     with pytest.raises(ValueError, match="Unsupported BacktestSpec schema version: 2"):
+        BacktestSpec.from_mapping(mapping)
+
+
+@pytest.mark.parametrize("invalid", [True, 1.5, "1"])
+def test_backtest_spec_rejects_non_integer_new_name_budget(invalid: object) -> None:
+    mapping = _golden_spec().to_mapping()
+    mapping["max_new_names_per_rebalance"] = invalid
+
+    with pytest.raises(ValueError, match="non-negative integer"):
         BacktestSpec.from_mapping(mapping)
 
 
@@ -196,3 +207,17 @@ def test_run_backtest_accepts_separate_pricing_data() -> None:
     spec = _golden_spec()
 
     assert run_backtest(data, spec, pricing_data=_golden_frame()) is not None
+
+
+def test_run_backtest_applies_score_threshold_and_new_name_limit() -> None:
+    spec = replace(
+        _golden_spec(),
+        selection_min_score=2.5,
+        max_new_names_per_rebalance=0,
+    )
+
+    result = run_backtest(_golden_frame(), spec)
+
+    assert result is not None
+    _, _, gross, _, _ = result
+    assert gross.tolist() == pytest.approx([0.10, 0.10])
