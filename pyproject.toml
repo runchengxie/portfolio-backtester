@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "portfolio-backtester"
-version = "0.3.0"
+version = "0.4.0"
 description = "Reusable portfolio construction and research backtesting toolkit"
 readme = "README.md"
 requires-python = ">=3.12"
@@ -31,7 +31,6 @@ package-dir = {"" = "src"}
 [tool.setuptools.packages.find]
 where = ["src"]
 include = ["portfolio_backtester", "portfolio_backtester.*"]
-
 
 [tool.ruff]
 target-version = "py312"

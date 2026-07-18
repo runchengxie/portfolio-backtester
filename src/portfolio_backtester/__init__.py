@@ -24,6 +24,7 @@ from .daily_watch20 import (
     GuardFactorSpec,
     select_daily_watch20,
 )
+from .daily_watch20_policy import PORTFOLIO_POLICY_SCHEMA, DailyWatch20PortfolioPolicy
 from .evidence_receipts import (
     build_portfolio_sizing_receipt,
     series_sha256,
@@ -31,6 +32,11 @@ from .evidence_receipts import (
     write_receipt,
 )
 from .execution import DetailedTradeFeeModel, l2_price_tiered_slippage
+from .execution_summary import (
+    EXECUTION_SUMMARY_SCHEMA,
+    execution_summary_frame,
+    summarize_staggered_execution,
+)
 from .hrp import HrpConfig, HrpResult, hierarchical_risk_parity, rolling_hrp_weights
 from .metrics import summarize_period_returns
 from .position_backtest import PositionBacktestConfig, PositionBacktestResult, run_position_backtest
@@ -43,6 +49,11 @@ from .sharpe_inference import (
     expected_max_sharpe,
     probabilistic_sharpe_ratio as probabilistic_sharpe_ratio_from_stats,
     sharpe_standard_error,
+)
+from .staggered_cohort_execution import (
+    StaggeredCohortExecutionConfig,
+    StaggeredCohortExecutionResult,
+    simulate_staggered_cohort_execution,
 )
 from .strategy import construct_positions_from_strategy, strategy_from_config
 from .strategy_risk import (
@@ -64,10 +75,13 @@ from .turnover import (
 from .types import CostBreakdown
 
 __all__ = [
+    "EXECUTION_SUMMARY_SCHEMA",
+    "PORTFOLIO_POLICY_SCHEMA",
     "POSITIONS_BY_REBALANCE_CONTRACT",
     "BacktestSpec",
     "CostBreakdown",
     "DailyWatch20Config",
+    "DailyWatch20PortfolioPolicy",
     "DailyWatch20Receipt",
     "DailyWatch20Result",
     "DailyWatch20SelectionError",
@@ -83,6 +97,8 @@ __all__ = [
     "RebalanceTurnoverReport",
     "SessionRebalanceSchedule",
     "SizingConfig",
+    "StaggeredCohortExecutionConfig",
+    "StaggeredCohortExecutionResult",
     "StrategyRiskReport",
     "StrategySpec",
     "TurnoverBreakdown",
@@ -100,6 +116,7 @@ __all__ = [
     "deflated_sharpe_ratio",
     "discretize_weights",
     "evaluate_position_backtest",
+    "execution_summary_frame",
     "expected_max_sharpe",
     "get_session_interval_rebalance_dates",
     "hierarchical_risk_parity",
@@ -117,9 +134,11 @@ __all__ = [
     "series_sha256",
     "sha256_file",
     "sharpe_standard_error",
+    "simulate_staggered_cohort_execution",
     "strategy_failure_probability",
     "strategy_from_config",
     "summarize_period_returns",
+    "summarize_staggered_execution",
     "summarize_strategy_risk",
     "turnover_from_trade_weights",
     "validate_positions_by_rebalance_frame",
