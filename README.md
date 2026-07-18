@@ -39,6 +39,24 @@ from portfolio_backtester import (
 
 `run_position_backtest` 只汇总策略自身结果。需要信息比率、跟踪误差、alpha 和 beta 时，使用 `evaluate_position_backtest` 补充基准评估。
 
+DailyWatch20 的组合策略、错位持有执行与稳定汇总也可以从包根导入：
+
+```python
+from portfolio_backtester import (
+    EXECUTION_SUMMARY_SCHEMA,
+    PORTFOLIO_POLICY_SCHEMA,
+    DailyWatch20PortfolioPolicy,
+    StaggeredCohortExecutionConfig,
+    StaggeredCohortExecutionResult,
+    execution_summary_frame,
+    simulate_staggered_cohort_execution,
+    summarize_staggered_execution,
+)
+```
+
+错位持有执行按 `horizon_days` 建立同样数量的独立 cohort，并为每个 cohort 分配
+`1 / horizon_days` 的初始资金。H1 只有一个 cohort，因此其收益就是整个 ledger 的收益。
+
 输入表、最小示例和返回值说明见 [docs/guides/entry-points.md](docs/guides/entry-points.md)。
 
 公开 API 与契约见：
@@ -100,7 +118,7 @@ scripts/dev/run_tests.sh basedpyright
 
 数据采集、特征工程、模型训练、具体策略规则、任务编排和券商执行由调用方或其他仓库负责。vn.py Gateway 和实时 transport 属于 `quant-execution-engine`。第三方框架对象不得进入本仓库公开结果或跨仓库产物。
 
-`DailyWatch20` 是现有调用方使用的兼容例外。本仓库只保留其组合选择与回执接口，研究假设、特征和晋升证据由 `alpha-research` 与 `strategy-pipeline` 维护。新增策略专用规则不应继续扩展这一例外。
+`DailyWatch20` 是现有调用方使用的兼容例外。本仓库只保留其组合选择、组合策略、错位持有执行与回执接口，研究假设、特征和晋升证据由 `alpha-research`、`research-apps` 与 `strategy-pipeline` 维护。新增策略专用规则不应继续扩展这一例外。
 
 工作区 2.0 已删除旧共享 namespace 和 facade。新代码只使用 `portfolio_backtester`。
 

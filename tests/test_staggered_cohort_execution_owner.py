@@ -209,6 +209,7 @@ def test_public_execution_summary_and_policy() -> None:
         result, variant="A", horizon=1, single_side_cost_bps=0.0
     )
     frame = execution_summary_frame([summary])
-    assert frame.iloc[0]["total_return"] == pytest.approx(0.1 / 3.0)
+    assert result.summary["cohort_capital_fraction"] == pytest.approx(1.0)
+    assert frame.iloc[0]["total_return"] == pytest.approx(0.1)
     assert frame.iloc[0]["terminal_complete"]
     assert DailyWatch20PortfolioPolicy().to_dict()["terminal_policy"] == "fail_closed"

@@ -28,7 +28,9 @@ class DailyWatch20PortfolioPolicy:
             raise ValueError("DailyWatch20 weighting is frozen at equal_weight")
         if not 0 <= self.single_side_cost_bps < 10_000:
             raise ValueError("single_side_cost_bps must be in [0, 10000)")
-        if not self.execution_horizons or any(value not in {1, 3, 5} for value in self.execution_horizons):
+        if not self.execution_horizons or any(
+            value not in {1, 3, 5} for value in self.execution_horizons
+        ):
             raise ValueError("execution_horizons must use the supported 1/3/5-day grid")
         if len(self.execution_horizons) != len(set(self.execution_horizons)):
             raise ValueError("execution_horizons must be unique")

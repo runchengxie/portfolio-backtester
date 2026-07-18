@@ -65,7 +65,9 @@ def summarize_staggered_execution(
         "terminal_complete": bool(summary.get("complete_nav")),
         "final_nav": summary.get("final_nav"),
         "diagnostic_mark_to_open_nav": summary.get("diagnostic_mark_to_open_nav"),
-        "terminal_unclosed_position_count": int(summary.get("terminal_unclosed_position_count") or 0),
+        "terminal_unclosed_position_count": int(
+            summary.get("terminal_unclosed_position_count") or 0
+        ),
         "tradability_price": summary.get("tradability_price"),
         "valuation_and_fill_price": summary.get("valuation_and_fill_price"),
     }

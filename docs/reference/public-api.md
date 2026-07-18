@@ -7,6 +7,9 @@
 | 分数驱动回测 | `BacktestSpec`、`run_backtest`、`backtest_topk` |
 | 策略和持仓构造 | `StrategySpec`、`GroupCap`、`strategy_from_config`、`construct_positions_from_strategy` |
 | DailyWatch20 兼容入口 | `DailyWatch20Config`、`DailyWatch20Receipt`、`DailyWatch20Result`、`DailyWatch20SelectionError`、`GuardFactorSpec`、`select_daily_watch20` |
+| DailyWatch20 组合策略 | `PORTFOLIO_POLICY_SCHEMA`、`DailyWatch20PortfolioPolicy` |
+| 错位持有执行 | `StaggeredCohortExecutionConfig`、`StaggeredCohortExecutionResult`、`simulate_staggered_cohort_execution` |
+| 错位持有汇总 | `EXECUTION_SUMMARY_SCHEMA`、`summarize_staggered_execution`、`execution_summary_frame` |
 | 持仓回放 | `PositionBacktestConfig`、`PositionBacktestResult`、`run_position_backtest` |
 | 持仓基准评估 | `PositionBacktestEvaluation`、`evaluate_position_backtest` |
 | 持仓契约 | `POSITIONS_BY_REBALANCE_CONTRACT`、`PositionsByRebalanceFrameContract`、`validate_positions_by_rebalance_frame`、`assert_positions_by_rebalance_frame` |
@@ -23,6 +26,10 @@
 `probabilistic_sharpe_ratio` 接收收益序列。`probabilistic_sharpe_ratio_from_stats` 接收已经计算好的周期 Sharpe、偏度和超额峰度。
 
 `DailyWatch20` 是现有调用方使用的兼容例外。新增研究假设、特征和晋升规则由研究层与编排层维护。
+
+错位持有执行按 `horizon_days` 建立同样数量的独立 cohort，每个 cohort 初始分配
+`1 / horizon_days` 的组合资金。H1 只有一个 cohort，因此占用全部初始资金。汇总中的
+`total_return` 是整个 ledger 的累计收益，不是单个 cohort 收益再次除以持有期。
 
 执行容量与每日净值模拟从 `portfolio_backtester.execution_sim` 导入，详细入口见 [执行容量与每日净值模拟](../guides/execution-simulation.md)。AFML 仓位和风险入口见 [AFML 仓位、HRP 与策略风险](../concepts/afml-sizing-and-risk.md)。
 
