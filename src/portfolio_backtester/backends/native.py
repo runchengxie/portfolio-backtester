@@ -56,12 +56,10 @@ class NativePositionReplayBackend:
             config=request.config,
             intraday_bars=request.intraday_bars,
         )
-        performance = result.net_returns.merge(
+        performance = _aligned_performance_frame(
+            result.net_returns,
             result.gross_returns,
-            on="period_end",
-            how="outer",
-            validate="one_to_one",
-        ).sort_values("period_end", kind="stable")
+        )
         canonical = CanonicalBacktestResult(
             backend_name=self.name,
             capabilities=self.capabilities,
@@ -79,6 +77,20 @@ class NativePositionReplayBackend:
         )
         canonical.validate()
         return canonical
+
+
+def _aligned_performance_frame(
+    net_returns: pd.DataFrame,
+    gross_returns: pd.DataFrame,
+) -> pd.DataFrame:
+    net = net_returns.reset_index(drop=True).copy()
+    gross = gross_returns.reset_index(drop=True).copy()
+    if net.shape[0] != gross.shape[0]:
+        raise ValueError("Native net and gross return frames must have the same row count.")
+    if not net["period_end"].astype(str).equals(gross["period_end"].astype(str)):
+        raise ValueError("Native net and gross return frames must have aligned period_end rows.")
+    net["gross_return"] = pd.to_numeric(gross["gross_return"], errors="coerce").to_numpy()
+    return net
 
 
 def _validate_request(request: NativePositionReplayRequest) -> None:
