@@ -6,6 +6,7 @@ from pathlib import Path
 import pandas as pd
 import pytest
 
+import portfolio_backtester.backends.native as native_backend_module
 from portfolio_backtester.backends import (
     BackendCapabilities,
     BackendRegistry,
@@ -82,6 +83,34 @@ def test_native_backend_matches_committed_liquid_golden_result() -> None:
     assert result.orders.empty
     assert result.fills.empty
     assert result.daily_ledger.empty
+
+
+def test_native_backend_preserves_duplicate_period_end_rows(monkeypatch) -> None:
+    class FakeResult:
+        net_returns = pd.DataFrame(
+            [
+                {"period_end": "2020-01-03", "net_return": 0.01},
+                {"period_end": "2020-01-03", "net_return": 0.02},
+            ]
+        )
+        gross_returns = pd.DataFrame(
+            [
+                {"period_end": "2020-01-03", "gross_return": 0.011},
+                {"period_end": "2020-01-03", "gross_return": 0.021},
+            ]
+        )
+        summary = {"schema": "position_backtest.v1"}
+
+    monkeypatch.setattr(
+        native_backend_module,
+        "run_position_backtest",
+        lambda **_: FakeResult(),
+    )
+
+    result = NativePositionReplayBackend().run(_request())
+
+    assert result.performance.shape[0] == 2
+    assert result.performance["gross_return"].tolist() == pytest.approx([0.011, 0.021])
 
 
 def test_native_backend_fails_closed_for_unsupported_short_positions() -> None:
