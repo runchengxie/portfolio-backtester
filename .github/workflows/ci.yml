@@ -1,0 +1,39 @@
+name: pr-ci
+
+on:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: pr-ci-${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  contracts:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v6
+        with:
+          enable-cache: true
+          python-version: "3.12"
+      - name: Sync development environment
+        run: uv sync --locked --extra dev
+      - name: Lint
+        run: scripts/dev/run_tests.sh lint
+      - name: Format check
+        run: scripts/dev/run_tests.sh format
+      - name: Typecheck
+        run: scripts/dev/run_tests.sh typecheck
+      - name: Contract and compatibility tests
+        run: |
+          uv run --extra dev python -m pytest -q \
+            tests/test_execution_contracts.py \
+            tests/test_backtest_backends.py \
+            tests/test_framework_integration_ledger.py \
+            tests/test_position_backtest.py \
+            tests/test_package_smoke.py
