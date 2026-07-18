@@ -8,8 +8,7 @@ import numpy as np
 import pandas as pd
 
 from . import name_turnover, turnover_from_trade_weights
-from .daily_watch20 import DailyWatch20Config as SelectionConfig
-from .daily_watch20 import select_daily_watch20
+from .daily_watch20 import DailyWatch20Config as SelectionConfig, select_daily_watch20
 
 DEFAULT_SCORE_COLUMN = "relative_percentile"
 
@@ -26,9 +25,7 @@ def _flag_masks(values: pd.Series) -> tuple[pd.Series, pd.Series]:
     numeric = cast(pd.Series, pd.to_numeric(values, errors="coerce"))
     text = values.astype("string").str.strip().str.lower()
     true = numeric.eq(1).fillna(False) | text.isin(["true", "t", "yes", "y"])
-    known = numeric.isin([0, 1]) | text.isin(
-        ["true", "t", "yes", "y", "false", "f", "no", "n"]
-    )
+    known = numeric.isin([0, 1]) | text.isin(["true", "t", "yes", "y", "false", "f", "no", "n"])
     return cast(pd.Series, true), cast(pd.Series, known)
 
 
@@ -42,9 +39,7 @@ def trade_audit(
 
     columns = ["symbol", "is_suspended", "open", "up_limit", "down_limit"]
     available = [column for column in columns if column in frame.columns]
-    execution = frame.loc[
-        _series(frame, "trade_date").eq(execution_date), available
-    ].copy()
+    execution = frame.loc[_series(frame, "trade_date").eq(execution_date), available].copy()
     execution = execution.drop_duplicates("symbol", keep="last").set_index("symbol")
     trades = trade_weights.rename("trade_weight").to_frame().join(execution, how="left")
     for column in columns[1:]:
@@ -127,18 +122,14 @@ def portfolio_daily_row(
         else np.nan
     )
     transaction_cost = turnover.gross_traded_weight * single_side_cost_bps / 10_000.0
-    net_return = (
-        gross_return - transaction_cost if return_observation_complete else np.nan
-    )
+    net_return = gross_return - transaction_cost if return_observation_complete else np.nan
     return {
         "trade_date": trade_date,
         "execution_date": execution_date,
         "portfolio_size": len(selected),
         "portfolio_size_complete": len(selected) == expected_size,
         "observed_return_count": observed_return_count,
-        "observed_return_ratio": observed_return_count / len(selected)
-        if len(selected)
-        else 0.0,
+        "observed_return_ratio": observed_return_count / len(selected) if len(selected) else 0.0,
         "return_observation_complete": return_observation_complete,
         "gross_forward_return_proxy": gross_return,
         "transaction_cost": float(transaction_cost),
@@ -268,30 +259,18 @@ def portfolio_summary_fields(daily: pd.DataFrame) -> dict[str, Any]:
         "blocked_gross_trade_weight_total": float(
             _series(daily, "blocked_gross_trade_weight").sum()
         ),
-        "buy_limit_blocked_weight_total": float(
-            _series(daily, "buy_limit_blocked_weight").sum()
-        ),
-        "sell_limit_blocked_weight_total": float(
-            _series(daily, "sell_limit_blocked_weight").sum()
-        ),
-        "suspended_trade_weight_total": float(
-            _series(daily, "suspended_trade_weight").sum()
-        ),
+        "buy_limit_blocked_weight_total": float(_series(daily, "buy_limit_blocked_weight").sum()),
+        "sell_limit_blocked_weight_total": float(_series(daily, "sell_limit_blocked_weight").sum()),
+        "suspended_trade_weight_total": float(_series(daily, "suspended_trade_weight").sum()),
         "unknown_tradability_weight_total": float(
             _series(daily, "unknown_tradability_weight").sum()
         ),
-        "tradability_audit_pass_ratio": float(
-            _series(daily, "tradability_audit_passed").mean()
-        ),
-        "complete_portfolio_ratio": float(
-            _series(daily, "portfolio_size_complete").mean()
-        ),
+        "tradability_audit_pass_ratio": float(_series(daily, "tradability_audit_passed").mean()),
+        "complete_portfolio_ratio": float(_series(daily, "portfolio_size_complete").mean()),
         "observed_return_count": observed,
         "expected_return_count": expected,
         "observed_return_ratio": observed / expected if expected else 0.0,
-        "complete_return_date_ratio": float(
-            _series(daily, "return_observation_complete").mean()
-        ),
+        "complete_return_date_ratio": float(_series(daily, "return_observation_complete").mean()),
     }
 
 
