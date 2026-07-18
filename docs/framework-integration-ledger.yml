@@ -1,0 +1,111 @@
+schema_version: portfolio_backtester.framework_integration.v1
+policy:
+  native_default_until_parity: true
+  no_new_generic_framework_features:
+    - event_engine
+    - gateway
+    - generic_oms
+    - strategy_lifecycle
+    - parameter_optimizer
+    - generic_data_feed
+    - market_agnostic_broker_simulator
+  forbidden_public_result_types:
+    - backtrader.*
+    - vnpy.*
+    - qlib.*
+  required_canonical_outputs:
+    - performance
+    - positions
+    - orders
+    - fills
+    - daily_ledger
+    - summary
+    - metadata
+
+backends:
+  native:
+    owner: portfolio-backtester
+    status: canonical
+    scope:
+      - cross_sectional_targets
+      - deterministic_position_replay
+      - a_share_execution_rules
+      - capacity_and_cost_research
+    rollback: keep native as the default backend
+
+  qlib:
+    owner: portfolio-backtester
+    status: evaluation
+    scope:
+      - generic_topk_baselines
+      - differential_backtests
+    adoption_gates:
+      - canonical_result_translation
+      - deterministic_golden_parity
+      - no_framework_objects_in_artifacts
+      - native_a_share_rule_protection
+    rollback: disable the optional adapter and retain native fixtures
+
+  backtrader:
+    owner: portfolio-backtester
+    status: evaluation
+    scope:
+      - event_driven_reference_scenarios
+      - order_type_and_clock_parity
+    adoption_gates:
+      - optional_dependency_only
+      - canonical_order_and_fill_translation
+      - explicit_simulation_clock
+      - deterministic_golden_parity
+      - adapter_code_smaller_than_replaced_native_surface
+    rollback: disable the optional adapter and retain native replay
+
+  vnpy:
+    owner: quant-execution-engine
+    status: transport_only
+    scope:
+      - gateway_lifecycle
+      - paper_and_shadow_transport
+      - normalized_order_trade_account_events
+    adoption_gates:
+      - shadow_mode_cannot_send_live_orders
+      - duplicate_callbacks_are_idempotent
+      - out_of_order_callbacks_are_deterministic
+      - restart_and_reconciliation_are_deterministic
+    rollback: disable vn.py transport and replay the durable execution journal
+
+replacement_gates:
+  coverage_ratio_minimum: 0.90
+  requirements:
+    - all_golden_scenarios_pass
+    - canonical_outputs_match_or_differences_are_classified
+    - performance_meets_documented_threshold
+    - no_loss_of_a_share_domain_semantics
+    - migration_and_rollback_are_documented
+  action: delete_or_freeze_replaced_native_generic_implementation
+
+golden_scenarios:
+  - id: liquid_long_only
+    purpose: generic fully liquid parity
+    required_comparisons:
+      - positions
+      - turnover
+      - gross_return
+      - costs
+      - nav
+  - id: a_share_market_rules
+    purpose: preserve native market semantics
+    required_features:
+      - t_plus_one
+      - directional_price_limits
+      - suspension
+      - round_lot_and_odd_lot_sell
+      - minimum_commission
+  - id: capacity_partial_fill
+    purpose: validate order lifecycle and accounting
+    required_features:
+      - multi_day_partial_fill
+      - cancel_replace
+      - insufficient_cash
+      - nonlinear_minimum_commission
+      - cash_and_position_conservation

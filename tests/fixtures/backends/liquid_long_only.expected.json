@@ -1,0 +1,23 @@
+{
+  "schema_version": "canonical_backtest_result.v1",
+  "backend_name": "native.position_replay",
+  "performance": [
+    {
+      "period_end": "2020-01-03",
+      "net_return": 0.049,
+      "gross_return": 0.05
+    }
+  ],
+  "capabilities": {
+    "target_generation": false,
+    "order_lifecycle": false,
+    "partial_fills": false,
+    "daily_ledger": false,
+    "long_short": false,
+    "market_rules": [
+      "tradability",
+      "delayed_exit",
+      "period_costs"
+    ]
+  }
+}
