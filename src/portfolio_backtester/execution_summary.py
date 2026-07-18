@@ -35,8 +35,14 @@ def summarize_staggered_execution(
     total_return = float(wealth.iloc[-1] - 1.0)
     annualized_return = float((1.0 + total_return) ** (252.0 / len(net)) - 1.0)
     volatility = float(net.std(ddof=1) * np.sqrt(252.0)) if len(net) > 1 else np.nan
-    sharpe = float(net.mean() / net.std(ddof=1) * np.sqrt(252.0)) if len(net) > 1 and net.std(ddof=1) > 0 else np.nan
+    sharpe = (
+        float(net.mean() / net.std(ddof=1) * np.sqrt(252.0))
+        if len(net) > 1 and net.std(ddof=1) > 0
+        else np.nan
+    )
     drawdown = wealth / wealth.cummax() - 1.0
+    gross_nav = _numeric(daily, "gross_nav_before_cost")
+    traded_ratio = _numeric(daily, "traded_notional") / gross_nav.replace(0.0, np.nan)
     summary = result.summary
     return {
         "schema_version": EXECUTION_SUMMARY_SCHEMA,
@@ -52,6 +58,7 @@ def summarize_staggered_execution(
         "max_drawdown": float(drawdown.min()),
         "total_transaction_cost": float(_numeric(daily, "transaction_cost").sum()),
         "total_traded_notional": float(_numeric(daily, "traded_notional").sum()),
+        "mean_traded_notional_to_nav": float(traded_ratio.mean()),
         "mean_cash_weight": float(_numeric(daily, "cash_weight").mean()),
         "mean_blocked_buy_weight": float(_numeric(daily, "blocked_buy_weight").mean()),
         "mean_blocked_sell_weight": float(_numeric(daily, "blocked_sell_weight").mean()),
@@ -75,6 +82,7 @@ def execution_summary_frame(rows: list[dict[str, Any]]) -> pd.DataFrame:
         "single_side_cost_bps",
         "total_return",
         "mean_daily_net_return",
+        "mean_traded_notional_to_nav",
         "terminal_complete",
     }
     missing = sorted(required - set(frame.columns))
