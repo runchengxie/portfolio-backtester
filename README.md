@@ -90,7 +90,7 @@ BasedPyright 用于补充诊断：
 scripts/dev/run_tests.sh basedpyright
 ```
 
-Pull request 会运行轻量远程 CI，包括 Ruff、格式、现有类型检查、后端契约测试、持仓回放回归测试和包导入检查。完整测试集与维护性门禁仍在本地或工作区 pre-push 中运行。
+启用仓库级 GitHub Actions 后，pull request 会运行轻量远程 CI，包括 Ruff、格式、现有类型检查、后端契约测试、持仓回放回归测试和包导入检查。完整测试集与维护性门禁仍在本地或工作区 pre-push 中运行。
 
 详细范围见 [docs/testing.md](docs/testing.md)。
 
