@@ -1,20 +1,18 @@
 name: migration source export
 
 on:
-  pull_request:
-    branches: [main]
+  push:
+    branches: [refactor/research-app-ownership]
 
 permissions:
   contents: read
 
 jobs:
   export:
-    if: github.head_ref == 'refactor/research-app-ownership'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v6
         with:
-          ref: ${{ github.event.pull_request.head.ref }}
           fetch-depth: 1
       - run: tar --exclude=.git --exclude=.venv --exclude=artifacts -czf /tmp/portfolio-backtester-current.tar.gz .
       - uses: actions/upload-artifact@v4
