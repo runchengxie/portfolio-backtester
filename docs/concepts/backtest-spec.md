@@ -60,7 +60,7 @@ result = run_backtest(scores, spec)
 
 `run_backtest` 的返回值与 `backtest_topk` 保持一致。没有可计算的持有期时返回 `None`。有结果时返回统计字典、净收益序列、毛收益序列、换手率序列和持有期明细。
 
-## 弱信号和新增名称控制
+## 弱信号、新增名称和固定槽位控制
 
 `BacktestSpec` 提供两个默认关闭的研究参数：
 
@@ -85,7 +85,13 @@ conservative_spec = BacktestSpec(
 )
 ```
 
-这些参数控制名称选择，不改变权重方法。持仓数量介于一只和 `top_k - 1` 只之间时，`equal`、`signal` 等方法仍在实际选中的证券之间分配完整目标权重。只有零只合格证券时整侧持币。需要按`缺几只就留多少现金`缩放部分持仓总敞口时，仍应使用现金 gross overlay 和支持保留总敞口的持仓回放入口。
+以下三个字段用于建立不靠候选回填、且能明确保留现金的研究基线：
+
+- `entry_rank_cutoff` 是新证券的严格排名上限。设置为 `8` 时，新证券只有进入前 8 名才能买入。缓冲区允许旧持仓在更宽的退出排名内继续持有，但选择器不会用第 9 名以后的新证券补满组合。
+- `target_weight_policy="fixed_slot"` 只支持多头等权组合。每个目标槽位固定为 `1 / top_k`，不足 `top_k` 的部分保留现金。例如 Top10 只选出 8 只时，每只权重为 `0.10`，目标总敞口为 `0.80`。
+- `selection_price_policy="target_first"` 先用信号冻结目标名单，再单独检查开仓日价格、流动性和可交易性。未通过开仓约束的目标不由更低排名证券替换，其权重在模型持仓中保留为现金。
+
+三个字段默认分别为 `None`、`"normalized"` 和 `"execution_aware"`，因此旧配置和旧调用结果不变。`fixed_slot` 与非等权或多空策略组合会直接报错。低换手 Top10 基线可以组合使用 `buffer_exit=5`、`buffer_entry=2`、`entry_rank_cutoff=8`、`target_weight_policy="fixed_slot"` 和 `selection_price_policy="target_first"`，具体阈值仍需由独立实验验证。
 
 ## 配置序列化
 
@@ -126,7 +132,7 @@ run_backtest(filtered_scores, spec, pricing_data=published_prices)
 | `group_col`、`max_names_per_group` | `StrategySpec.group_cap` |
 | `price_col`、`cost_bps`、退出规则 | 默认 `ExecutionModel` |
 | 显式 `execution` | `BacktestSpec.execution` |
-| 调仓、持有期、流动性、排序、分数门槛和新增名称限制 | `BacktestSpec` |
+| 调仓、持有期、流动性、排序、分数门槛、新增名称和固定槽位限制 | `BacktestSpec` |
 
 显式传入 `execution` 时，它仍覆盖 `price_col`、`cost_bps` 和历史退出参数，与原有行为一致。兼容入口暂不发出弃用警告，下游调用完成审计后再决定迁移期限。
 

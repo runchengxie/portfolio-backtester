@@ -4,9 +4,11 @@ import numpy as np
 import pandas as pd
 
 from .bet_sizing import SizingConfig, build_sized_weights
+from .selection_controls import TargetWeightPolicy, validate_target_weight_policy
 
 __all__ = [
     "build_position_weights",
+    "clean_position_weights",
     "limit_weight_turnover",
     "normalize_position_weights",
     "normalize_weighting_mode",
@@ -48,6 +50,45 @@ def normalize_position_weights(weights: pd.Series) -> pd.Series:
     if not np.isfinite(total) or total <= 0:
         return _equal_weights(list(cleaned.index))
     return cleaned / total
+
+
+def clean_position_weights(
+    weights: pd.Series,
+    *,
+    preserve_gross_exposure: bool,
+) -> pd.Series:
+    """Clean weights while optionally preserving an intentional cash allocation."""
+
+    if not preserve_gross_exposure:
+        return normalize_position_weights(weights)
+    if weights is None or weights.empty:
+        return pd.Series(dtype=float)
+    cleaned = pd.to_numeric(weights, errors="coerce").replace([np.inf, -np.inf], np.nan).dropna()
+    cleaned = cleaned.loc[cleaned.abs() > 1e-12].astype(float)
+    gross = float(cleaned.abs().sum())
+    if not np.isfinite(gross) or gross > 1.0 + 1e-12:
+        raise ValueError("Preserved target gross exposure must be finite and <= 1.0.")
+    return cleaned
+
+
+def _apply_target_weight_policy(
+    weights: pd.Series,
+    *,
+    target_weight_policy: TargetWeightPolicy,
+    target_slot_count: int | None,
+) -> pd.Series:
+    policy = validate_target_weight_policy(target_weight_policy)
+    if policy == "normalized" or weights.empty:
+        return weights
+    if target_slot_count is None or isinstance(target_slot_count, bool):
+        raise ValueError("fixed_slot target weights require a positive target_slot_count.")
+    slots = int(target_slot_count)
+    if slots <= 0:
+        raise ValueError("fixed_slot target weights require a positive target_slot_count.")
+    positive_names = int((weights.abs() > 1e-12).sum())
+    if positive_names > slots:
+        raise ValueError("fixed_slot target weights cannot contain more names than slots.")
+    return weights * (positive_names / slots)
 
 
 def _cap_and_redistribute_positive_weights(
@@ -137,59 +178,70 @@ def build_position_weights(
     side: str,
     weighting: str = "equal",
     liquidity_col: str = "medadv20_amount",
+    target_weight_policy: TargetWeightPolicy = "normalized",
+    target_slot_count: int | None = None,
 ) -> pd.Series:
     mode = normalize_weighting_mode(weighting)
+    target_policy = validate_target_weight_policy(target_weight_policy)
+    if target_policy == "fixed_slot" and mode != "equal":
+        raise ValueError("fixed_slot target weights require weighting='equal'.")
+    if target_policy == "fixed_slot" and side != "long":
+        raise ValueError("fixed_slot target weights require side='long'.")
     base = _equal_weights(holdings)
-    if mode == "equal" or base.empty:
-        return base
-
-    if mode == "sqrt_liquidity":
-        return _sqrt_liquidity_weights(day, holdings, liquidity_col)
-
-    if side not in {"long", "short"}:
-        raise ValueError("side must be one of: long, short.")
-
-    if mode in {
-        "probability",
-        "probability_vol_target",
-        "signal_vol_target",
-        "confidence_budget",
-        "risk_budget",
-    }:
-        return _calibrated_weights(day, holdings, pred_col, mode=mode)
-
-    signal = pd.to_numeric(
-        day.set_index("symbol").reindex(holdings)[pred_col],
-        errors="coerce",
+    weights = base
+    if mode == "sqrt_liquidity" and not base.empty:
+        weights = _sqrt_liquidity_weights(day, holdings, liquidity_col)
+    elif mode not in {"equal"} and not base.empty:
+        if side not in {"long", "short"}:
+            raise ValueError("side must be one of: long, short.")
+        if mode in {
+            "probability",
+            "probability_vol_target",
+            "signal_vol_target",
+            "confidence_budget",
+            "risk_budget",
+        }:
+            weights = _calibrated_weights(day, holdings, pred_col, mode=mode)
+        else:
+            signal = pd.to_numeric(
+                day.set_index("symbol").reindex(holdings)[pred_col],
+                errors="coerce",
+            )
+            if side == "short":
+                signal = -signal
+            if not signal.empty and not signal.isna().all():
+                signal = signal.fillna(float(signal.mean()) if signal.notna().any() else 0.0)
+                std = float(signal.std(ddof=0))
+                if np.isfinite(std) and std > 0:
+                    scaled = ((signal - float(signal.mean())) / std).clip(-5.0, 5.0)
+                    raw = np.exp(scaled.to_numpy(dtype=float))
+                    total = float(np.sum(raw))
+                    if np.isfinite(total) and total > 0:
+                        weights = normalize_position_weights(
+                            pd.Series(raw, index=signal.index, dtype=float)
+                        )
+    return _apply_target_weight_policy(
+        weights,
+        target_weight_policy=target_policy,
+        target_slot_count=target_slot_count,
     )
-    if side == "short":
-        signal = -signal
-    if signal.empty or signal.isna().all():
-        return base
-
-    signal = signal.fillna(float(signal.mean()) if signal.notna().any() else 0.0)
-    std = float(signal.std(ddof=0))
-    if not np.isfinite(std) or std <= 0:
-        return base
-
-    scaled = ((signal - float(signal.mean())) / std).clip(-5.0, 5.0)
-    raw = np.exp(scaled.to_numpy(dtype=float))
-    total = float(np.sum(raw))
-    if not np.isfinite(total) or total <= 0:
-        return base
-    return normalize_position_weights(pd.Series(raw, index=signal.index, dtype=float))
 
 
 def limit_weight_turnover(
     previous: pd.Series | None,
     target: pd.Series,
     max_turnover: float | None,
+    *,
+    preserve_gross_exposure: bool = False,
 ) -> pd.Series:
     if previous is None or previous.empty or target.empty or max_turnover is None:
         return target
     cap = float(max_turnover)
     if cap <= 0:
-        return normalize_position_weights(previous)
+        return clean_position_weights(
+            previous,
+            preserve_gross_exposure=preserve_gross_exposure,
+        )
     symbols = previous.index.union(target.index)
     prev = previous.reindex(symbols).fillna(0.0).astype(float)
     desired = target.reindex(symbols).fillna(0.0).astype(float)
@@ -199,7 +251,10 @@ def limit_weight_turnover(
     else:
         limited = prev + (desired - prev) * (cap / turnover)
     limited = limited[limited.abs() > 1e-12]
-    return normalize_position_weights(limited)
+    return clean_position_weights(
+        limited,
+        preserve_gross_exposure=preserve_gross_exposure,
+    )
 
 
 def validate_positive_name_invariant(

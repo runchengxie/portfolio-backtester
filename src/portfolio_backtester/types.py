@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 
 import pandas as pd
 
@@ -56,6 +56,8 @@ class BacktestPositionState:
     weights: pd.Series | None = None
     entry_date: pd.Timestamp | None = None
     entry_prices: pd.Series | None = None
+    target_holdings: set[str] | None = None
+    target_weights: pd.Series | None = None
 
 
 @dataclass(frozen=True)
@@ -90,6 +92,12 @@ class BacktestLegResult:
     executed_full_l1: float | None = None
     executed_half_l1: float | None = None
     executed_cost: float | None = None
+    target_holdings: tuple[str, ...] = ()
+    target_weights: pd.Series = field(default_factory=pd.Series)
+    target_gross_exposure: float = 1.0
+    target_cash_weight: float = 0.0
+    modeled_gross_exposure: float = 1.0
+    modeled_cash_weight: float = 0.0
 
     @property
     def turnover_breakdown(self) -> TurnoverBreakdown:
@@ -142,6 +150,10 @@ class BacktestPeriodResult:
     executed_half_l1: float | None = None
     executed_cost: float | None = None
     is_initial_build: bool = False
+    target_gross_exposure: float | None = None
+    target_cash_weight: float | None = None
+    modeled_gross_exposure: float | None = None
+    modeled_cash_weight: float | None = None
 
     @property
     def cost_breakdown(self) -> CostBreakdown:

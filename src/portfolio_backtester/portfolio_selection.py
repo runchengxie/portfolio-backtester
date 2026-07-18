@@ -9,13 +9,16 @@ from .execution import SelectionConstraints
 from .holding_selection import select_candidate_holdings
 from .selection_controls import (
     MaxNewNamesShortfallPolicy,
+    SelectionPricePolicy,
     apply_selection_score_threshold,
     entry_amount_values,
     entry_tradable_flags,
     ranked_selection_frame,
+    validate_entry_rank_cutoff,
     validate_max_new_names_per_rebalance,
     validate_max_new_names_shortfall_policy,
     validate_selection_min_score,
+    validate_selection_price_policy,
 )
 
 
@@ -25,10 +28,16 @@ def apply_rebalance_buffer(
     k: int,
     buffer_exit: int,
     buffer_entry: int,
+    entry_rank_cutoff: int | None = None,
 ) -> list[str]:
     if not ranked_codes or k <= 0:
         return []
-    if prev_holdings is None or (buffer_exit <= 0 and buffer_entry <= 0):
+    strict_cutoff = validate_entry_rank_cutoff(entry_rank_cutoff)
+    if prev_holdings is None:
+        if strict_cutoff is not None:
+            return list(ranked_codes[:strict_cutoff])
+        return list(ranked_codes)
+    if buffer_exit <= 0 and buffer_entry <= 0 and strict_cutoff is None:
         return list(ranked_codes)
 
     keep_limit = min(len(ranked_codes), k + max(0, buffer_exit))
@@ -37,17 +46,20 @@ def apply_rebalance_buffer(
     keep_set = set(ranked_codes[:keep_limit]) & prev_holdings
     candidate_order: list[str] = [code for code in ranked_codes if code in keep_set]
 
-    preferred = set(ranked_codes[:entry_limit]) if entry_limit > 0 else set()
+    preferred_limit = min(strict_cutoff, entry_limit) if strict_cutoff is not None else entry_limit
+    preferred = set(ranked_codes[:preferred_limit]) if preferred_limit > 0 else set()
     for code in ranked_codes:
         if len(candidate_order) >= k:
             break
         if code in candidate_order:
             continue
-        if preferred and code not in preferred:
+        if strict_cutoff is not None and code not in preferred:
+            continue
+        if strict_cutoff is None and preferred and code not in preferred:
             continue
         candidate_order.append(code)
 
-    if len(candidate_order) < k:
+    if len(candidate_order) < k and strict_cutoff is None:
         for code in ranked_codes:
             if len(candidate_order) >= k:
                 break
@@ -172,12 +184,16 @@ def select_holdings(
     selection_min_score: float | None = None,
     max_new_names_per_rebalance: int | None = None,
     max_new_names_shortfall_policy: MaxNewNamesShortfallPolicy = "legacy_concentrate",
+    entry_rank_cutoff: int | None = None,
+    selection_price_policy: SelectionPricePolicy = "execution_aware",
 ) -> tuple[list[str], pd.Series]:
     selection_min_score = validate_selection_min_score(selection_min_score)
     max_new_names_per_rebalance = validate_max_new_names_per_rebalance(max_new_names_per_rebalance)
     max_new_names_shortfall_policy = validate_max_new_names_shortfall_policy(
         max_new_names_shortfall_policy
     )
+    entry_rank_cutoff = validate_entry_rank_cutoff(entry_rank_cutoff)
+    selection_price_policy = validate_selection_price_policy(selection_price_policy)
     inputs = _build_selection_inputs(
         day=day,
         entry_date=entry_date,
@@ -201,6 +217,8 @@ def select_holdings(
         selection_score_margin_col=selection_score_margin_col,
         selection_score_margin_rank_limit=selection_score_margin_rank_limit,
         selection_min_score=selection_min_score,
+        entry_rank_cutoff=entry_rank_cutoff,
+        selection_price_policy=selection_price_policy,
         deduplicate_symbols=(
             selection_min_score is not None or max_new_names_per_rebalance is not None
         ),
@@ -217,6 +235,7 @@ def select_holdings(
         max_new_names_per_rebalance=max_new_names_per_rebalance,
         max_new_names_shortfall_policy=max_new_names_shortfall_policy,
         selection_min_score=selection_min_score,
+        selection_price_policy=selection_price_policy,
     )
     if not holdings:
         return [], pd.Series(dtype=float)
@@ -233,6 +252,7 @@ def _select_from_inputs(
     max_new_names_per_rebalance: int | None,
     max_new_names_shortfall_policy: MaxNewNamesShortfallPolicy,
     selection_min_score: float | None,
+    selection_price_policy: SelectionPricePolicy,
 ) -> list[str]:
     return select_candidate_holdings(
         candidate_order=inputs.candidate_order,
@@ -249,6 +269,7 @@ def _select_from_inputs(
         carry_allowed_symbols=(
             set(inputs.candidate_order) if selection_min_score is not None else None
         ),
+        enforce_entry_constraints=selection_price_policy == "execution_aware",
     )
 
 
@@ -276,13 +297,17 @@ def _build_selection_inputs(
     selection_score_margin_col: str | None,
     selection_score_margin_rank_limit: int | None,
     selection_min_score: float | None,
+    entry_rank_cutoff: int | None,
+    selection_price_policy: SelectionPricePolicy,
     deduplicate_symbols: bool,
 ) -> _SelectionInputs | None:
     if day.empty or k <= 0:
         return None
     lookup_date = entry_lookup_date or entry_date
-    if lookup_date not in price_table.index:
+    has_entry_row = lookup_date in price_table.index
+    if not has_entry_row and selection_price_policy == "execution_aware":
         return None
+    entry_prices = price_table.loc[lookup_date] if has_entry_row else pd.Series(dtype=float)
 
     ranked = ranked_selection_frame(
         day,
@@ -312,21 +337,30 @@ def _build_selection_inputs(
         selection_score_margin=selection_score_margin,
         selection_score_margin_col=selection_score_margin_col,
         selection_score_margin_rank_limit=selection_score_margin_rank_limit,
+        entry_rank_cutoff=entry_rank_cutoff,
     )
     amount_values = entry_amount_values(
         constraints=constraints,
         amount_table=amount_table,
         lookup_date=lookup_date,
     )
-    if amount_values is None and constraints.min_amount is not None:
+    if (
+        selection_price_policy == "execution_aware"
+        and amount_values is None
+        and constraints.min_amount is not None
+    ):
         return None
     tradable_flags = entry_tradable_flags(tradable_table, lookup_date)
-    if tradable_table is not None and tradable_flags is None:
+    if (
+        selection_price_policy == "execution_aware"
+        and tradable_table is not None
+        and tradable_flags is None
+    ):
         return None
 
     return _SelectionInputs(
         candidate_order=candidate_order,
-        entry_prices=price_table.loc[lookup_date],
+        entry_prices=entry_prices,
         amount_values=amount_values,
         tradable_flags=tradable_flags,
         group_map=_selection_group_map(day, group_col, max_names_per_group),
@@ -346,6 +380,7 @@ def _candidate_order_with_score_margin(
     selection_score_margin: float | None,
     selection_score_margin_col: str | None,
     selection_score_margin_rank_limit: int | None,
+    entry_rank_cutoff: int | None,
 ) -> list[str]:
     candidate_order = apply_rebalance_buffer(
         ranked_codes,
@@ -353,7 +388,9 @@ def _candidate_order_with_score_margin(
         k,
         buffer_exit,
         buffer_entry,
+        entry_rank_cutoff,
     )
+    allowed_codes = set(candidate_order)
     margin_col = selection_score_margin_col or pred_col
     if margin_col not in ranked.columns:
         raise ValueError(f"Selection score margin column not found: {margin_col}")
@@ -364,7 +401,7 @@ def _candidate_order_with_score_margin(
             strict=False,
         )
     )
-    return _apply_score_margin_holdover(
+    ordered = _apply_score_margin_holdover(
         candidate_order=candidate_order,
         ranked_codes=ranked_codes,
         ranked_scores=ranked_scores,
@@ -374,6 +411,7 @@ def _candidate_order_with_score_margin(
         score_margin=selection_score_margin,
         score_margin_rank_limit=selection_score_margin_rank_limit,
     )
+    return [code for code in ordered if code in allowed_codes]
 
 
 def _selection_group_map(

@@ -36,12 +36,14 @@ half_l1_turnover = 0.5 * sum(abs(target_weight - drifted_weight))
 - `executed_buy` 和 `executed_sell` 记录实际买卖权重
 - `executed_full_l1` 和 `executed_half_l1` 明确记录实际执行换手，`executed_gross` 保留为 `executed_full_l1` 的兼容别名
 - `executed_cost` 只在调用方提供实际成交成本时有值
+- `target_gross_exposure` 和 `target_cash_weight` 记录冻结目标的总敞口与现金
+- `modeled_gross_exposure` 和 `modeled_cash_weight` 记录开仓约束生效后的模型持仓敞口与现金
 
 权重和换手字段都以组合期初净值为单位，`1.0` 表示净值的 100%。`executed_cost` 也使用期初净值的收益拖累单位，不使用货币金额。
 
 分数回测没有成交回报，因此 period 输出中的 `executed_buy`、`executed_sell`、`executed_gross`、`executed_full_l1`、`executed_half_l1` 和 `executed_cost` 为 `None`。`modeled_fee_cost`、`modeled_slippage_cost` 和 `modeled_total_cost` 是模型估计，不冒充实际成交。
 
-汇总结果中的 `avg_*` 包含首次建仓。`avg_rebalance_*` 排除 `is_initial_build=true` 的周期，用于报告持续换手。
+汇总结果中的 `avg_*` 包含首次建仓。`avg_rebalance_*` 排除 `is_initial_build=true` 的周期，用于报告持续换手。上述目标和模型敞口字段也提供对应的 `avg_*` 汇总。
 
 固定 Top10 等权组合替换两只股票时，目标权重的 full-L1 为 `0.40`，half-L1 为 `0.20`。`max_positive_names` 可用于拒绝权重插值产生的超额正权重名称。
 

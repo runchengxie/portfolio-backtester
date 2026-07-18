@@ -12,10 +12,15 @@ from .contracts import GroupCap, StrategySpec
 from .execution import ExecutionModel, build_execution_model, describe_execution_model
 from .selection_controls import (
     MaxNewNamesShortfallPolicy,
+    SelectionPricePolicy,
+    TargetWeightPolicy,
+    validate_entry_rank_cutoff,
     validate_max_new_names_per_rebalance,
     validate_max_new_names_shortfall_policy,
     validate_max_positive_names,
     validate_selection_min_score,
+    validate_selection_price_policy,
+    validate_target_weight_policy,
 )
 
 BACKTEST_SPEC_SCHEMA_VERSION = 1
@@ -55,6 +60,9 @@ class BacktestSpec:
     max_new_names_per_rebalance: int | None = None
     max_new_names_shortfall_policy: MaxNewNamesShortfallPolicy = "legacy_concentrate"
     max_positive_names: int | None = None
+    entry_rank_cutoff: int | None = None
+    selection_price_policy: SelectionPricePolicy = "execution_aware"
+    target_weight_policy: TargetWeightPolicy = "normalized"
 
     def __post_init__(self) -> None:
         object.__setattr__(
@@ -77,6 +85,25 @@ class BacktestSpec:
             "max_new_names_per_rebalance",
             validate_max_new_names_per_rebalance(self.max_new_names_per_rebalance),
         )
+        object.__setattr__(
+            self,
+            "entry_rank_cutoff",
+            validate_entry_rank_cutoff(self.entry_rank_cutoff),
+        )
+        object.__setattr__(
+            self,
+            "selection_price_policy",
+            validate_selection_price_policy(self.selection_price_policy),
+        )
+        object.__setattr__(
+            self,
+            "target_weight_policy",
+            validate_target_weight_policy(self.target_weight_policy),
+        )
+        if self.target_weight_policy == "fixed_slot" and self.strategy.weighting != "equal":
+            raise ValueError("fixed_slot target weights require strategy.weighting='equal'.")
+        if self.target_weight_policy == "fixed_slot" and not self.strategy.long_only:
+            raise ValueError("fixed_slot target weights currently require a long-only strategy.")
 
     def to_mapping(self) -> dict[str, Any]:
         """Return a JSON/YAML-safe mapping without market data frames."""
@@ -107,6 +134,9 @@ class BacktestSpec:
             "max_new_names_per_rebalance": self.max_new_names_per_rebalance,
             "max_new_names_shortfall_policy": self.max_new_names_shortfall_policy,
             "max_positive_names": self.max_positive_names,
+            "entry_rank_cutoff": self.entry_rank_cutoff,
+            "selection_price_policy": self.selection_price_policy,
+            "target_weight_policy": self.target_weight_policy,
         }
 
     @classmethod
@@ -148,6 +178,11 @@ class BacktestSpec:
                 value.get("max_new_names_shortfall_policy")
             ),
             max_positive_names=validate_max_positive_names(value.get("max_positive_names")),
+            entry_rank_cutoff=validate_entry_rank_cutoff(value.get("entry_rank_cutoff")),
+            selection_price_policy=validate_selection_price_policy(
+                value.get("selection_price_policy")
+            ),
+            target_weight_policy=validate_target_weight_policy(value.get("target_weight_policy")),
         )
 
 

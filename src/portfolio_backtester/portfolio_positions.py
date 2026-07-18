@@ -6,11 +6,13 @@ from functools import partial
 import numpy as np
 import pandas as pd
 
-from portfolio_backtester._symbol_utils import canonicalize_symbol_columns
-
 from .execution import ExecutionModel, SelectionConstraints
 from .execution_calendar import build_execution_date_map
-from .portfolio_position_options import PortfolioPositionOptions
+from .portfolio_position_frames import normalize_portfolio_frames, resolve_pricing_source
+from .portfolio_position_options import (
+    PortfolioPositionOptions,
+    validate_fixed_slot_configuration,
+)
 from .portfolio_selection import select_holdings
 from .portfolio_weights import (
     build_position_weights,
@@ -21,14 +23,19 @@ from .portfolio_weights import (
 )
 from .selection_controls import (
     MaxNewNamesShortfallPolicy,
+    SelectionPricePolicy,
+    TargetWeightPolicy,
     apply_liquidity_floor_to_day as _apply_liquidity_floor_to_day,
     controlled_selection_day,
     merge_pricing_supplemental_columns as _merge_pricing_supplemental_columns,
     ranked_selection_frame,
+    validate_entry_rank_cutoff,
     validate_max_new_names_per_rebalance,
     validate_max_new_names_shortfall_policy,
     validate_max_positive_names,
     validate_selection_min_score,
+    validate_selection_price_policy,
+    validate_target_weight_policy,
 )
 
 POSITION_COLUMNS = [
@@ -285,6 +292,8 @@ def _select_side_holdings(
     selection_min_score: float | None,
     max_new_names_per_rebalance: int | None,
     max_new_names_shortfall_policy: MaxNewNamesShortfallPolicy,
+    entry_rank_cutoff: int | None,
+    selection_price_policy: SelectionPricePolicy,
 ) -> list[str]:
     holdings, _ = select_holdings(
         selection.day,
@@ -311,6 +320,8 @@ def _select_side_holdings(
         selection_min_score=selection_min_score,
         max_new_names_per_rebalance=max_new_names_per_rebalance,
         max_new_names_shortfall_policy=max_new_names_shortfall_policy,
+        entry_rank_cutoff=entry_rank_cutoff,
+        selection_price_policy=selection_price_policy,
     )
     return holdings
 
@@ -329,6 +340,7 @@ def _build_and_append_side(
     selection_score_bucket_size: float | None,
     selection_min_score: float | None,
     max_new_names_per_rebalance: int | None,
+    target_weight_policy: TargetWeightPolicy,
     weight_sign: float = 1.0,
 ) -> bool:
     selection = replace(
@@ -350,6 +362,8 @@ def _build_and_append_side(
         side=side,
         weighting=weighting_mode,
         liquidity_col=weighting_liquidity_col,
+        target_weight_policy=target_weight_policy,
+        target_slot_count=selection.k,
     )
     if weights.empty:
         return False
@@ -400,11 +414,15 @@ def _process_long_only_rebalance(
         selection_min_score=options.selection_min_score,
         max_new_names_per_rebalance=options.max_new_names_per_rebalance,
         max_new_names_shortfall_policy=options.max_new_names_shortfall_policy,
+        entry_rank_cutoff=options.entry_rank_cutoff,
+        selection_price_policy=options.selection_price_policy,
     )
     if not holdings:
         if (
             options.selection_min_score is not None
             or options.max_new_names_per_rebalance is not None
+            or options.entry_rank_cutoff is not None
+            or options.preserve_gross_exposure
         ) and state.prev_holdings is not None:
             state.prev_weights = pd.Series(dtype=float)
             state.prev_holdings = set()
@@ -417,14 +435,17 @@ def _process_long_only_rebalance(
         side="long",
         weighting=options.weighting_mode,
         liquidity_col=options.weighting_liquidity_col,
+        target_weight_policy=options.target_weight_policy,
+        target_slot_count=options.top_k,
     )
     weights = limit_weight_turnover(
         state.prev_weights,
         weights,
         options.max_turnover_per_rebalance,
+        preserve_gross_exposure=options.preserve_gross_exposure,
     )
     weights = validate_positive_name_invariant(weights, options.max_positive_names)
-    if options.selection_min_score is not None:
+    if options.selection_min_score is not None and not options.preserve_gross_exposure:
         weights = normalize_position_weights(weights.reindex(holdings).dropna())
     if weights.empty:
         return
@@ -482,6 +503,7 @@ def _append_long_short_positions(
         selection_score_bucket_size=options.selection_score_bucket_size,
         selection_min_score=options.selection_min_score,
         max_new_names_per_rebalance=options.max_new_names_per_rebalance,
+        target_weight_policy=options.target_weight_policy,
     )
     long_ok = not long_holdings or append_side(
         long_holdings,
@@ -532,6 +554,8 @@ def _process_long_short_rebalance(
         selection_min_score=options.selection_min_score,
         max_new_names_per_rebalance=options.max_new_names_per_rebalance,
         max_new_names_shortfall_policy=options.max_new_names_shortfall_policy,
+        entry_rank_cutoff=options.entry_rank_cutoff,
+        selection_price_policy=options.selection_price_policy,
     )
     short_selection = selection
     if controlled:
@@ -558,6 +582,8 @@ def _process_long_short_rebalance(
         selection_min_score=options.selection_min_score,
         max_new_names_per_rebalance=options.max_new_names_per_rebalance,
         max_new_names_shortfall_policy=options.max_new_names_shortfall_policy,
+        entry_rank_cutoff=options.entry_rank_cutoff,
+        selection_price_policy=options.selection_price_policy,
     )
     if not controlled and (not long_holdings or not short_holdings):
         return
@@ -574,33 +600,6 @@ def _process_long_short_rebalance(
         short_holdings=short_holdings,
         completed=completed,
     )
-
-
-def _normalize_portfolio_frames(
-    data: pd.DataFrame,
-    pricing_data: pd.DataFrame | None,
-) -> tuple[pd.DataFrame, pd.DataFrame | None]:
-    if data is not None and not data.empty:
-        data = canonicalize_symbol_columns(data, context="Portfolio data")
-        data = data.copy()
-        data["trade_date"] = pd.to_datetime(data["trade_date"]).dt.normalize()
-    if pricing_data is not None and not pricing_data.empty:
-        pricing_data = canonicalize_symbol_columns(
-            pricing_data,
-            context="Portfolio pricing data",
-        )
-        pricing_data = pricing_data.copy()
-        pricing_data["trade_date"] = pd.to_datetime(pricing_data["trade_date"]).dt.normalize()
-    return data, pricing_data
-
-
-def _resolve_pricing_source(
-    data: pd.DataFrame,
-    pricing_data: pd.DataFrame | None,
-) -> pd.DataFrame | None:
-    if pricing_data is not None and not pricing_data.empty:
-        return pricing_data
-    return data
 
 
 def _prepare_position_setup(
@@ -622,7 +621,7 @@ def _prepare_position_setup(
     selection_constraints = (
         execution.selection_constraints if execution is not None else SelectionConstraints()
     )
-    pricing_source = _resolve_pricing_source(data, pricing_data)
+    pricing_source = resolve_pricing_source(data, pricing_data)
     if pricing_source is None or pricing_source.empty:
         return None
 
@@ -728,6 +727,9 @@ def build_positions_by_rebalance(
     max_new_names_per_rebalance: int | None = None,
     max_new_names_shortfall_policy: MaxNewNamesShortfallPolicy = "legacy_concentrate",
     max_positive_names: int | None = None,
+    entry_rank_cutoff: int | None = None,
+    selection_price_policy: SelectionPricePolicy = "execution_aware",
+    target_weight_policy: TargetWeightPolicy = "normalized",
 ) -> pd.DataFrame:
     selection_min_score = validate_selection_min_score(selection_min_score)
     max_new_names_per_rebalance = validate_max_new_names_per_rebalance(max_new_names_per_rebalance)
@@ -735,7 +737,13 @@ def build_positions_by_rebalance(
         max_new_names_shortfall_policy
     )
     max_positive_names = validate_max_positive_names(max_positive_names)
-    data, pricing_data = _normalize_portfolio_frames(data, pricing_data)
+    entry_rank_cutoff = validate_entry_rank_cutoff(entry_rank_cutoff)
+    selection_price_policy = validate_selection_price_policy(selection_price_policy)
+    target_weight_policy = validate_target_weight_policy(target_weight_policy)
+    validate_fixed_slot_configuration(
+        target_weight_policy, weighting=weighting, long_only=long_only
+    )
+    data, pricing_data = normalize_portfolio_frames(data, pricing_data)
     if data.empty or not rebalance_dates or top_k <= 0:
         return _empty_positions()
     setup = _prepare_position_setup(
@@ -779,6 +787,9 @@ def build_positions_by_rebalance(
         max_new_names_per_rebalance=max_new_names_per_rebalance,
         max_new_names_shortfall_policy=max_new_names_shortfall_policy,
         max_positive_names=max_positive_names,
+        entry_rank_cutoff=entry_rank_cutoff,
+        selection_price_policy=selection_price_policy,
+        target_weight_policy=target_weight_policy,
     )
     results = _build_position_rows_by_rebalance(setup.context, options)
     return _positions_frame_from_rows(results)

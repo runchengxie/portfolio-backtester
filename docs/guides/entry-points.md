@@ -43,7 +43,7 @@ result = run_backtest(scores, spec)
 
 `BacktestSpec.to_mapping()` 可以生成适合写入 JSON 或 YAML 的配置，`BacktestSpec.from_mapping()` 可以恢复规范。行情表不进入配置。信号和定价数据在运行时传给 `run_backtest`。
 
-研究低换手策略时，可以设置 `selection_min_score` 和 `max_new_names_per_rebalance`。前者按选股方向过滤弱信号且不会补满 `top_k`，后者限制已有持仓后的单次新增名称数量。初始建仓不受新增名称限制。两项默认均为 `None`，不会改变历史结果。完整语义见[组合式回测规范](../concepts/backtest-spec.md)。
+研究低换手策略时，可以设置 `selection_min_score` 和 `max_new_names_per_rebalance`。需要严格限制新证券排名并让未填满的槽位持币时，组合使用 `entry_rank_cutoff` 和 `target_weight_policy="fixed_slot"`。需要避免开仓日价格或可交易性反过来改变目标名单时，设置 `selection_price_policy="target_first"`。这些字段默认关闭，不改变历史结果。完整语义见[组合式回测规范](../concepts/backtest-spec.md)。
 
 输入数据通常需要以下字段：
 

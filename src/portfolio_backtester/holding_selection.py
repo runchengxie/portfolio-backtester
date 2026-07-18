@@ -7,6 +7,29 @@ from .execution import SelectionConstraints
 from .selection_controls import MaxNewNamesShortfallPolicy
 
 
+def filter_entry_eligible_symbols(
+    symbols: list[str],
+    *,
+    entry_prices: pd.Series,
+    amount_values: pd.Series | None,
+    tradable_flags: pd.Series | None,
+    constraints: SelectionConstraints,
+) -> list[str]:
+    """Apply execution-time entry constraints after a target has been frozen."""
+
+    return [
+        symbol
+        for symbol in symbols
+        if _passes_entry_constraints(
+            symbol,
+            entry_prices=entry_prices,
+            amount_values=amount_values,
+            tradable_flags=tradable_flags,
+            constraints=constraints,
+        )
+    ]
+
+
 def select_candidate_holdings(
     *,
     candidate_order: list[str],
@@ -21,6 +44,7 @@ def select_candidate_holdings(
     max_new_names_per_rebalance: int | None,
     max_new_names_shortfall_policy: MaxNewNamesShortfallPolicy,
     carry_allowed_symbols: set[str] | None,
+    enforce_entry_constraints: bool = True,
 ) -> list[str]:
     holdings, group_counts = _select_ranked_holdings(
         candidate_order=candidate_order,
@@ -33,6 +57,7 @@ def select_candidate_holdings(
         max_names_per_group=max_names_per_group,
         prev_holdings=prev_holdings,
         max_new_names_per_rebalance=max_new_names_per_rebalance,
+        enforce_entry_constraints=enforce_entry_constraints,
     )
     _resolve_selection_shortfall(
         holdings,
@@ -48,6 +73,7 @@ def select_candidate_holdings(
         max_names_per_group=max_names_per_group,
         max_new_names_per_rebalance=max_new_names_per_rebalance,
         shortfall_policy=max_new_names_shortfall_policy,
+        enforce_entry_constraints=enforce_entry_constraints,
     )
     return holdings
 
@@ -64,6 +90,7 @@ def _select_ranked_holdings(
     max_names_per_group: int | None,
     prev_holdings: set[str] | None,
     max_new_names_per_rebalance: int | None,
+    enforce_entry_constraints: bool,
 ) -> tuple[list[str], dict[object, int]]:
     holdings: list[str] = []
     group_counts: dict[object, int] = {}
@@ -71,7 +98,7 @@ def _select_ranked_holdings(
     for symbol in candidate_order:
         if len(holdings) >= k:
             break
-        if not _passes_entry_constraints(
+        if enforce_entry_constraints and not _passes_entry_constraints(
             symbol,
             entry_prices=entry_prices,
             amount_values=amount_values,
@@ -127,6 +154,7 @@ def _resolve_selection_shortfall(
     max_names_per_group: int | None,
     max_new_names_per_rebalance: int | None,
     shortfall_policy: MaxNewNamesShortfallPolicy,
+    enforce_entry_constraints: bool,
 ) -> None:
     has_limited_rebalance = prev_holdings is not None and max_new_names_per_rebalance is not None
     if len(holdings) >= k or not has_limited_rebalance:
@@ -144,6 +172,7 @@ def _resolve_selection_shortfall(
             group_map=group_map,
             group_counts=group_counts,
             max_names_per_group=max_names_per_group,
+            enforce_entry_constraints=enforce_entry_constraints,
         )
         if len(holdings) < k:
             raise ValueError(
@@ -170,6 +199,7 @@ def _carry_previous_holdings(
     group_map: dict[object, object] | None,
     group_counts: dict[object, int],
     max_names_per_group: int | None,
+    enforce_entry_constraints: bool,
 ) -> None:
     for symbol in sorted(prev_holdings):
         if len(holdings) >= k:
@@ -178,12 +208,15 @@ def _carry_previous_holdings(
             symbol in holdings
             or (carry_allowed_symbols is not None and symbol not in carry_allowed_symbols)
             or (group_map is not None and symbol not in group_map)
-            or not _passes_entry_constraints(
-                symbol,
-                entry_prices=entry_prices,
-                amount_values=amount_values,
-                tradable_flags=tradable_flags,
-                constraints=constraints,
+            or (
+                enforce_entry_constraints
+                and not _passes_entry_constraints(
+                    symbol,
+                    entry_prices=entry_prices,
+                    amount_values=amount_values,
+                    tradable_flags=tradable_flags,
+                    constraints=constraints,
+                )
             )
         ):
             continue

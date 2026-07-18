@@ -47,6 +47,10 @@ def period_result_from_leg(leg: BacktestLegResult) -> BacktestPeriodResult:
         executed_half_l1=leg.executed_half_l1,
         executed_cost=leg.executed_cost,
         is_initial_build=leg.is_initial,
+        target_gross_exposure=leg.target_gross_exposure,
+        target_cash_weight=leg.target_cash_weight,
+        modeled_gross_exposure=leg.modeled_gross_exposure,
+        modeled_cash_weight=leg.modeled_cash_weight,
     )
 
 
@@ -63,6 +67,8 @@ def period_result_from_legs(
     slippage_cost = long_leg.slippage_cost + short_leg.slippage_cost
     total_cost = fee_cost + slippage_cost
     gross = long_leg.gross + short_leg.gross
+    target_gross = long_leg.target_gross_exposure + short_leg.target_gross_exposure
+    modeled_gross = long_leg.modeled_gross_exposure + short_leg.modeled_gross_exposure
     return BacktestPeriodResult(
         gross=gross,
         net=gross - total_cost,
@@ -109,6 +115,10 @@ def period_result_from_legs(
         executed_half_l1=_optional_sum(long_leg.executed_half_l1, short_leg.executed_half_l1),
         executed_cost=_optional_sum(long_leg.executed_cost, short_leg.executed_cost),
         is_initial_build=long_leg.is_initial and short_leg.is_initial,
+        target_gross_exposure=target_gross,
+        target_cash_weight=max(0.0, 1.0 - target_gross),
+        modeled_gross_exposure=modeled_gross,
+        modeled_cash_weight=max(0.0, 1.0 - modeled_gross),
     )
 
 
@@ -142,4 +152,8 @@ def period_turnover_fields(
         "executed_cost": result.executed_cost,
         "execution_data_available": result.executed_full_l1 is not None,
         "is_initial_build": result.is_initial_build,
+        "target_gross_exposure": result.target_gross_exposure,
+        "target_cash_weight": result.target_cash_weight,
+        "modeled_gross_exposure": result.modeled_gross_exposure,
+        "modeled_cash_weight": result.modeled_cash_weight,
     }

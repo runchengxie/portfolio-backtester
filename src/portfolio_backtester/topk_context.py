@@ -15,7 +15,11 @@ from .pricing import (
     prepare_backtest_pricing_context,
     resolve_backtest_execution_context,
 )
-from .selection_controls import MaxNewNamesShortfallPolicy
+from .selection_controls import (
+    MaxNewNamesShortfallPolicy,
+    SelectionPricePolicy,
+    TargetWeightPolicy,
+)
 from .types import (
     BacktestExecutionContext,
     BacktestPeriodResult,
@@ -61,6 +65,9 @@ class _BacktestTopKConfig:
     max_new_names_per_rebalance: int | None
     max_new_names_shortfall_policy: MaxNewNamesShortfallPolicy
     max_positive_names: int | None
+    entry_rank_cutoff: int | None
+    selection_price_policy: SelectionPricePolicy
+    target_weight_policy: TargetWeightPolicy
 
 
 @dataclass(frozen=True)
@@ -140,6 +147,9 @@ def _build_backtest_spec_config(
         max_new_names_per_rebalance=spec.max_new_names_per_rebalance,
         max_new_names_shortfall_policy=spec.max_new_names_shortfall_policy,
         max_positive_names=spec.max_positive_names,
+        entry_rank_cutoff=spec.entry_rank_cutoff,
+        selection_price_policy=spec.selection_price_policy,
+        target_weight_policy=spec.target_weight_policy,
     )
 
 
@@ -261,6 +271,10 @@ def _build_backtest_return_bundle(
         "executed_full_l1",
         "executed_half_l1",
         "executed_cost",
+        "target_gross_exposure",
+        "target_cash_weight",
+        "modeled_gross_exposure",
+        "modeled_cash_weight",
     )
     rebalance_periods = [
         period for period in accumulator.period_info if not bool(period.get("is_initial_build"))

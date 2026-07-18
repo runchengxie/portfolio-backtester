@@ -8,6 +8,7 @@ import pandas as pd
 
 from .api import backtest_topk as backtest_topk
 from .execution import CostModel, SelectionConstraints, SlippageModel
+from .holding_selection import filter_entry_eligible_symbols
 from .leg_helpers import (
     _build_backtest_leg_result,
     _build_target_weights_and_exit,
@@ -21,8 +22,15 @@ from .period_turnover import (
 )
 from .periods import resolve_backtest_period_plan
 from .portfolio_selection import select_holdings
-from .portfolio_weights import normalize_position_weights, validate_positive_name_invariant
-from .selection_controls import MaxNewNamesShortfallPolicy, controlled_selection_day
+from .portfolio_weights import clean_position_weights, validate_positive_name_invariant
+from .selection_controls import (
+    MaxNewNamesShortfallPolicy,
+    SelectionPricePolicy,
+    TargetWeightPolicy,
+    controlled_selection_day,
+    entry_amount_values,
+    entry_tradable_flags,
+)
 from .topk_context import (
     _BacktestPeriodEvaluation,
     _BacktestResultAccumulator,
@@ -62,10 +70,122 @@ class _BacktestLegContext:
     max_new_names_per_rebalance: int | None
     max_new_names_shortfall_policy: MaxNewNamesShortfallPolicy
     max_positive_names: int | None
+    entry_rank_cutoff: int | None
+    selection_price_policy: SelectionPricePolicy
+    target_weight_policy: TargetWeightPolicy
+    target_slot_count: int
     cost_model: CostModel
     slippage_model: SlippageModel
     exit_policy: object
     date_to_idx: dict[pd.Timestamp, int]
+
+
+@dataclass(frozen=True)
+class _ExecutableLeg:
+    holdings: list[str]
+    weights: pd.Series
+    entry_prices: pd.Series
+    exit_prices: pd.Series
+    exit_idx: int
+
+
+def _cash_target_allowed(context: _BacktestLegContext) -> bool:
+    return bool(
+        context.selection_min_score is not None
+        or context.max_new_names_per_rebalance is not None
+        or context.entry_rank_cutoff is not None
+        or context.target_weight_policy == "fixed_slot"
+        or context.selection_price_policy == "target_first"
+    )
+
+
+def _select_target_holdings(
+    context: _BacktestLegContext,
+    *,
+    count: int,
+    ascending: bool,
+    previous: BacktestPositionState,
+    rank_offset: int,
+) -> list[str]:
+    if count <= 0:
+        return []
+    previous_holdings = (
+        previous.target_holdings
+        if context.selection_price_policy == "target_first" and previous.target_holdings is not None
+        else previous.holdings
+    )
+    holdings, _ = select_holdings(
+        context.day,
+        context.entry_date,
+        count,
+        context.pred_col,
+        ascending=ascending,
+        price_table=context.entry_price_table,
+        tradable_table=context.tradable_table,
+        amount_table=context.amount_tables.get(context.selection_constraints.amount_col),
+        constraints=context.selection_constraints,
+        prev_holdings=previous_holdings,
+        buffer_exit=context.buffer_exit,
+        buffer_entry=context.buffer_entry,
+        rank_offset=rank_offset,
+        group_col=context.group_col,
+        max_names_per_group=context.max_names_per_group,
+        selection_tiebreak_col=context.selection_tiebreak_col,
+        selection_score_bucket_size=context.selection_score_bucket_size,
+        selection_score_margin=context.selection_score_margin,
+        selection_score_margin_col=context.selection_score_margin_col,
+        selection_score_margin_rank_limit=context.selection_score_margin_rank_limit,
+        selection_min_score=context.selection_min_score,
+        max_new_names_per_rebalance=context.max_new_names_per_rebalance,
+        max_new_names_shortfall_policy=context.max_new_names_shortfall_policy,
+        entry_rank_cutoff=context.entry_rank_cutoff,
+        selection_price_policy=context.selection_price_policy,
+    )
+    return holdings
+
+
+def _resolve_executable_leg(
+    context: _BacktestLegContext,
+    requested_weights: pd.Series,
+    *,
+    preserve_gross_exposure: bool,
+) -> _ExecutableLeg | None:
+    all_entry_prices = context.entry_price_table.loc[context.entry_date]
+    amount_values = entry_amount_values(
+        constraints=context.selection_constraints,
+        amount_table=context.amount_tables.get(context.selection_constraints.amount_col),
+        lookup_date=context.entry_date,
+    )
+    executable_holdings = filter_entry_eligible_symbols(
+        [str(symbol) for symbol in requested_weights.index],
+        entry_prices=all_entry_prices,
+        amount_values=amount_values,
+        tradable_flags=entry_tradable_flags(context.tradable_table, context.entry_date),
+        constraints=context.selection_constraints,
+    )
+    if executable_holdings:
+        exit_prices, exit_idx = _backtest_exit_price_resolver(context)(
+            executable_holdings,
+            context.planned_exit_idx,
+        )
+        if exit_prices.empty:
+            return None
+    else:
+        exit_prices = pd.Series(dtype=float)
+        exit_idx = context.planned_exit_idx
+    weights = clean_position_weights(
+        requested_weights.reindex(exit_prices.index).dropna(),
+        preserve_gross_exposure=preserve_gross_exposure,
+    )
+    weights = validate_positive_name_invariant(weights, context.max_positive_names)
+    holdings = cast(list[str], list(weights.index))
+    return _ExecutableLeg(
+        holdings=holdings,
+        weights=weights,
+        entry_prices=all_entry_prices.reindex(holdings),
+        exit_prices=exit_prices.reindex(holdings),
+        exit_idx=exit_idx,
+    )
 
 
 def _evaluate_backtest_leg(
@@ -78,39 +198,20 @@ def _evaluate_backtest_leg(
     rank_offset: int,
     max_turnover_per_rebalance: float | None,
 ) -> BacktestLegResult | None:
-    cash_control_enabled = (
-        context.selection_min_score is not None or context.max_new_names_per_rebalance is not None
+    preserve_gross_exposure = (
+        context.target_weight_policy == "fixed_slot"
+        or context.selection_price_policy == "target_first"
     )
+    cash_control_enabled = _cash_target_allowed(context)
     if count <= 0 and not cash_control_enabled:
         return None
-    if count > 0:
-        holdings, entry_prices = select_holdings(
-            context.day,
-            context.entry_date,
-            count,
-            context.pred_col,
-            ascending=ascending,
-            price_table=context.entry_price_table,
-            tradable_table=context.tradable_table,
-            amount_table=context.amount_tables.get(context.selection_constraints.amount_col),
-            constraints=context.selection_constraints,
-            prev_holdings=previous.holdings,
-            buffer_exit=context.buffer_exit,
-            buffer_entry=context.buffer_entry,
-            rank_offset=rank_offset,
-            group_col=context.group_col,
-            max_names_per_group=context.max_names_per_group,
-            selection_tiebreak_col=context.selection_tiebreak_col,
-            selection_score_bucket_size=context.selection_score_bucket_size,
-            selection_score_margin=context.selection_score_margin,
-            selection_score_margin_col=context.selection_score_margin_col,
-            selection_score_margin_rank_limit=context.selection_score_margin_rank_limit,
-            selection_min_score=context.selection_min_score,
-            max_new_names_per_rebalance=context.max_new_names_per_rebalance,
-            max_new_names_shortfall_policy=context.max_new_names_shortfall_policy,
-        )
-    else:
-        holdings, entry_prices = [], pd.Series(dtype=float)
+    holdings = _select_target_holdings(
+        context,
+        count=count,
+        ascending=ascending,
+        previous=previous,
+        rank_offset=rank_offset,
+    )
     if not holdings and not cash_control_enabled:
         return None
     weighting_day = controlled_selection_day(
@@ -132,30 +233,26 @@ def _evaluate_backtest_leg(
         previous=previous,
         max_turnover_per_rebalance=max_turnover_per_rebalance,
         selection_min_score=context.selection_min_score,
-        planned_exit_idx=context.planned_exit_idx,
-        resolve_exit_prices=_backtest_exit_price_resolver(context),
+        target_weight_policy=context.target_weight_policy,
+        target_slot_count=context.target_slot_count,
+        preserve_gross_exposure=preserve_gross_exposure,
     )
-    if target is None:
+    executable = _resolve_executable_leg(
+        context,
+        target.requested_weights,
+        preserve_gross_exposure=preserve_gross_exposure,
+    )
+    if executable is None:
         return None
-    weights, exit_prices = target.requested_weights, target.exit_prices
-    if cash_control_enabled:
-        entry_prices = context.entry_price_table.loc[context.entry_date].reindex(exit_prices.index)
-    else:
-        entry_prices = entry_prices.reindex(exit_prices.index)
-    weights = normalize_position_weights(weights.reindex(exit_prices.index))
-    weights = validate_positive_name_invariant(weights, context.max_positive_names)
-    holdings = cast(list[str], list(weights.index))
-    if not holdings and not cash_control_enabled:
+    if not executable.holdings and not cash_control_enabled:
         return None
-    entry_prices = entry_prices.reindex(holdings)
-    exit_prices = exit_prices.reindex(holdings)
     return _build_backtest_leg_result(
-        holdings=holdings,
+        holdings=executable.holdings,
         target_weights=target.target_weights,
-        weights=weights,
-        entry_prices=entry_prices,
-        exit_prices=exit_prices,
-        period_exit_idx=target.exit_idx,
+        weights=executable.weights,
+        entry_prices=executable.entry_prices,
+        exit_prices=executable.exit_prices,
+        period_exit_idx=executable.exit_idx,
         entry_idx=context.entry_idx,
         entry_date=context.entry_date,
         trade_dates=context.trade_dates,
@@ -165,6 +262,7 @@ def _evaluate_backtest_leg(
         cost_model=context.cost_model,
         slippage_model=context.slippage_model,
         amount_tables=context.amount_tables,
+        preserve_gross_exposure=preserve_gross_exposure,
     )
 
 
@@ -392,6 +490,10 @@ def _configured_leg_context(
         max_new_names_per_rebalance=config.max_new_names_per_rebalance,
         max_new_names_shortfall_policy=config.max_new_names_shortfall_policy,
         max_positive_names=config.max_positive_names,
+        entry_rank_cutoff=config.entry_rank_cutoff,
+        selection_price_policy=config.selection_price_policy,
+        target_weight_policy=config.target_weight_policy,
+        target_slot_count=config.top_k,
         cost_model=execution_context.cost_model,
         slippage_model=execution_context.slippage_model,
         exit_policy=execution_context.exit_policy,

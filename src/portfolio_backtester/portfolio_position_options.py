@@ -6,7 +6,26 @@ from dataclasses import dataclass
 
 import pandas as pd
 
-from .selection_controls import MaxNewNamesShortfallPolicy, controlled_selection_day
+from .selection_controls import (
+    MaxNewNamesShortfallPolicy,
+    SelectionPricePolicy,
+    TargetWeightPolicy,
+    controlled_selection_day,
+)
+
+
+def validate_fixed_slot_configuration(
+    target_weight_policy: TargetWeightPolicy,
+    *,
+    weighting: str,
+    long_only: bool,
+) -> None:
+    if target_weight_policy != "fixed_slot":
+        return
+    if weighting.strip().lower() != "equal":
+        raise ValueError("fixed_slot target weights require weighting='equal'.")
+    if not long_only:
+        raise ValueError("fixed_slot target weights currently require long_only=True.")
 
 
 @dataclass(frozen=True)
@@ -36,6 +55,15 @@ class PortfolioPositionOptions:
     max_new_names_per_rebalance: int | None
     max_new_names_shortfall_policy: MaxNewNamesShortfallPolicy
     max_positive_names: int | None
+    entry_rank_cutoff: int | None
+    selection_price_policy: SelectionPricePolicy
+    target_weight_policy: TargetWeightPolicy
+
+    @property
+    def preserve_gross_exposure(self) -> bool:
+        """Whether underfilled targets intentionally leave capital in cash."""
+
+        return self.target_weight_policy == "fixed_slot"
 
     def controlled_day(self, day: pd.DataFrame, *, ascending: bool) -> pd.DataFrame:
         """Return the side-specific weighting frame without duplicate controlled symbols."""

@@ -12,6 +12,8 @@ import pandas as pd
 from .execution import SelectionConstraints
 
 MaxNewNamesShortfallPolicy = Literal["legacy_concentrate", "carry", "fail"]
+SelectionPricePolicy = Literal["execution_aware", "target_first"]
+TargetWeightPolicy = Literal["normalized", "fixed_slot"]
 
 
 def ranked_selection_frame(
@@ -222,7 +224,45 @@ def validate_max_positive_names(value: Any) -> int | None:
     return int(normalized)
 
 
+def validate_entry_rank_cutoff(value: Any) -> int | None:
+    """Return an absolute strict entry rank, or reject ambiguous values."""
+
+    if value is None:
+        return None
+    if isinstance(value, bool):
+        raise ValueError("entry_rank_cutoff must be a positive integer when provided.")
+    try:
+        normalized = operator.index(value)
+    except TypeError as exc:
+        raise ValueError("entry_rank_cutoff must be a positive integer when provided.") from exc
+    if normalized <= 0:
+        raise ValueError("entry_rank_cutoff must be > 0 when provided.")
+    return int(normalized)
+
+
+def validate_selection_price_policy(value: Any) -> SelectionPricePolicy:
+    """Normalize whether prices may influence target selection."""
+
+    normalized = str(value or "execution_aware").strip().lower()
+    allowed = {"execution_aware", "target_first"}
+    if normalized not in allowed:
+        raise ValueError("selection_price_policy must be one of: execution_aware, target_first.")
+    return cast(SelectionPricePolicy, normalized)
+
+
+def validate_target_weight_policy(value: Any) -> TargetWeightPolicy:
+    """Normalize the target-weight policy without changing the legacy default."""
+
+    normalized = str(value or "normalized").strip().lower()
+    allowed = {"normalized", "fixed_slot"}
+    if normalized not in allowed:
+        raise ValueError("target_weight_policy must be one of: normalized, fixed_slot.")
+    return cast(TargetWeightPolicy, normalized)
+
+
 __all__ = [
+    "SelectionPricePolicy",
+    "TargetWeightPolicy",
     "apply_liquidity_floor_to_day",
     "apply_selection_score_threshold",
     "controlled_selection_day",
@@ -230,8 +270,11 @@ __all__ = [
     "entry_tradable_flags",
     "merge_pricing_supplemental_columns",
     "ranked_selection_frame",
+    "validate_entry_rank_cutoff",
     "validate_max_new_names_per_rebalance",
     "validate_max_new_names_shortfall_policy",
     "validate_max_positive_names",
     "validate_selection_min_score",
+    "validate_selection_price_policy",
+    "validate_target_weight_policy",
 ]
