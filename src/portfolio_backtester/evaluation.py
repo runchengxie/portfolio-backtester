@@ -261,11 +261,17 @@ def _run_walk_forward_backtest_topk(
             selection_tiebreak_col=context.get("backtest_selection_tiebreak_col"),
             selection_score_bucket_size=context.get("backtest_selection_score_bucket_size"),
             selection_score_margin=context.get("backtest_selection_score_margin"),
+            selection_score_margin_col=context.get("backtest_selection_score_margin_col"),
             selection_score_margin_rank_limit=context.get(
                 "backtest_selection_score_margin_rank_limit"
             ),
             selection_min_score=context.get("backtest_selection_min_score"),
             max_new_names_per_rebalance=context.get("backtest_max_new_names_per_rebalance"),
+            max_new_names_shortfall_policy=context.get(
+                "backtest_max_new_names_shortfall_policy",
+                "legacy_concentrate",
+            ),
+            max_positive_names=context.get("backtest_max_positive_names"),
         )
     except ValueError:
         return None
@@ -372,11 +378,17 @@ def _build_period_positions(
             selection_tiebreak_col=context.get("backtest_selection_tiebreak_col"),
             selection_score_bucket_size=context.get("backtest_selection_score_bucket_size"),
             selection_score_margin=context.get("backtest_selection_score_margin"),
+            selection_score_margin_col=context.get("backtest_selection_score_margin_col"),
             selection_score_margin_rank_limit=context.get(
                 "backtest_selection_score_margin_rank_limit"
             ),
             selection_min_score=context.get("backtest_selection_min_score"),
             max_new_names_per_rebalance=context.get("backtest_max_new_names_per_rebalance"),
+            max_new_names_shortfall_policy=context.get(
+                "backtest_max_new_names_shortfall_policy",
+                "legacy_concentrate",
+            ),
+            max_positive_names=context.get("backtest_max_positive_names"),
         )
     if allow_live_fallback and live_enabled and not backtest_enabled:
         positions_by_rebalance = context["positions_by_rebalance_live"]
@@ -609,11 +621,17 @@ def _run_period_backtest(
             selection_tiebreak_col=context.get("backtest_selection_tiebreak_col"),
             selection_score_bucket_size=context.get("backtest_selection_score_bucket_size"),
             selection_score_margin=context.get("backtest_selection_score_margin"),
+            selection_score_margin_col=context.get("backtest_selection_score_margin_col"),
             selection_score_margin_rank_limit=context.get(
                 "backtest_selection_score_margin_rank_limit"
             ),
             selection_min_score=context.get("backtest_selection_min_score"),
             max_new_names_per_rebalance=context.get("backtest_max_new_names_per_rebalance"),
+            max_new_names_shortfall_policy=context.get(
+                "backtest_max_new_names_shortfall_policy",
+                "legacy_concentrate",
+            ),
+            max_positive_names=context.get("backtest_max_positive_names"),
         )
     except ValueError as exc:
         logger.warning("%sBacktest skipped: %s", label_prefix, exc)

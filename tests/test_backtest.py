@@ -134,10 +134,17 @@ def test_backtest_turnover_accounts_for_weight_drift():
         trading_days_per_year=252,
         exit_mode="rebalance",
     )
-    _, _, _, turnover_series, _ = result
+    assert result is not None
+    _, _, _, turnover_series, periods = result
     # First period is initial entry (turnover=1). Second period should reflect drift.
     assert turnover_series.shape[0] == 2
     assert np.isclose(turnover_series.iloc[1], 1 / 6, atol=1e-6)
+    assert periods[1]["target_weight_full_l1"] == pytest.approx(0.0)
+    assert periods[1]["target_weight_half_l1"] == pytest.approx(0.0)
+    assert periods[1]["pretrade_demand_buy"] == pytest.approx(1 / 6)
+    assert periods[1]["pretrade_demand_sell"] == pytest.approx(1 / 6)
+    assert periods[1]["pretrade_demand_full_l1"] == pytest.approx(1 / 3)
+    assert periods[1]["pretrade_demand_half_l1"] == pytest.approx(1 / 6)
 
 
 def test_backtest_label_horizon_overlap_raises():

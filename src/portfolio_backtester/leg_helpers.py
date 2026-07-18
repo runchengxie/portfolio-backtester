@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from collections.abc import Callable
+from dataclasses import dataclass
 from typing import Literal, cast
 
 import pandas as pd
@@ -12,8 +13,16 @@ from .portfolio_weights import (
     normalize_position_weights,
 )
 from .pricing import slippage_pricing_row
-from .turnover import turnover_from_trade_weights
+from .turnover import build_rebalance_turnover_report, turnover_from_trade_weights
 from .types import BacktestLegResult, BacktestPositionState
+
+
+@dataclass(frozen=True)
+class _TargetWeightsAndExit:
+    target_weights: pd.Series
+    requested_weights: pd.Series
+    exit_prices: pd.Series
+    exit_idx: int
 
 
 def _build_target_weights_and_exit(
@@ -29,10 +38,11 @@ def _build_target_weights_and_exit(
     selection_min_score: float | None,
     planned_exit_idx: int,
     resolve_exit_prices: Callable[[list[str], int], tuple[pd.Series, int]],
-) -> tuple[pd.Series, pd.Series, int] | None:
+) -> _TargetWeightsAndExit | None:
     if not holdings:
-        return pd.Series(dtype=float), pd.Series(dtype=float), planned_exit_idx
-    weights = build_position_weights(
+        empty = pd.Series(dtype=float)
+        return _TargetWeightsAndExit(empty, empty, empty, planned_exit_idx)
+    target_weights = build_position_weights(
         day,
         holdings,
         pred_col,
@@ -40,13 +50,24 @@ def _build_target_weights_and_exit(
         weighting=weighting_mode,
         liquidity_col=weighting_liquidity_col,
     )
-    weights = limit_weight_turnover(previous.weights, weights, max_turnover_per_rebalance)
+    requested_weights = limit_weight_turnover(
+        previous.weights,
+        target_weights,
+        max_turnover_per_rebalance,
+    )
     if selection_min_score is not None:
-        weights = normalize_position_weights(weights.reindex(holdings).dropna())
-    exit_prices, period_exit_idx = resolve_exit_prices(list(weights.index), planned_exit_idx)
+        requested_weights = normalize_position_weights(requested_weights.reindex(holdings).dropna())
+    exit_prices, period_exit_idx = resolve_exit_prices(
+        list(requested_weights.index), planned_exit_idx
+    )
     if exit_prices.empty:
         return None
-    return weights, exit_prices, period_exit_idx
+    return _TargetWeightsAndExit(
+        target_weights=target_weights,
+        requested_weights=requested_weights,
+        exit_prices=exit_prices,
+        exit_idx=period_exit_idx,
+    )
 
 
 def _next_position_state(
@@ -151,6 +172,7 @@ def _drift_previous_weights(
 def _build_backtest_leg_result(
     *,
     holdings: list[str],
+    target_weights: pd.Series,
     weights: pd.Series,
     entry_prices: pd.Series,
     exit_prices: pd.Series,
@@ -181,6 +203,13 @@ def _build_backtest_leg_result(
     turnover_breakdown = turnover_from_trade_weights(
         trade_weights,
         is_initial=previous.weights is None,
+    )
+    turnover_report = build_rebalance_turnover_report(
+        previous_holdings=previous.holdings,
+        target_holdings=target_weights[target_weights > 1e-12].index,
+        previous_target_weights=previous.weights,
+        target_weights=target_weights,
+        pretrade_trade_weights=trade_weights,
     )
     fee_cost = cost_model.cost(
         turnover,
@@ -216,4 +245,20 @@ def _build_backtest_leg_result(
         gross_traded_weight=turnover_breakdown.gross_traded_weight,
         half_l1_turnover=turnover_breakdown.half_l1_turnover,
         is_initial=turnover_breakdown.is_initial,
+        target_name_turnover=turnover_report.target_name_turnover,
+        target_entered_names=turnover_report.target_entered_names,
+        target_exited_names=turnover_report.target_exited_names,
+        target_overlap_names=turnover_report.target_overlap_names,
+        target_weight_full_l1=turnover_report.target_weight_full_l1,
+        target_weight_half_l1=turnover_report.target_weight_half_l1,
+        pretrade_demand_buy=turnover_report.pretrade_demand_buy,
+        pretrade_demand_sell=turnover_report.pretrade_demand_sell,
+        pretrade_demand_full_l1=turnover_report.pretrade_demand_full_l1,
+        pretrade_demand_half_l1=turnover_report.pretrade_demand_half_l1,
+        executed_buy=turnover_report.executed_buy,
+        executed_sell=turnover_report.executed_sell,
+        executed_gross=turnover_report.executed_gross,
+        executed_full_l1=turnover_report.executed_full_l1,
+        executed_half_l1=turnover_report.executed_half_l1,
+        executed_cost=turnover_report.executed_cost,
     )

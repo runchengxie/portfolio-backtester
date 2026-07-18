@@ -10,19 +10,24 @@ from portfolio_backtester._symbol_utils import canonicalize_symbol_columns
 
 from .execution import ExecutionModel, SelectionConstraints
 from .execution_calendar import build_execution_date_map
+from .portfolio_position_options import PortfolioPositionOptions
 from .portfolio_selection import select_holdings
 from .portfolio_weights import (
     build_position_weights,
     limit_weight_turnover,
     normalize_position_weights,
     normalize_weighting_mode,
+    validate_positive_name_invariant,
 )
 from .selection_controls import (
+    MaxNewNamesShortfallPolicy,
     apply_liquidity_floor_to_day as _apply_liquidity_floor_to_day,
     controlled_selection_day,
     merge_pricing_supplemental_columns as _merge_pricing_supplemental_columns,
     ranked_selection_frame,
     validate_max_new_names_per_rebalance,
+    validate_max_new_names_shortfall_policy,
+    validate_max_positive_names,
     validate_selection_min_score,
 )
 
@@ -71,45 +76,6 @@ class RebalanceSelection:
 class PortfolioPositionSetup:
     context: PortfolioBuildContext
     weighting_mode: str
-
-
-@dataclass(frozen=True)
-class PortfolioPositionOptions:
-    pred_col: str
-    rebalance_dates: list[pd.Timestamp]
-    shift_days: int
-    top_k: int
-    weighting_mode: str
-    weighting_liquidity_col: str
-    buffer_exit: int
-    buffer_entry: int
-    long_only: bool
-    short_k: int | None
-    group_col: str | None
-    max_names_per_group: int | None
-    liquidity_floor_col: str | None
-    liquidity_floor_quantile: float | None
-    max_turnover_per_rebalance: float | None
-    rank_offset: int
-    selection_tiebreak_col: str | None
-    selection_score_bucket_size: float | None
-    selection_score_margin: float | None
-    selection_score_margin_rank_limit: int | None
-    selection_min_score: float | None
-    max_new_names_per_rebalance: int | None
-
-    def controlled_day(self, day: pd.DataFrame, *, ascending: bool) -> pd.DataFrame:
-        """Return the side-specific weighting frame without duplicate controlled symbols."""
-
-        return controlled_selection_day(
-            day,
-            self.pred_col,
-            ascending=ascending,
-            selection_tiebreak_col=self.selection_tiebreak_col,
-            selection_score_bucket_size=self.selection_score_bucket_size,
-            selection_min_score=self.selection_min_score,
-            max_new_names_per_rebalance=self.max_new_names_per_rebalance,
-        )
 
 
 def _empty_positions() -> pd.DataFrame:
@@ -314,9 +280,11 @@ def _select_side_holdings(
     selection_tiebreak_col: str | None,
     selection_score_bucket_size: float | None,
     selection_score_margin: float | None,
+    selection_score_margin_col: str | None,
     selection_score_margin_rank_limit: int | None,
     selection_min_score: float | None,
     max_new_names_per_rebalance: int | None,
+    max_new_names_shortfall_policy: MaxNewNamesShortfallPolicy,
 ) -> list[str]:
     holdings, _ = select_holdings(
         selection.day,
@@ -338,9 +306,11 @@ def _select_side_holdings(
         selection_tiebreak_col=selection_tiebreak_col,
         selection_score_bucket_size=selection_score_bucket_size,
         selection_score_margin=selection_score_margin,
+        selection_score_margin_col=selection_score_margin_col,
         selection_score_margin_rank_limit=selection_score_margin_rank_limit,
         selection_min_score=selection_min_score,
         max_new_names_per_rebalance=max_new_names_per_rebalance,
+        max_new_names_shortfall_policy=max_new_names_shortfall_policy,
     )
     return holdings
 
@@ -425,9 +395,11 @@ def _process_long_only_rebalance(
         selection_tiebreak_col=options.selection_tiebreak_col,
         selection_score_bucket_size=options.selection_score_bucket_size,
         selection_score_margin=options.selection_score_margin,
+        selection_score_margin_col=options.selection_score_margin_col,
         selection_score_margin_rank_limit=options.selection_score_margin_rank_limit,
         selection_min_score=options.selection_min_score,
         max_new_names_per_rebalance=options.max_new_names_per_rebalance,
+        max_new_names_shortfall_policy=options.max_new_names_shortfall_policy,
     )
     if not holdings:
         if (
@@ -451,6 +423,7 @@ def _process_long_only_rebalance(
         weights,
         options.max_turnover_per_rebalance,
     )
+    weights = validate_positive_name_invariant(weights, options.max_positive_names)
     if options.selection_min_score is not None:
         weights = normalize_position_weights(weights.reindex(holdings).dropna())
     if weights.empty:
@@ -554,9 +527,11 @@ def _process_long_short_rebalance(
         selection_tiebreak_col=options.selection_tiebreak_col,
         selection_score_bucket_size=options.selection_score_bucket_size,
         selection_score_margin=options.selection_score_margin,
+        selection_score_margin_col=options.selection_score_margin_col,
         selection_score_margin_rank_limit=options.selection_score_margin_rank_limit,
         selection_min_score=options.selection_min_score,
         max_new_names_per_rebalance=options.max_new_names_per_rebalance,
+        max_new_names_shortfall_policy=options.max_new_names_shortfall_policy,
     )
     short_selection = selection
     if controlled:
@@ -578,9 +553,11 @@ def _process_long_short_rebalance(
         selection_tiebreak_col=options.selection_tiebreak_col,
         selection_score_bucket_size=options.selection_score_bucket_size,
         selection_score_margin=options.selection_score_margin,
+        selection_score_margin_col=options.selection_score_margin_col,
         selection_score_margin_rank_limit=options.selection_score_margin_rank_limit,
         selection_min_score=options.selection_min_score,
         max_new_names_per_rebalance=options.max_new_names_per_rebalance,
+        max_new_names_shortfall_policy=options.max_new_names_shortfall_policy,
     )
     if not controlled and (not long_holdings or not short_holdings):
         return
@@ -745,12 +722,19 @@ def build_positions_by_rebalance(
     selection_tiebreak_col: str | None = None,
     selection_score_bucket_size: float | None = None,
     selection_score_margin: float | None = None,
+    selection_score_margin_col: str | None = None,
     selection_score_margin_rank_limit: int | None = None,
     selection_min_score: float | None = None,
     max_new_names_per_rebalance: int | None = None,
+    max_new_names_shortfall_policy: MaxNewNamesShortfallPolicy = "legacy_concentrate",
+    max_positive_names: int | None = None,
 ) -> pd.DataFrame:
     selection_min_score = validate_selection_min_score(selection_min_score)
     max_new_names_per_rebalance = validate_max_new_names_per_rebalance(max_new_names_per_rebalance)
+    max_new_names_shortfall_policy = validate_max_new_names_shortfall_policy(
+        max_new_names_shortfall_policy
+    )
+    max_positive_names = validate_max_positive_names(max_positive_names)
     data, pricing_data = _normalize_portfolio_frames(data, pricing_data)
     if data.empty or not rebalance_dates or top_k <= 0:
         return _empty_positions()
@@ -789,9 +773,12 @@ def build_positions_by_rebalance(
         selection_tiebreak_col=selection_tiebreak_col,
         selection_score_bucket_size=selection_score_bucket_size,
         selection_score_margin=selection_score_margin,
+        selection_score_margin_col=selection_score_margin_col,
         selection_score_margin_rank_limit=selection_score_margin_rank_limit,
         selection_min_score=selection_min_score,
         max_new_names_per_rebalance=max_new_names_per_rebalance,
+        max_new_names_shortfall_policy=max_new_names_shortfall_policy,
+        max_positive_names=max_positive_names,
     )
     results = _build_position_rows_by_rebalance(setup.context, options)
     return _positions_frame_from_rows(results)

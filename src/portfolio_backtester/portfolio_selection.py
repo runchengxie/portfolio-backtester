@@ -7,11 +7,13 @@ import pandas as pd
 
 from .execution import SelectionConstraints
 from .selection_controls import (
+    MaxNewNamesShortfallPolicy,
     apply_selection_score_threshold,
     entry_amount_values,
     entry_tradable_flags,
     ranked_selection_frame,
     validate_max_new_names_per_rebalance,
+    validate_max_new_names_shortfall_policy,
     validate_selection_min_score,
 )
 
@@ -201,12 +203,17 @@ def select_holdings(
     selection_tiebreak_col: str | None = None,
     selection_score_bucket_size: float | None = None,
     selection_score_margin: float | None = None,
+    selection_score_margin_col: str | None = None,
     selection_score_margin_rank_limit: int | None = None,
     selection_min_score: float | None = None,
     max_new_names_per_rebalance: int | None = None,
+    max_new_names_shortfall_policy: MaxNewNamesShortfallPolicy = "legacy_concentrate",
 ) -> tuple[list[str], pd.Series]:
     selection_min_score = validate_selection_min_score(selection_min_score)
     max_new_names_per_rebalance = validate_max_new_names_per_rebalance(max_new_names_per_rebalance)
+    max_new_names_shortfall_policy = validate_max_new_names_shortfall_policy(
+        max_new_names_shortfall_policy
+    )
     inputs = _build_selection_inputs(
         day=day,
         entry_date=entry_date,
@@ -227,6 +234,7 @@ def select_holdings(
         selection_tiebreak_col=selection_tiebreak_col,
         selection_score_bucket_size=selection_score_bucket_size,
         selection_score_margin=selection_score_margin,
+        selection_score_margin_col=selection_score_margin_col,
         selection_score_margin_rank_limit=selection_score_margin_rank_limit,
         selection_min_score=selection_min_score,
         deduplicate_symbols=(
@@ -247,6 +255,10 @@ def select_holdings(
         max_names_per_group=max_names_per_group,
         prev_holdings=prev_holdings,
         max_new_names_per_rebalance=max_new_names_per_rebalance,
+        max_new_names_shortfall_policy=max_new_names_shortfall_policy,
+        carry_allowed_symbols=(
+            set(inputs.candidate_order) if selection_min_score is not None else None
+        ),
     )
     if not holdings:
         return [], pd.Series(dtype=float)
@@ -274,6 +286,7 @@ def _build_selection_inputs(
     selection_tiebreak_col: str | None,
     selection_score_bucket_size: float | None,
     selection_score_margin: float | None,
+    selection_score_margin_col: str | None,
     selection_score_margin_rank_limit: int | None,
     selection_min_score: float | None,
     deduplicate_symbols: bool,
@@ -310,6 +323,7 @@ def _build_selection_inputs(
         buffer_exit=buffer_exit,
         buffer_entry=buffer_entry,
         selection_score_margin=selection_score_margin,
+        selection_score_margin_col=selection_score_margin_col,
         selection_score_margin_rank_limit=selection_score_margin_rank_limit,
     )
     amount_values = entry_amount_values(
@@ -343,6 +357,7 @@ def _candidate_order_with_score_margin(
     buffer_exit: int,
     buffer_entry: int,
     selection_score_margin: float | None,
+    selection_score_margin_col: str | None,
     selection_score_margin_rank_limit: int | None,
 ) -> list[str]:
     candidate_order = apply_rebalance_buffer(
@@ -352,10 +367,13 @@ def _candidate_order_with_score_margin(
         buffer_exit,
         buffer_entry,
     )
+    margin_col = selection_score_margin_col or pred_col
+    if margin_col not in ranked.columns:
+        raise ValueError(f"Selection score margin column not found: {margin_col}")
     ranked_scores = dict(
         zip(
             ranked["symbol"],
-            pd.to_numeric(ranked[pred_col], errors="coerce"),
+            pd.to_numeric(ranked[margin_col], errors="coerce"),
             strict=False,
         )
     )
@@ -398,6 +416,8 @@ def _select_candidate_holdings(
     max_names_per_group: int | None,
     prev_holdings: set[str] | None,
     max_new_names_per_rebalance: int | None,
+    max_new_names_shortfall_policy: MaxNewNamesShortfallPolicy,
+    carry_allowed_symbols: set[str] | None,
 ) -> list[str]:
     holdings: list[str] = []
     group_counts: dict[object, int] = {}
@@ -430,7 +450,72 @@ def _select_candidate_holdings(
         holdings.append(symbol)
         if is_new_name:
             new_names_selected += 1
+    if len(holdings) < k and prev_holdings is not None and max_new_names_per_rebalance is not None:
+        if max_new_names_shortfall_policy == "carry":
+            _carry_previous_holdings(
+                holdings,
+                prev_holdings=prev_holdings,
+                k=k,
+                carry_allowed_symbols=carry_allowed_symbols,
+                entry_prices=entry_prices,
+                amount_values=amount_values,
+                tradable_flags=tradable_flags,
+                constraints=constraints,
+                group_map=group_map,
+                group_counts=group_counts,
+                max_names_per_group=max_names_per_group,
+            )
+            if len(holdings) < k:
+                raise ValueError(
+                    "max_new_names_shortfall_policy='carry' could not restore the target "
+                    "count from tradable previous holdings."
+                )
+        if len(holdings) < k and max_new_names_shortfall_policy == "fail":
+            raise ValueError(
+                "max_new_names_per_rebalance underfilled the target; choose "
+                "max_new_names_shortfall_policy='carry' or retain legacy_concentrate."
+            )
     return holdings
+
+
+def _carry_previous_holdings(
+    holdings: list[str],
+    *,
+    prev_holdings: set[str],
+    k: int,
+    carry_allowed_symbols: set[str] | None,
+    entry_prices: pd.Series,
+    amount_values: pd.Series | None,
+    tradable_flags: pd.Series | None,
+    constraints: SelectionConstraints,
+    group_map: dict[object, object] | None,
+    group_counts: dict[object, int],
+    max_names_per_group: int | None,
+) -> None:
+    for symbol in sorted(prev_holdings):
+        if len(holdings) >= k:
+            break
+        if (
+            symbol in holdings
+            or (carry_allowed_symbols is not None and symbol not in carry_allowed_symbols)
+            or (group_map is not None and symbol not in group_map)
+            or not _passes_entry_constraints(
+                symbol,
+                entry_prices=entry_prices,
+                amount_values=amount_values,
+                tradable_flags=tradable_flags,
+                constraints=constraints,
+            )
+        ):
+            continue
+        if _blocked_by_group_cap(
+            symbol,
+            group_map=group_map,
+            group_counts=group_counts,
+            max_names_per_group=max_names_per_group,
+        ):
+            continue
+        holdings.append(symbol)
 
 
 def _blocked_by_group_cap(

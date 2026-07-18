@@ -1,8 +1,10 @@
 from __future__ import annotations
 
+import operator
 import re
 from collections.abc import Iterable
 from dataclasses import dataclass
+from typing import Literal
 
 import numpy as np
 import pandas as pd
@@ -26,6 +28,99 @@ class _MultiweekFrequency:
     phase: int
     weeks: int
     anchor: pd.Timestamp | None = None
+
+
+@dataclass(frozen=True)
+class SessionRebalanceSchedule:
+    """Deterministic every-N-trading-session rebalance schedule.
+
+    ``anchor`` is a trading session in the supplied calendar.  Keeping it
+    explicit makes a phase stable when callers extend the sample window.
+    Positions are held until the next selected rebalance; this is deliberately
+    different from a daily staggered sleeve labelled H3/H5.
+    """
+
+    rebalance_interval_sessions: int
+    anchor: pd.Timestamp
+    phase: int = 0
+    holding_mode: Literal["until_next_rebalance"] = "until_next_rebalance"
+
+    def __post_init__(self) -> None:
+        interval = _positive_session_interval(self.rebalance_interval_sessions)
+        phase = _session_phase(self.phase, interval=interval)
+        anchor = pd.to_datetime(self.anchor, errors="coerce")
+        if pd.isna(anchor):
+            raise ValueError("anchor must be a valid trading-session date.")
+        if self.holding_mode != "until_next_rebalance":
+            raise ValueError("holding_mode must be 'until_next_rebalance'.")
+        object.__setattr__(self, "rebalance_interval_sessions", interval)
+        object.__setattr__(self, "phase", phase)
+        object.__setattr__(self, "anchor", pd.Timestamp(anchor).normalize())
+
+    def dates(self, trading_sessions: Iterable[pd.Timestamp]) -> list[pd.Timestamp]:
+        """Return the sessions selected by this anchored phase."""
+
+        return get_session_interval_rebalance_dates(
+            trading_sessions,
+            rebalance_interval_sessions=self.rebalance_interval_sessions,
+            anchor=self.anchor,
+            phase=self.phase,
+        )
+
+
+def _positive_session_interval(value: object) -> int:
+    if isinstance(value, bool):
+        raise ValueError("rebalance_interval_sessions must be a positive integer.")
+    try:
+        normalized = operator.index(value)
+    except TypeError as exc:
+        raise ValueError("rebalance_interval_sessions must be a positive integer.") from exc
+    if normalized <= 0:
+        raise ValueError("rebalance_interval_sessions must be a positive integer.")
+    return int(normalized)
+
+
+def _session_phase(value: object, *, interval: int) -> int:
+    if isinstance(value, bool):
+        raise ValueError("phase must be an integer in [0, rebalance_interval_sessions).")
+    try:
+        normalized = operator.index(value)
+    except TypeError as exc:
+        raise ValueError("phase must be an integer in [0, rebalance_interval_sessions).") from exc
+    if not 0 <= normalized < interval:
+        raise ValueError("phase must be an integer in [0, rebalance_interval_sessions).")
+    return int(normalized)
+
+
+def get_session_interval_rebalance_dates(
+    trading_sessions: Iterable[pd.Timestamp],
+    *,
+    rebalance_interval_sessions: int,
+    anchor: pd.Timestamp,
+    phase: int = 0,
+) -> list[pd.Timestamp]:
+    """Select one deterministic phase from an ordered trading-session calendar.
+
+    The anchor must be present in ``trading_sessions``.  Requiring an exact
+    session prevents a calendar date from silently changing phase after a
+    holiday or when a caller trims the input window.
+    """
+
+    sessions = _clean_dates(trading_sessions)
+    interval = _positive_session_interval(rebalance_interval_sessions)
+    normalized_phase = _session_phase(phase, interval=interval)
+    normalized_anchor = pd.to_datetime(anchor, errors="coerce")
+    if pd.isna(normalized_anchor):
+        raise ValueError("anchor must be a valid trading-session date.")
+    anchor_session = pd.Timestamp(normalized_anchor).normalize()
+    if anchor_session not in sessions:
+        raise ValueError("anchor must be present in trading_sessions.")
+    anchor_index = sessions.index(anchor_session)
+    return [
+        session
+        for index, session in enumerate(sessions)
+        if (index - anchor_index - normalized_phase) % interval == 0
+    ]
 
 
 def _clean_dates(dates: Iterable[pd.Timestamp]) -> list[pd.Timestamp]:

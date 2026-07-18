@@ -16,6 +16,7 @@ from .execution import (
     NoSlippageModel,
     SelectionConstraints,
 )
+from .selection_controls import MaxNewNamesShortfallPolicy
 
 
 def run_backtest(
@@ -68,9 +69,12 @@ def backtest_topk(
     selection_tiebreak_col: str | None = None,
     selection_score_bucket_size: float | None = None,
     selection_score_margin: float | None = None,
+    selection_score_margin_col: str | None = None,
     selection_score_margin_rank_limit: int | None = None,
     selection_min_score: float | None = None,
     max_new_names_per_rebalance: int | None = None,
+    max_new_names_shortfall_policy: MaxNewNamesShortfallPolicy = "legacy_concentrate",
+    max_positive_names: int | None = None,
 ):
     """Compatibility facade for the historical Top-K parameter surface."""
 
@@ -119,9 +123,12 @@ def backtest_topk(
         selection_tiebreak_col=selection_tiebreak_col,
         selection_score_bucket_size=selection_score_bucket_size,
         selection_score_margin=selection_score_margin,
+        selection_score_margin_col=selection_score_margin_col,
         selection_score_margin_rank_limit=selection_score_margin_rank_limit,
         selection_min_score=selection_min_score,
         max_new_names_per_rebalance=max_new_names_per_rebalance,
+        max_new_names_shortfall_policy=max_new_names_shortfall_policy,
+        max_positive_names=max_positive_names,
     )
     return run_backtest(data, spec, pricing_data=pricing_data)
 

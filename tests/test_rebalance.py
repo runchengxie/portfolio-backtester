@@ -1,11 +1,17 @@
 from __future__ import annotations
 
+from itertools import pairwise
+
 import numpy as np
 import pandas as pd
+import pytest
 
+from portfolio_backtester import backtest_topk
 from portfolio_backtester.rebalance import (
+    SessionRebalanceSchedule,
     estimate_rebalance_gap,
     get_rebalance_dates,
+    get_session_interval_rebalance_dates,
     sample_rebalance_frame,
 )
 
@@ -97,6 +103,116 @@ def test_get_rebalance_dates_four_week_anchor_samples_every_fourth_week() -> Non
         "20240517",
         "20240614",
     ]
+
+
+def test_session_interval_anchor_is_stable_when_history_is_extended() -> None:
+    full = pd.bdate_range("2024-01-02", "2024-01-19")
+    short = full[3:]
+    anchor = pd.Timestamp(short[2])
+
+    full_schedule = get_session_interval_rebalance_dates(
+        full,
+        rebalance_interval_sessions=3,
+        anchor=anchor,
+        phase=1,
+    )
+    short_schedule = get_session_interval_rebalance_dates(
+        short,
+        rebalance_interval_sessions=3,
+        anchor=anchor,
+        phase=1,
+    )
+
+    assert [date for date in full_schedule if date >= short[0]] == short_schedule
+
+
+@pytest.mark.parametrize("interval", [3, 5])
+def test_session_interval_phases_partition_the_trading_calendar(interval: int) -> None:
+    sessions = pd.bdate_range("2024-01-02", periods=23)
+    anchor = pd.Timestamp(sessions[7])
+
+    phases = [
+        get_session_interval_rebalance_dates(
+            sessions,
+            rebalance_interval_sessions=interval,
+            anchor=anchor,
+            phase=phase,
+        )
+        for phase in range(interval)
+    ]
+
+    flattened = [date for phase_dates in phases for date in phase_dates]
+    assert sorted(flattened) == list(sessions)
+    assert len(flattened) == len(set(flattened))
+    session_index = {date: index for index, date in enumerate(sessions)}
+    for phase_dates in phases:
+        gaps = [session_index[right] - session_index[left] for left, right in pairwise(phase_dates)]
+        assert gaps == [interval] * len(gaps)
+
+
+def test_session_interval_schedule_declares_hold_until_next_rebalance() -> None:
+    sessions = pd.bdate_range("2024-01-02", periods=10)
+    schedule = SessionRebalanceSchedule(
+        rebalance_interval_sessions=3,
+        anchor=pd.Timestamp(sessions[0]),
+        phase=0,
+    )
+
+    assert schedule.holding_mode == "until_next_rebalance"
+    assert schedule.dates(sessions) == list(sessions[[0, 3, 6, 9]])
+
+
+def test_session_interval_backtest_exits_only_at_next_scheduled_rebalance() -> None:
+    sessions = pd.bdate_range("2024-01-02", periods=10)
+    schedule = SessionRebalanceSchedule(3, pd.Timestamp(sessions[0]))
+    rebalance_dates = schedule.dates(sessions)
+    data = pd.DataFrame(
+        {
+            "trade_date": sessions,
+            "symbol": "A",
+            "score": 1.0,
+            "close": range(10, 20),
+        }
+    )
+
+    result = backtest_topk(
+        data,
+        pred_col="score",
+        price_col="close",
+        rebalance_dates=rebalance_dates,
+        top_k=1,
+        shift_days=0,
+        cost_bps=0.0,
+        trading_days_per_year=252,
+    )
+
+    assert result is not None
+    periods = result[4]
+    assert [period["entry_date"] for period in periods] == rebalance_dates[:-1]
+    assert [period["planned_exit_date"] for period in periods] == rebalance_dates[1:]
+
+
+def test_session_interval_schedule_rejects_non_session_anchor() -> None:
+    sessions = pd.bdate_range("2024-01-02", periods=5)
+
+    with pytest.raises(ValueError, match="anchor must be present"):
+        get_session_interval_rebalance_dates(
+            sessions,
+            rebalance_interval_sessions=3,
+            anchor=pd.Timestamp("2024-01-06"),
+        )
+
+
+@pytest.mark.parametrize("interval", [True, 3.0, "3", 0])
+def test_session_interval_schedule_requires_positive_integer(interval: object) -> None:
+    sessions = pd.bdate_range("2024-01-02", periods=5)
+
+    with pytest.raises(ValueError, match="positive integer"):
+        get_session_interval_rebalance_dates(
+            sessions,
+            rebalance_interval_sessions=interval,  # type: ignore[arg-type]
+            anchor=pd.Timestamp(sessions[0]),
+        )
 
 
 def test_three_week_rebalance_alias_samples_every_third_week() -> None:

@@ -4,12 +4,14 @@ from __future__ import annotations
 
 import math
 import operator
-from typing import Any
+from typing import Any, Literal, cast
 
 import numpy as np
 import pandas as pd
 
 from .execution import SelectionConstraints
+
+MaxNewNamesShortfallPolicy = Literal["legacy_concentrate", "carry", "fail"]
 
 
 def ranked_selection_frame(
@@ -192,6 +194,34 @@ def validate_max_new_names_per_rebalance(value: Any) -> int | None:
     return int(normalized)
 
 
+def validate_max_new_names_shortfall_policy(value: Any) -> MaxNewNamesShortfallPolicy:
+    """Return the explicit action when a new-name budget underfills Top-K."""
+
+    normalized = str(value or "legacy_concentrate").strip().lower()
+    allowed = {"legacy_concentrate", "carry", "fail"}
+    if normalized not in allowed:
+        raise ValueError(
+            "max_new_names_shortfall_policy must be one of: legacy_concentrate, carry, fail."
+        )
+    return cast(MaxNewNamesShortfallPolicy, normalized)
+
+
+def validate_max_positive_names(value: Any) -> int | None:
+    """Return a positive integer final-position invariant when configured."""
+
+    if value is None:
+        return None
+    if isinstance(value, bool):
+        raise ValueError("max_positive_names must be a positive integer.")
+    try:
+        normalized = operator.index(value)
+    except TypeError as exc:
+        raise ValueError("max_positive_names must be a positive integer.") from exc
+    if normalized <= 0:
+        raise ValueError("max_positive_names must be > 0 when provided.")
+    return int(normalized)
+
+
 __all__ = [
     "apply_liquidity_floor_to_day",
     "apply_selection_score_threshold",
@@ -201,5 +231,7 @@ __all__ = [
     "merge_pricing_supplemental_columns",
     "ranked_selection_frame",
     "validate_max_new_names_per_rebalance",
+    "validate_max_new_names_shortfall_policy",
+    "validate_max_positive_names",
     "validate_selection_min_score",
 ]

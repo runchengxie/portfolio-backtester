@@ -15,6 +15,7 @@ from .pricing import (
     prepare_backtest_pricing_context,
     resolve_backtest_execution_context,
 )
+from .selection_controls import MaxNewNamesShortfallPolicy
 from .types import (
     BacktestExecutionContext,
     BacktestPeriodResult,
@@ -54,9 +55,12 @@ class _BacktestTopKConfig:
     selection_tiebreak_col: str | None
     selection_score_bucket_size: float | None
     selection_score_margin: float | None
+    selection_score_margin_col: str | None
     selection_score_margin_rank_limit: int | None
     selection_min_score: float | None
     max_new_names_per_rebalance: int | None
+    max_new_names_shortfall_policy: MaxNewNamesShortfallPolicy
+    max_positive_names: int | None
 
 
 @dataclass(frozen=True)
@@ -130,9 +134,12 @@ def _build_backtest_spec_config(
         selection_tiebreak_col=spec.selection_tiebreak_col,
         selection_score_bucket_size=spec.selection_score_bucket_size,
         selection_score_margin=spec.selection_score_margin,
+        selection_score_margin_col=spec.selection_score_margin_col,
         selection_score_margin_rank_limit=spec.selection_score_margin_rank_limit,
         selection_min_score=spec.selection_min_score,
         max_new_names_per_rebalance=spec.max_new_names_per_rebalance,
+        max_new_names_shortfall_policy=spec.max_new_names_shortfall_policy,
+        max_positive_names=spec.max_positive_names,
     )
 
 
@@ -237,4 +244,49 @@ def _build_backtest_return_bundle(
             else None,
         }
     )
+    turnover_metric_fields = (
+        "target_name_turnover",
+        "target_entered_count",
+        "target_exited_count",
+        "target_overlap_count",
+        "target_weight_full_l1",
+        "target_weight_half_l1",
+        "pretrade_demand_buy",
+        "pretrade_demand_sell",
+        "pretrade_demand_full_l1",
+        "pretrade_demand_half_l1",
+        "executed_buy",
+        "executed_sell",
+        "executed_gross",
+        "executed_full_l1",
+        "executed_half_l1",
+        "executed_cost",
+    )
+    rebalance_periods = [
+        period for period in accumulator.period_info if not bool(period.get("is_initial_build"))
+    ]
+    for field_name in turnover_metric_fields:
+        stats[f"avg_{field_name}"] = _mean_period_field(
+            accumulator.period_info,
+            field_name,
+        )
+        stats[f"avg_rebalance_{field_name}"] = _mean_period_field(
+            rebalance_periods,
+            field_name,
+        )
+    stats["execution_data_available"] = bool(
+        accumulator.period_info
+        and all(bool(period.get("execution_data_available")) for period in accumulator.period_info)
+    )
+    stats["initial_build_periods"] = sum(
+        bool(period.get("is_initial_build")) for period in accumulator.period_info
+    )
     return stats, net_series, gross_series, turnover_series, accumulator.period_info
+
+
+def _mean_period_field(periods: list[dict], field_name: str) -> float:
+    values = pd.to_numeric(
+        pd.Series([period.get(field_name) for period in periods], dtype=object),
+        errors="coerce",
+    )
+    return float(values.mean()) if values.notna().any() else np.nan

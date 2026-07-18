@@ -10,6 +10,7 @@ __all__ = [
     "limit_weight_turnover",
     "normalize_position_weights",
     "normalize_weighting_mode",
+    "validate_positive_name_invariant",
 ]
 
 _WEIGHTING_MODES = {
@@ -199,3 +200,21 @@ def limit_weight_turnover(
         limited = prev + (desired - prev) * (cap / turnover)
     limited = limited[limited.abs() > 1e-12]
     return normalize_position_weights(limited)
+
+
+def validate_positive_name_invariant(
+    weights: pd.Series,
+    max_positive_names: int | None,
+) -> pd.Series:
+    """Fail instead of silently emitting a turnover-cap long tail."""
+
+    if max_positive_names is None:
+        return weights
+    positive_names = int((pd.to_numeric(weights, errors="coerce").fillna(0.0) > 1e-12).sum())
+    if positive_names > max_positive_names:
+        raise ValueError(
+            "Final portfolio exceeds max_positive_names: "
+            f"{positive_names} > {max_positive_names}. Avoid weight interpolation or use an "
+            "explicit discrete replacement policy."
+        )
+    return weights

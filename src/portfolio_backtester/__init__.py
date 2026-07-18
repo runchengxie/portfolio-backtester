@@ -35,6 +35,7 @@ from .hrp import HrpConfig, HrpResult, hierarchical_risk_parity, rolling_hrp_wei
 from .metrics import summarize_period_returns
 from .position_backtest import PositionBacktestConfig, PositionBacktestResult, run_position_backtest
 from .position_evaluation import PositionBacktestEvaluation, evaluate_position_backtest
+from .rebalance import SessionRebalanceSchedule, get_session_interval_rebalance_dates
 from .sharpe_inference import (
     annualized_sharpe_to_periodic,
     annualized_variance_to_periodic,
@@ -53,8 +54,10 @@ from .strategy_risk import (
     summarize_strategy_risk,
 )
 from .turnover import (
+    RebalanceTurnoverReport,
     TurnoverBreakdown,
     annualize_turnover,
+    build_rebalance_turnover_report,
     name_turnover,
     turnover_from_trade_weights,
 )
@@ -77,6 +80,8 @@ __all__ = [
     "PositionBacktestEvaluation",
     "PositionBacktestResult",
     "PositionsByRebalanceFrameContract",
+    "RebalanceTurnoverReport",
+    "SessionRebalanceSchedule",
     "SizingConfig",
     "StrategyRiskReport",
     "StrategySpec",
@@ -88,6 +93,7 @@ __all__ = [
     "average_active_bets",
     "backtest_topk",
     "build_portfolio_sizing_receipt",
+    "build_rebalance_turnover_report",
     "build_sized_weights",
     "build_sizing_receipt",
     "construct_positions_from_strategy",
@@ -95,6 +101,7 @@ __all__ = [
     "discretize_weights",
     "evaluate_position_backtest",
     "expected_max_sharpe",
+    "get_session_interval_rebalance_dates",
     "hierarchical_risk_parity",
     "implementation_shortfall_metrics",
     "l2_price_tiered_slippage",

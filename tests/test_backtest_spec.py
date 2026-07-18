@@ -121,9 +121,12 @@ def test_backtest_spec_is_frozen_and_json_serializable() -> None:
         selection_tiebreak_col="amount",
         selection_score_bucket_size=0.01,
         selection_score_margin=0.02,
+        selection_score_margin_col="candidate_relevance",
         selection_score_margin_rank_limit=10,
         selection_min_score=0.25,
         max_new_names_per_rebalance=3,
+        max_new_names_shortfall_policy="carry",
+        max_positive_names=10,
     )
 
     mapping = spec.to_mapping()
@@ -134,6 +137,9 @@ def test_backtest_spec_is_frozen_and_json_serializable() -> None:
     assert restored.strategy.group_cap == GroupCap(column="industry", max_names=1)
     assert restored.execution is not None
     assert isinstance(restored.execution.cost_model, SideBpsCostModel)
+    assert restored.selection_score_margin_col == "candidate_relevance"
+    assert restored.max_new_names_shortfall_policy == "carry"
+    assert restored.max_positive_names == 10
     assert describe_execution_model(restored.execution) == describe_execution_model(spec.execution)
     with pytest.raises(FrozenInstanceError):
         spec.rank_offset = 1  # type: ignore[misc]
@@ -145,6 +151,22 @@ def test_backtest_spec_rejects_unknown_schema_version() -> None:
 
     with pytest.raises(ValueError, match="Unsupported BacktestSpec schema version: 2"):
         BacktestSpec.from_mapping(mapping)
+
+
+def test_backtest_spec_reads_schema_v1_mapping_without_additive_controls() -> None:
+    mapping = _golden_spec().to_mapping()
+    for field in (
+        "selection_score_margin_col",
+        "max_new_names_shortfall_policy",
+        "max_positive_names",
+    ):
+        mapping.pop(field)
+
+    restored = BacktestSpec.from_mapping(mapping)
+
+    assert restored.selection_score_margin_col is None
+    assert restored.max_new_names_shortfall_policy == "legacy_concentrate"
+    assert restored.max_positive_names is None
 
 
 @pytest.mark.parametrize("invalid", [True, 1.5, "1"])

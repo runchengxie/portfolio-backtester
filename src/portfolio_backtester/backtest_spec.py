@@ -11,7 +11,10 @@ import pandas as pd
 from .contracts import GroupCap, StrategySpec
 from .execution import ExecutionModel, build_execution_model, describe_execution_model
 from .selection_controls import (
+    MaxNewNamesShortfallPolicy,
     validate_max_new_names_per_rebalance,
+    validate_max_new_names_shortfall_policy,
+    validate_max_positive_names,
     validate_selection_min_score,
 )
 
@@ -46,15 +49,28 @@ class BacktestSpec:
     selection_tiebreak_col: str | None = None
     selection_score_bucket_size: float | None = None
     selection_score_margin: float | None = None
+    selection_score_margin_col: str | None = None
     selection_score_margin_rank_limit: int | None = None
     selection_min_score: float | None = None
     max_new_names_per_rebalance: int | None = None
+    max_new_names_shortfall_policy: MaxNewNamesShortfallPolicy = "legacy_concentrate"
+    max_positive_names: int | None = None
 
     def __post_init__(self) -> None:
         object.__setattr__(
             self,
             "selection_min_score",
             validate_selection_min_score(self.selection_min_score),
+        )
+        object.__setattr__(
+            self,
+            "max_new_names_shortfall_policy",
+            validate_max_new_names_shortfall_policy(self.max_new_names_shortfall_policy),
+        )
+        object.__setattr__(
+            self,
+            "max_positive_names",
+            validate_max_positive_names(self.max_positive_names),
         )
         object.__setattr__(
             self,
@@ -85,9 +101,12 @@ class BacktestSpec:
             "selection_tiebreak_col": self.selection_tiebreak_col,
             "selection_score_bucket_size": self.selection_score_bucket_size,
             "selection_score_margin": self.selection_score_margin,
+            "selection_score_margin_col": self.selection_score_margin_col,
             "selection_score_margin_rank_limit": self.selection_score_margin_rank_limit,
             "selection_min_score": self.selection_min_score,
             "max_new_names_per_rebalance": self.max_new_names_per_rebalance,
+            "max_new_names_shortfall_policy": self.max_new_names_shortfall_policy,
+            "max_positive_names": self.max_positive_names,
         }
 
     @classmethod
@@ -117,6 +136,7 @@ class BacktestSpec:
             selection_tiebreak_col=_optional_str(value.get("selection_tiebreak_col")),
             selection_score_bucket_size=_optional_float(value.get("selection_score_bucket_size")),
             selection_score_margin=_optional_float(value.get("selection_score_margin")),
+            selection_score_margin_col=_optional_str(value.get("selection_score_margin_col")),
             selection_score_margin_rank_limit=_optional_int(
                 value.get("selection_score_margin_rank_limit")
             ),
@@ -124,6 +144,10 @@ class BacktestSpec:
             max_new_names_per_rebalance=validate_max_new_names_per_rebalance(
                 value.get("max_new_names_per_rebalance")
             ),
+            max_new_names_shortfall_policy=validate_max_new_names_shortfall_policy(
+                value.get("max_new_names_shortfall_policy")
+            ),
+            max_positive_names=validate_max_positive_names(value.get("max_positive_names")),
         )
 
 

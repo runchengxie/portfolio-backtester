@@ -14,10 +14,15 @@ from .leg_helpers import (
     _compute_trade_summary as _compute_trade_summary,
     _next_position_state,
 )
+from .period_turnover import (
+    period_result_from_leg,
+    period_result_from_legs,
+    period_turnover_fields,
+)
 from .periods import resolve_backtest_period_plan
 from .portfolio_selection import select_holdings
-from .portfolio_weights import normalize_position_weights
-from .selection_controls import controlled_selection_day
+from .portfolio_weights import normalize_position_weights, validate_positive_name_invariant
+from .selection_controls import MaxNewNamesShortfallPolicy, controlled_selection_day
 from .topk_context import (
     _BacktestPeriodEvaluation,
     _BacktestResultAccumulator,
@@ -51,9 +56,12 @@ class _BacktestLegContext:
     selection_tiebreak_col: str | None
     selection_score_bucket_size: float | None
     selection_score_margin: float | None
+    selection_score_margin_col: str | None
     selection_score_margin_rank_limit: int | None
     selection_min_score: float | None
     max_new_names_per_rebalance: int | None
+    max_new_names_shortfall_policy: MaxNewNamesShortfallPolicy
+    max_positive_names: int | None
     cost_model: CostModel
     slippage_model: SlippageModel
     exit_policy: object
@@ -95,9 +103,11 @@ def _evaluate_backtest_leg(
             selection_tiebreak_col=context.selection_tiebreak_col,
             selection_score_bucket_size=context.selection_score_bucket_size,
             selection_score_margin=context.selection_score_margin,
+            selection_score_margin_col=context.selection_score_margin_col,
             selection_score_margin_rank_limit=context.selection_score_margin_rank_limit,
             selection_min_score=context.selection_min_score,
             max_new_names_per_rebalance=context.max_new_names_per_rebalance,
+            max_new_names_shortfall_policy=context.max_new_names_shortfall_policy,
         )
     else:
         holdings, entry_prices = [], pd.Series(dtype=float)
@@ -127,12 +137,13 @@ def _evaluate_backtest_leg(
     )
     if target is None:
         return None
-    weights, exit_prices, period_exit_idx = target
+    weights, exit_prices = target.requested_weights, target.exit_prices
     if cash_control_enabled:
         entry_prices = context.entry_price_table.loc[context.entry_date].reindex(exit_prices.index)
     else:
         entry_prices = entry_prices.reindex(exit_prices.index)
     weights = normalize_position_weights(weights.reindex(exit_prices.index))
+    weights = validate_positive_name_invariant(weights, context.max_positive_names)
     holdings = cast(list[str], list(weights.index))
     if not holdings and not cash_control_enabled:
         return None
@@ -140,10 +151,11 @@ def _evaluate_backtest_leg(
     exit_prices = exit_prices.reindex(holdings)
     return _build_backtest_leg_result(
         holdings=holdings,
+        target_weights=target.target_weights,
         weights=weights,
         entry_prices=entry_prices,
         exit_prices=exit_prices,
-        period_exit_idx=period_exit_idx,
+        period_exit_idx=target.exit_idx,
         entry_idx=context.entry_idx,
         entry_date=context.entry_date,
         trade_dates=context.trade_dates,
@@ -200,68 +212,13 @@ def _resolve_exit_prices_for_policy(
 
 
 def _evaluate_long_only_period(
+    context: _BacktestLegContext,
     *,
-    day: pd.DataFrame,
-    entry_date: pd.Timestamp,
-    entry_idx: int,
-    planned_exit_idx: int,
-    trade_dates: list[pd.Timestamp],
-    pred_col: str,
     count: int,
-    weighting_mode: str,
-    entry_price_table: pd.DataFrame,
-    exit_price_table: pd.DataFrame,
-    tradable_table: pd.DataFrame | None,
-    amount_tables: dict[str, pd.DataFrame],
-    selection_constraints: SelectionConstraints,
     long_state: BacktestPositionState,
-    buffer_exit: int,
-    buffer_entry: int,
     rank_offset: int,
-    group_col: str | None,
-    max_names_per_group: int | None,
-    weighting_liquidity_col: str,
     max_turnover_per_rebalance: float | None,
-    selection_tiebreak_col: str | None,
-    selection_score_bucket_size: float | None,
-    selection_score_margin: float | None,
-    selection_score_margin_rank_limit: int | None,
-    selection_min_score: float | None,
-    max_new_names_per_rebalance: int | None,
-    cost_model: CostModel,
-    slippage_model: SlippageModel,
-    exit_policy,
-    date_to_idx: dict[pd.Timestamp, int],
 ) -> tuple[BacktestPeriodResult, BacktestPositionState] | None:
-    context = _BacktestLegContext(
-        day=day,
-        entry_date=entry_date,
-        entry_idx=entry_idx,
-        planned_exit_idx=planned_exit_idx,
-        trade_dates=trade_dates,
-        pred_col=pred_col,
-        weighting_mode=weighting_mode,
-        entry_price_table=entry_price_table,
-        exit_price_table=exit_price_table,
-        tradable_table=tradable_table,
-        amount_tables=amount_tables,
-        selection_constraints=selection_constraints,
-        buffer_exit=buffer_exit,
-        buffer_entry=buffer_entry,
-        group_col=group_col,
-        max_names_per_group=max_names_per_group,
-        weighting_liquidity_col=weighting_liquidity_col,
-        selection_tiebreak_col=selection_tiebreak_col,
-        selection_score_bucket_size=selection_score_bucket_size,
-        selection_score_margin=selection_score_margin,
-        selection_score_margin_rank_limit=selection_score_margin_rank_limit,
-        selection_min_score=selection_min_score,
-        max_new_names_per_rebalance=max_new_names_per_rebalance,
-        cost_model=cost_model,
-        slippage_model=slippage_model,
-        exit_policy=exit_policy,
-        date_to_idx=date_to_idx,
-    )
     long_leg = _evaluate_paired_backtest_leg(
         context,
         side="long",
@@ -273,48 +230,9 @@ def _evaluate_long_only_period(
     )
     if long_leg is None:
         return None
-    fee_cost = long_leg.fee_cost
-    slippage_cost = long_leg.slippage_cost
-    total_cost = fee_cost + slippage_cost
-    result = BacktestPeriodResult(
-        gross=long_leg.gross,
-        net=long_leg.gross - total_cost,
-        turnover=long_leg.turnover,
-        fee_cost=fee_cost,
-        slippage_cost=slippage_cost,
-        total_cost=total_cost,
-        exit_idx=long_leg.exit_idx,
-        exit_date=long_leg.exit_date,
-    )
-    next_state = _next_position_state(long_leg, entry_date=entry_date)
+    result = period_result_from_leg(long_leg)
+    next_state = _next_position_state(long_leg, entry_date=context.entry_date)
     return result, next_state
-
-
-def _build_long_short_period_result(
-    *,
-    long_leg: BacktestLegResult,
-    short_leg: BacktestLegResult,
-    entry_date: pd.Timestamp,
-    trade_dates: list[pd.Timestamp],
-) -> tuple[BacktestPeriodResult, BacktestPositionState, BacktestPositionState]:
-    exit_idx = max(long_leg.exit_idx, short_leg.exit_idx)
-    fee_cost = long_leg.fee_cost + short_leg.fee_cost
-    slippage_cost = long_leg.slippage_cost + short_leg.slippage_cost
-    total_cost = fee_cost + slippage_cost
-    gross = long_leg.gross + short_leg.gross
-    result = BacktestPeriodResult(
-        gross=gross,
-        net=gross - total_cost,
-        turnover=long_leg.turnover + short_leg.turnover,
-        fee_cost=fee_cost,
-        slippage_cost=slippage_cost,
-        total_cost=total_cost,
-        exit_idx=exit_idx,
-        exit_date=trade_dates[exit_idx],
-    )
-    next_long = _next_position_state(long_leg, entry_date=entry_date)
-    next_short = _next_position_state(short_leg, entry_date=entry_date)
-    return result, next_long, next_short
 
 
 def _backtest_exit_price_resolver(
@@ -356,70 +274,15 @@ def _evaluate_paired_backtest_leg(
 
 
 def _evaluate_long_short_period(
+    context: _BacktestLegContext,
     *,
-    day: pd.DataFrame,
-    entry_date: pd.Timestamp,
-    entry_idx: int,
-    planned_exit_idx: int,
-    trade_dates: list[pd.Timestamp],
-    pred_col: str,
     long_count: int,
     short_count: int,
-    weighting_mode: str,
-    entry_price_table: pd.DataFrame,
-    exit_price_table: pd.DataFrame,
-    tradable_table: pd.DataFrame | None,
-    amount_tables: dict[str, pd.DataFrame],
-    selection_constraints: SelectionConstraints,
     long_state: BacktestPositionState,
     short_state: BacktestPositionState,
-    buffer_exit: int,
-    buffer_entry: int,
     rank_offset: int,
-    group_col: str | None,
-    max_names_per_group: int | None,
-    weighting_liquidity_col: str,
     max_turnover_per_rebalance: float | None,
-    selection_tiebreak_col: str | None,
-    selection_score_bucket_size: float | None,
-    selection_score_margin: float | None,
-    selection_score_margin_rank_limit: int | None,
-    selection_min_score: float | None,
-    max_new_names_per_rebalance: int | None,
-    cost_model: CostModel,
-    slippage_model: SlippageModel,
-    exit_policy,
-    date_to_idx: dict[pd.Timestamp, int],
 ) -> tuple[BacktestPeriodResult, BacktestPositionState, BacktestPositionState] | None:
-    context = _BacktestLegContext(
-        day=day,
-        entry_date=entry_date,
-        entry_idx=entry_idx,
-        planned_exit_idx=planned_exit_idx,
-        trade_dates=trade_dates,
-        pred_col=pred_col,
-        weighting_mode=weighting_mode,
-        entry_price_table=entry_price_table,
-        exit_price_table=exit_price_table,
-        tradable_table=tradable_table,
-        amount_tables=amount_tables,
-        selection_constraints=selection_constraints,
-        buffer_exit=buffer_exit,
-        buffer_entry=buffer_entry,
-        group_col=group_col,
-        max_names_per_group=max_names_per_group,
-        weighting_liquidity_col=weighting_liquidity_col,
-        selection_tiebreak_col=selection_tiebreak_col,
-        selection_score_bucket_size=selection_score_bucket_size,
-        selection_score_margin=selection_score_margin,
-        selection_score_margin_rank_limit=selection_score_margin_rank_limit,
-        selection_min_score=selection_min_score,
-        max_new_names_per_rebalance=max_new_names_per_rebalance,
-        cost_model=cost_model,
-        slippage_model=slippage_model,
-        exit_policy=exit_policy,
-        date_to_idx=date_to_idx,
-    )
     long_leg = _evaluate_paired_backtest_leg(
         context,
         side="long",
@@ -432,9 +295,9 @@ def _evaluate_long_short_period(
     short_context = context
     short_count_final = short_count
     if (
-        selection_min_score is not None or max_new_names_per_rebalance is not None
+        context.selection_min_score is not None or context.max_new_names_per_rebalance is not None
     ) and long_leg is not None:
-        short_day = day.loc[~day["symbol"].isin(long_leg.holdings)].copy()
+        short_day = context.day.loc[~context.day["symbol"].isin(long_leg.holdings)].copy()
         short_context = replace(context, day=short_day)
         short_count_final = min(short_count, len(short_day))
     short_leg = _evaluate_paired_backtest_leg(
@@ -448,12 +311,10 @@ def _evaluate_long_short_period(
     )
     if long_leg is None or short_leg is None:
         return None
-    return _build_long_short_period_result(
-        long_leg=long_leg,
-        short_leg=short_leg,
-        entry_date=entry_date,
-        trade_dates=trade_dates,
-    )
+    result = period_result_from_legs(long_leg, short_leg, trade_dates=context.trade_dates)
+    next_long = _next_position_state(long_leg, entry_date=context.entry_date)
+    next_short = _next_position_state(short_leg, entry_date=context.entry_date)
+    return result, next_long, next_short
 
 
 def _append_backtest_period_result(
@@ -488,7 +349,53 @@ def _append_backtest_period_result(
             "planned_exit_date": planned_exit_date,
             "exit_date": period_result.exit_date,
             "exit_delay_steps": int(period_result.exit_idx - planned_exit_idx),
+            **period_turnover_fields(period_result),
         }
+    )
+
+
+def _configured_leg_context(
+    day: pd.DataFrame,
+    *,
+    entry_date: pd.Timestamp,
+    entry_idx: int,
+    planned_exit_idx: int,
+    config: _BacktestTopKConfig,
+    run_context: _BacktestRunContext,
+) -> _BacktestLegContext:
+    pricing_context = run_context.pricing_context
+    execution_context = run_context.execution_context
+    return _BacktestLegContext(
+        day=day,
+        entry_date=entry_date,
+        entry_idx=entry_idx,
+        planned_exit_idx=planned_exit_idx,
+        trade_dates=pricing_context.trade_dates,
+        pred_col=config.pred_col,
+        weighting_mode=run_context.weighting_mode,
+        entry_price_table=pricing_context.entry_price_table,
+        exit_price_table=pricing_context.exit_price_table,
+        tradable_table=pricing_context.tradable_table,
+        amount_tables=pricing_context.amount_tables,
+        selection_constraints=execution_context.selection_constraints,
+        buffer_exit=config.buffer_exit,
+        buffer_entry=config.buffer_entry,
+        group_col=config.group_col,
+        max_names_per_group=config.max_names_per_group,
+        weighting_liquidity_col=config.weighting_liquidity_col,
+        selection_tiebreak_col=config.selection_tiebreak_col,
+        selection_score_bucket_size=config.selection_score_bucket_size,
+        selection_score_margin=config.selection_score_margin,
+        selection_score_margin_col=config.selection_score_margin_col,
+        selection_score_margin_rank_limit=config.selection_score_margin_rank_limit,
+        selection_min_score=config.selection_min_score,
+        max_new_names_per_rebalance=config.max_new_names_per_rebalance,
+        max_new_names_shortfall_policy=config.max_new_names_shortfall_policy,
+        max_positive_names=config.max_positive_names,
+        cost_model=execution_context.cost_model,
+        slippage_model=execution_context.slippage_model,
+        exit_policy=execution_context.exit_policy,
+        date_to_idx=pricing_context.date_to_idx,
     )
 
 
@@ -503,40 +410,20 @@ def _evaluate_configured_long_only_period(
     config: _BacktestTopKConfig,
     run_context: _BacktestRunContext,
 ) -> tuple[BacktestPeriodResult, BacktestPositionState] | None:
-    pricing_context = run_context.pricing_context
-    execution_context = run_context.execution_context
-    return _evaluate_long_only_period(
-        day=day,
+    context = _configured_leg_context(
+        day,
         entry_date=entry_date,
         entry_idx=entry_idx,
         planned_exit_idx=planned_exit_idx,
-        trade_dates=pricing_context.trade_dates,
-        pred_col=config.pred_col,
+        config=config,
+        run_context=run_context,
+    )
+    return _evaluate_long_only_period(
+        context,
         count=count,
-        weighting_mode=run_context.weighting_mode,
-        entry_price_table=pricing_context.entry_price_table,
-        exit_price_table=pricing_context.exit_price_table,
-        tradable_table=pricing_context.tradable_table,
-        amount_tables=pricing_context.amount_tables,
-        selection_constraints=execution_context.selection_constraints,
         long_state=long_state,
-        buffer_exit=config.buffer_exit,
-        buffer_entry=config.buffer_entry,
         rank_offset=config.rank_offset,
-        group_col=config.group_col,
-        max_names_per_group=config.max_names_per_group,
-        weighting_liquidity_col=config.weighting_liquidity_col,
         max_turnover_per_rebalance=config.max_turnover_per_rebalance,
-        selection_tiebreak_col=config.selection_tiebreak_col,
-        selection_score_bucket_size=config.selection_score_bucket_size,
-        selection_score_margin=config.selection_score_margin,
-        selection_score_margin_rank_limit=config.selection_score_margin_rank_limit,
-        selection_min_score=config.selection_min_score,
-        max_new_names_per_rebalance=config.max_new_names_per_rebalance,
-        cost_model=execution_context.cost_model,
-        slippage_model=execution_context.slippage_model,
-        exit_policy=execution_context.exit_policy,
-        date_to_idx=pricing_context.date_to_idx,
     )
 
 
@@ -553,42 +440,22 @@ def _evaluate_configured_long_short_period(
     config: _BacktestTopKConfig,
     run_context: _BacktestRunContext,
 ) -> tuple[BacktestPeriodResult, BacktestPositionState, BacktestPositionState] | None:
-    pricing_context = run_context.pricing_context
-    execution_context = run_context.execution_context
-    return _evaluate_long_short_period(
-        day=day,
+    context = _configured_leg_context(
+        day,
         entry_date=entry_date,
         entry_idx=entry_idx,
         planned_exit_idx=planned_exit_idx,
-        trade_dates=pricing_context.trade_dates,
-        pred_col=config.pred_col,
+        config=config,
+        run_context=run_context,
+    )
+    return _evaluate_long_short_period(
+        context,
         long_count=long_count,
         short_count=short_count,
-        weighting_mode=run_context.weighting_mode,
-        entry_price_table=pricing_context.entry_price_table,
-        exit_price_table=pricing_context.exit_price_table,
-        tradable_table=pricing_context.tradable_table,
-        amount_tables=pricing_context.amount_tables,
-        selection_constraints=execution_context.selection_constraints,
         long_state=long_state,
         short_state=short_state,
-        buffer_exit=config.buffer_exit,
-        buffer_entry=config.buffer_entry,
         rank_offset=config.rank_offset,
-        group_col=config.group_col,
-        max_names_per_group=config.max_names_per_group,
-        weighting_liquidity_col=config.weighting_liquidity_col,
         max_turnover_per_rebalance=config.max_turnover_per_rebalance,
-        selection_tiebreak_col=config.selection_tiebreak_col,
-        selection_score_bucket_size=config.selection_score_bucket_size,
-        selection_score_margin=config.selection_score_margin,
-        selection_score_margin_rank_limit=config.selection_score_margin_rank_limit,
-        selection_min_score=config.selection_min_score,
-        max_new_names_per_rebalance=config.max_new_names_per_rebalance,
-        cost_model=execution_context.cost_model,
-        slippage_model=execution_context.slippage_model,
-        exit_policy=execution_context.exit_policy,
-        date_to_idx=pricing_context.date_to_idx,
     )
 
 

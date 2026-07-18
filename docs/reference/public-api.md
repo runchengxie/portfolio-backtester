@@ -11,7 +11,8 @@
 | 持仓基准评估 | `PositionBacktestEvaluation`、`evaluate_position_backtest` |
 | 持仓契约 | `POSITIONS_BY_REBALANCE_CONTRACT`、`PositionsByRebalanceFrameContract`、`validate_positions_by_rebalance_frame`、`assert_positions_by_rebalance_frame` |
 | 成本与滑点 | `DetailedTradeFeeModel`、`l2_price_tiered_slippage` |
-| 换手与成本 | `TurnoverBreakdown`、`CostBreakdown`、`name_turnover`、`annualize_turnover`、`turnover_from_trade_weights` |
+| 交易会话调仓 | `SessionRebalanceSchedule`、`get_session_interval_rebalance_dates` |
+| 换手与成本 | `TurnoverBreakdown`、`RebalanceTurnoverReport`、`CostBreakdown`、`name_turnover`、`annualize_turnover`、`turnover_from_trade_weights`、`build_rebalance_turnover_report` |
 | 收益汇总 | `summarize_period_returns` |
 | 夏普推断 | `probabilistic_sharpe_ratio`、`probabilistic_sharpe_ratio_from_stats`、`deflated_sharpe_ratio`、`expected_max_sharpe`、`sharpe_standard_error`、`annualized_sharpe_to_periodic`、`annualized_variance_to_periodic` |
 | 仓位缩放 | `SizingConfig`、`average_active_bets`、`build_sized_weights`、`build_sizing_receipt`、`discretize_weights`、`probability_to_size` |
