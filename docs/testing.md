@@ -53,7 +53,7 @@ scripts/dev/run_tests.sh basedpyright
 
 ## 远程 PR CI
 
-`.github/workflows/ci.yml` 在 pull request 和手动触发时运行。它是轻量质量门禁，不替代完整本地检查。
+启用仓库级 GitHub Actions 后，`.github/workflows/ci.yml` 会在 pull request 和手动触发时运行。它是轻量质量门禁，不替代完整本地检查。仓库级 Actions 关闭时，工作流文件会保留，但 GitHub 不会创建运行记录。
 
 远程 CI 覆盖：
 
