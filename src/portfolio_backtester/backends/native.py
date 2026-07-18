@@ -122,12 +122,15 @@ def _validate_request(request: NativePositionReplayRequest) -> None:
             "Set allow_stale_execution_price=True only for an explicitly documented study."
         )
 
-    if request.intraday_bars is not None and not request.intraday_bars.empty:
-        if request.intraday_execution_assumption is None:
-            raise ValueError(
-                "Intraday VWAP replay requires intraday_execution_assumption to prevent "
-                "accidental use of prices observed before the decision time."
-            )
+    if (
+        request.intraday_bars is not None
+        and not request.intraday_bars.empty
+        and request.intraday_execution_assumption is None
+    ):
+        raise ValueError(
+            "Intraday VWAP replay requires intraday_execution_assumption to prevent "
+            "accidental use of prices observed before the decision time."
+        )
 
 
 __all__ = [

@@ -63,8 +63,10 @@ def test_testing_docs_match_script_modes() -> None:
 def test_docs_record_current_automation_status() -> None:
     docs = (ROOT / "docs" / "testing.md").read_text(encoding="utf-8")
 
-    assert "当前仓库没有启用 GitHub Actions 远端测试" in docs
-    assert "本地质量门禁" in docs
+    assert "`.github/workflows/ci.yml`" in docs
+    assert "pull request 和手动触发" in docs
+    assert "不替代完整本地检查" in docs
+    assert (ROOT / ".github" / "workflows" / "ci.yml").is_file()
     assert ".github/workflows/tests.yml" not in docs
 
 

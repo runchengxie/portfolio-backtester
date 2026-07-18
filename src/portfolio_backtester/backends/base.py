@@ -92,8 +92,7 @@ class CanonicalBacktestResult:
             )
             if unknown:
                 raise ValueError(
-                    "Fills reference unknown order_id values: "
-                    + ", ".join(sorted(unknown))
+                    "Fills reference unknown order_id values: " + ", ".join(sorted(unknown))
                 )
         if self.capabilities.daily_ledger and not self.daily_ledger.empty:
             _require_columns(

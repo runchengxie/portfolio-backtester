@@ -200,12 +200,14 @@ class OrderIntent:
         if not isfinite(self.quantity) or self.quantity <= 0:
             raise ValueError("OrderIntent.quantity must be finite and > 0.")
         _assert_timezone_aware(self.submitted_at, label="OrderIntent.submitted_at")
-        if self.order_type in {OrderType.LIMIT, OrderType.STOP_LIMIT}:
-            if self.limit_price is None or not isfinite(self.limit_price) or self.limit_price <= 0:
-                raise ValueError("Limit orders require limit_price > 0.")
-        if self.order_type in {OrderType.STOP, OrderType.STOP_LIMIT}:
-            if self.stop_price is None or not isfinite(self.stop_price) or self.stop_price <= 0:
-                raise ValueError("Stop orders require stop_price > 0.")
+        if self.order_type in {OrderType.LIMIT, OrderType.STOP_LIMIT} and (
+            self.limit_price is None or not isfinite(self.limit_price) or self.limit_price <= 0
+        ):
+            raise ValueError("Limit orders require limit_price > 0.")
+        if self.order_type in {OrderType.STOP, OrderType.STOP_LIMIT} and (
+            self.stop_price is None or not isfinite(self.stop_price) or self.stop_price <= 0
+        ):
+            raise ValueError("Stop orders require stop_price > 0.")
 
     def to_record(self) -> dict[str, Any]:
         return {
@@ -402,6 +404,7 @@ def reduce_order_events(events: Iterable[OrderEvent]) -> OrderState:
 
 
 __all__ = [
+    "TERMINAL_ORDER_STATUSES",
     "Fill",
     "Instrument",
     "LedgerSnapshot",
@@ -410,7 +413,6 @@ __all__ = [
     "OrderState",
     "OrderStatus",
     "OrderType",
-    "TERMINAL_ORDER_STATUSES",
     "Target",
     "TimeInForce",
     "assert_order_transition",

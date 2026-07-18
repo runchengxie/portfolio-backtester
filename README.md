@@ -98,7 +98,7 @@ scripts/dev/run_tests.sh basedpyright
 
 本仓库维护通用组合构造、回测、成本、容量、暴露、报告、回测统计推断，以及 framework-neutral 的结果和执行契约。
 
-数据采集、特征工程、模型训练、具体策略规则、任务编排和券商执行由调用方或其他仓库负责。vn.py Gateway 和实时 transport 属于 `quant-execution-engine`；第三方框架对象不得进入本仓库公开结果或跨仓库产物。
+数据采集、特征工程、模型训练、具体策略规则、任务编排和券商执行由调用方或其他仓库负责。vn.py Gateway 和实时 transport 属于 `quant-execution-engine`。第三方框架对象不得进入本仓库公开结果或跨仓库产物。
 
 `DailyWatch20` 是现有调用方使用的兼容例外。本仓库只保留其组合选择与回执接口，研究假设、特征和晋升证据由 `alpha-research` 与 `strategy-pipeline` 维护。新增策略专用规则不应继续扩展这一例外。
 

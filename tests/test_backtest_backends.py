@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 from pathlib import Path
+from typing import ClassVar
 
 import pandas as pd
 import pytest
@@ -76,9 +77,7 @@ def test_native_backend_matches_committed_liquid_golden_result() -> None:
     assert len(records) == 1
     assert records[0]["period_end"] == expected["performance"][0]["period_end"]
     assert records[0]["net_return"] == pytest.approx(expected["performance"][0]["net_return"])
-    assert records[0]["gross_return"] == pytest.approx(
-        expected["performance"][0]["gross_return"]
-    )
+    assert records[0]["gross_return"] == pytest.approx(expected["performance"][0]["gross_return"])
     assert result.capabilities.to_mapping() == expected["capabilities"]
     assert result.orders.empty
     assert result.fills.empty
@@ -99,7 +98,7 @@ def test_native_backend_preserves_duplicate_period_end_rows(monkeypatch) -> None
                 {"period_end": "2020-01-03", "gross_return": 0.021},
             ]
         )
-        summary = {"schema": "position_backtest.v1"}
+        summary: ClassVar[dict[str, str]] = {"schema": "position_backtest.v1"}
 
     monkeypatch.setattr(
         native_backend_module,
@@ -165,9 +164,7 @@ def test_canonical_result_rejects_fake_orders_from_non_order_backend() -> None:
     result = CanonicalBacktestResult(
         backend_name="period-only",
         performance=pd.DataFrame([{"period_end": "2020-01-03", "net_return": 0.01}]),
-        positions=pd.DataFrame(
-            [{"rebalance_date": "2020-01-01", "symbol": "AAA", "weight": 1.0}]
-        ),
+        positions=pd.DataFrame([{"rebalance_date": "2020-01-01", "symbol": "AAA", "weight": 1.0}]),
         capabilities=BackendCapabilities(order_lifecycle=False),
         orders=pd.DataFrame([{"order_id": "order-1", "status": "filled"}]),
     )

@@ -1,6 +1,6 @@
 # 会计与执行路线图
 
-本页记录信号回测、持仓回放和容量分析逐步共用一套可审计账本的计划。当前已完成 framework-neutral 执行契约、后端结果边界以及术语与结果契约；共享每日账本和后续阶段仍属于路线图，不能当作现有能力使用。
+本页记录信号回测、持仓回放和容量分析逐步共用一套可审计账本的计划。当前已完成 framework-neutral 执行契约、后端结果边界以及术语与结果契约。共享每日账本和后续阶段仍属于路线图，不能当作现有能力使用。
 
 ## 长期约束
 
@@ -20,12 +20,12 @@
 
 当前已经完成：
 
-- 定义 `Instrument`、`Target`、`OrderIntent`、`OrderEvent`、`Fill` 和 `LedgerSnapshot`；
-- 定义 created、submitted、accepted、partial、filled、cancelled、expired 和 rejected 状态；
-- 使用稳定事件 ID 去重，并对乱序订单事件做确定性归约；
-- 定义 `BacktestBackend`、`BackendCapabilities` 和 `CanonicalBacktestResult`；
-- 提供 `NativePositionReplayBackend` 作为现有周期回放的 fail-closed 适配器；
-- 用机器可读账本记录 native、Qlib、Backtrader 和 vn.py 的职责、采用门禁和回滚路径；
+- 定义 `Instrument`、`Target`、`OrderIntent`、`OrderEvent`、`Fill` 和 `LedgerSnapshot`。
+- 定义 created、submitted、accepted、partial、filled、cancelled、expired 和 rejected 状态。
+- 使用稳定事件 ID 去重，并对乱序订单事件做确定性归约。
+- 定义 `BacktestBackend`、`BackendCapabilities` 和 `CanonicalBacktestResult`。
+- 提供 `NativePositionReplayBackend` 作为现有周期回放的 fail-closed 适配器。
+- 用机器可读账本记录 native、Qlib、Backtrader 和 vn.py 的职责、采用门禁和回滚路径。
 - 增加充分流动性 native golden fixture 和轻量 PR CI。
 
 该阶段只建立稳定边界，没有把周期回放升级为订单级或每日账本。`orders`、`fills` 和 `daily_ledger` 在 native 周期回放中保持为空，并通过 capabilities 明确声明不可用。
@@ -61,9 +61,9 @@
 
 实施顺序：
 
-1. 先迁移 `simulate_ideal_daily_nav`，建立现金和持仓守恒基准；
-2. 再迁移 `run_position_backtest`，保留旧周期结果作为兼容视图；
-3. 将 score-driven 回测限制为目标持仓生成；
+1. 先迁移 `simulate_ideal_daily_nav`，建立现金和持仓守恒基准。
+2. 再迁移 `run_position_backtest`，保留旧周期结果作为兼容视图。
+3. 将 score-driven 回测限制为目标持仓生成。
 4. 最后迁移容量模拟的订单、部分成交和 cancel/replace。
 
 ## 第三阶段：成本拆分
@@ -93,7 +93,7 @@
 - 带生效日期的费用表
 - 分红、拆股、送转和其他企业行动
 
-信号时间、决策时间、下单时间、成交时间和估值时间需要分别记录。执行契约中的时间戳要求带时区；共享账本落地时应自动检查前视偏差，并区分成交价与估值价。
+信号时间、决策时间、下单时间、成交时间和估值时间需要分别记录。执行契约中的时间戳要求带时区。共享账本落地时应自动检查前视偏差，并区分成交价与估值价。
 
 ## 第五阶段：容量与冲击校准
 
@@ -131,10 +131,10 @@ Qlib 和 Backtrader 只能通过可删除的 adapter 接入。native 在 parity 
 
 删除重复 native 通用实现前必须同时满足：
 
-- 覆盖率达到 `framework-integration-ledger.yml` 的门槛；
-- golden scenarios 全部通过；
-- 日期、持仓、换手、成本、成交和 PnL 差异已分类；
-- A 股领域语义无损；
+- 覆盖率达到 `framework-integration-ledger.yml` 的门槛。
+- golden scenarios 全部通过。
+- 日期、持仓、换手、成本、成交和 PnL 差异已分类。
+- A 股领域语义无损。
 - 性能、迁移说明和回滚路径达到约定。
 
 ## 验证要求

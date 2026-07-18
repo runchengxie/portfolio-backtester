@@ -57,12 +57,12 @@ scripts/dev/run_tests.sh basedpyright
 
 远程 CI 覆盖：
 
-- Ruff lint 和格式检查；
-- 当前登记范围的 `ty`；
-- framework-neutral execution contracts；
-- backend protocol、canonical result 和 native golden fixture；
-- framework integration ledger；
-- position backtest 回归；
+- Ruff lint 和格式检查。
+- 当前登记范围的 `ty`。
+- framework-neutral execution contracts。
+- backend protocol、canonical result 和 native golden fixture。
+- framework integration ledger。
+- position backtest 回归。
 - package import smoke。
 
 工作流使用 concurrency 取消同一 PR 的旧运行，避免把 Actions 配额献给已经过时的提交。完整测试、BasedPyright 和维护性预算仍由本地或工作区门禁执行。

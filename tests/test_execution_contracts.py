@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 
 import pytest
 
@@ -17,7 +17,6 @@ from portfolio_backtester.execution_contracts import (
     reduce_order_events,
 )
 
-UTC = timezone.utc
 T0 = datetime(2026, 1, 5, 9, 30, tzinfo=UTC)
 
 
