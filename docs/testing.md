@@ -1,6 +1,6 @@
 # 测试和质量检查
 
-本页说明 `portfolio-backtester` 的本地测试入口、远程 PR 检查和实际检查范围。
+本页说明 `portfolio-backtester` 的本地测试入口、保留的远程检查模板和实际检查范围。
 
 ## 安装开发依赖
 
@@ -51,21 +51,21 @@ scripts/dev/run_tests.sh basedpyright
 
 单独克隆本仓库时不会继承共享钩子。推送前应手动运行上方列出的 `lint`、`format`、`typecheck`、`all`、`maintainability` 和 `basedpyright`。
 
-## 远程 PR CI
+## GitHub Actions 状态
 
-启用仓库级 GitHub Actions 后，`.github/workflows/ci.yml` 会在 pull request 和手动触发时运行。它是轻量质量门禁，不替代完整本地检查。仓库级 Actions 关闭时，工作流文件会保留，但 GitHub 不会创建运行记录。
+`.github/workflows/ci.yml` 文件存在，并声明 pull request 与手动触发入口。仓库级 GitHub Actions 当前关闭，GitHub 不会为该文件创建运行记录。这个文件只作为轻量检查模板保留。本地命令和工作区 `pre-push` 是当前质量事实来源。
 
-远程 CI 覆盖：
+模板覆盖：
 
-- Ruff lint 和格式检查。
+- Ruff 代码和格式检查。
 - 当前登记范围的 `ty`。
-- framework-neutral execution contracts。
-- backend protocol、canonical result 和 native golden fixture。
-- framework integration ledger。
-- position backtest 回归。
-- package import smoke。
+- 框架中立的执行契约。
+- 后端协议、规范化结果和 `native` 固定对照样例。
+- 框架状态账本。
+- 持仓回放回归。
+- 包导入检查。
 
-工作流使用 concurrency 取消同一 PR 的旧运行，避免把 Actions 配额献给已经过时的提交。完整测试、BasedPyright 和维护性预算仍由本地或工作区门禁执行。
+模板使用并发控制取消同一 pull request 的旧运行。重新启用仓库级 Actions 前，需要复核触发条件、配额和检查范围。完整测试、BasedPyright 和维护性预算继续由本地或工作区门禁执行。
 
 ## 类型检查范围
 
@@ -86,9 +86,9 @@ scripts/dev/run_tests.sh basedpyright
 - A 股整手约束
 - benchmark、容量、暴露和报告
 - 流动性代理、缓冲区和换手限制
-- framework-neutral 订单状态、重复和乱序事件归约
-- canonical backend 结果与 golden scenario
+- 框架中立的订单状态、重复事件和乱序事件归约
+- 规范化后端结果与固定对照场景
 - 包导入和跨仓库依赖隔离
 - 维护性指标脚本
 
-新增公开入口或修改输出契约时，应增加行为测试、golden fixture 和导入测试。
+新增公开入口或修改输出契约时，应增加行为测试、固定对照样例和导入测试。

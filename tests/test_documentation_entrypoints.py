@@ -64,10 +64,26 @@ def test_docs_record_current_automation_status() -> None:
     docs = (ROOT / "docs" / "testing.md").read_text(encoding="utf-8")
 
     assert "`.github/workflows/ci.yml`" in docs
-    assert "pull request 和手动触发" in docs
-    assert "不替代完整本地检查" in docs
+    assert "仓库级 GitHub Actions 当前关闭" in docs
+    assert "只作为轻量检查模板保留" in docs
+    assert "本地命令和工作区 `pre-push` 是当前质量事实来源" in docs
     assert (ROOT / ".github" / "workflows" / "ci.yml").is_file()
     assert ".github/workflows/tests.yml" not in docs
+
+
+def test_docs_distinguish_current_backends_from_history_and_plans() -> None:
+    readme = (ROOT / "README.md").read_text(encoding="utf-8")
+    agents = (ROOT / "AGENTS.md").read_text(encoding="utf-8")
+    architecture = (ROOT / "docs" / "concepts" / "backend-architecture.md").read_text(
+        encoding="utf-8"
+    )
+    docs = "\n".join((readme, agents, architecture))
+
+    assert "registry 只包含 `native.position_replay`" in docs
+    assert "Qlib 与 LEAN 的历史候选没有进入 `main`" in docs
+    assert "LEAN 只" in docs and "架构参考" in docs
+    assert "Backtrader" in docs and "规划" in docs
+    assert "vn.py" in docs and "范围外" in docs
 
 
 def test_public_api_docs_cover_root_exports_and_execution_sim_surface() -> None:

@@ -1,5 +1,7 @@
-schema_version: portfolio_backtester.framework_integration.v1
+schema_version: portfolio_backtester.framework_integration.v2
 policy:
+  current_registry_only:
+    - native.position_replay
   native_default_until_parity: true
   no_new_generic_framework_features:
     - event_engine
@@ -11,8 +13,9 @@ policy:
     - market_agnostic_broker_simulator
   forbidden_public_result_types:
     - backtrader.*
-    - vnpy.*
+    - lean.*
     - qlib.*
+    - vnpy.*
   required_canonical_outputs:
     - performance
     - positions
@@ -24,6 +27,8 @@ policy:
 
 backends:
   native:
+    registry_name: native.position_replay
+    implementation: src/portfolio_backtester/backends/native.py
     owner: portfolio-backtester
     status: canonical
     scope:
@@ -31,48 +36,34 @@ backends:
       - deterministic_position_replay
       - a_share_execution_rules
       - capacity_and_cost_research
-    rollback: keep native as the default backend
+    rollback: keep native.position_replay as the default backend
 
+historical_candidates:
   qlib:
-    owner: portfolio-backtester
-    status: evaluation
-    scope:
-      - generic_topk_baselines
-      - differential_backtests
-    adoption_gates:
-      - canonical_result_translation
-      - deterministic_golden_parity
-      - no_framework_objects_in_artifacts
-      - native_a_share_rule_protection
-    rollback: disable the optional adapter and retain native fixtures
+    status: not_merged_to_main
+    current_role: none
+    note: historical candidate work did not enter the main branch
+  lean:
+    status: not_merged_to_main
+    current_role: reference_only
+    note: architecture reference only with no adapter or runtime dependency
 
+planned_integrations:
   backtrader:
-    owner: portfolio-backtester
-    status: evaluation
-    scope:
-      - event_driven_reference_scenarios
-      - order_type_and_clock_parity
+    status: planning_only
+    current_role: none
     adoption_gates:
       - optional_dependency_only
       - canonical_order_and_fill_translation
       - explicit_simulation_clock
       - deterministic_golden_parity
       - adapter_code_smaller_than_replaced_native_surface
-    rollback: disable the optional adapter and retain native replay
+    rollback: retain native.position_replay and remove the optional adapter
 
+out_of_scope:
   vnpy:
-    owner: quant-execution-engine
-    status: transport_only
-    scope:
-      - gateway_lifecycle
-      - paper_and_shadow_transport
-      - normalized_order_trade_account_events
-    adoption_gates:
-      - shadow_mode_cannot_send_live_orders
-      - duplicate_callbacks_are_idempotent
-      - out_of_order_callbacks_are_deterministic
-      - restart_and_reconciliation_are_deterministic
-    rollback: disable vn.py transport and replay the durable execution journal
+    status: out_of_scope
+    reason: gateway and live transport are execution-system concerns
 
 replacement_gates:
   coverage_ratio_minimum: 0.90

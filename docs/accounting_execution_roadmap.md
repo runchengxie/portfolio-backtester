@@ -1,6 +1,6 @@
 # 会计与执行路线图
 
-本页记录信号回测、持仓回放和容量分析逐步共用一套可审计账本的计划。当前已完成 framework-neutral 执行契约、后端结果边界以及术语与结果契约。共享每日账本和后续阶段仍属于路线图，不能当作现有能力使用。
+本页记录信号回测、持仓回放和容量分析逐步共用一套可审计账本的计划。当前已完成框架中立的执行契约、后端结果边界以及术语与结果契约。共享每日账本和后续阶段仍属于路线图，不能当作现有能力使用。
 
 ## 长期约束
 
@@ -24,9 +24,9 @@
 - 定义 created、submitted、accepted、partial、filled、cancelled、expired 和 rejected 状态。
 - 使用稳定事件 ID 去重，并对乱序订单事件做确定性归约。
 - 定义 `BacktestBackend`、`BackendCapabilities` 和 `CanonicalBacktestResult`。
-- 提供 `NativePositionReplayBackend` 作为现有周期回放的 fail-closed 适配器。
-- 用机器可读账本记录 native、Qlib、Backtrader 和 vn.py 的职责、采用门禁和回滚路径。
-- 增加充分流动性 native golden fixture 和轻量 PR CI。
+- 提供 `NativePositionReplayBackend` 作为现有周期回放的安全适配器。
+- 用机器可读账本分别记录当前内置后端、历史候选、规划项和范围外项目。
+- 增加充分流动性的 `native` 固定对照样例和本地质量门禁。
 
 该阶段只建立稳定边界，没有把周期回放升级为订单级或每日账本。`orders`、`fills` 和 `daily_ledger` 在 native 周期回放中保持为空，并通过 capabilities 明确声明不可用。
 
@@ -125,14 +125,16 @@
 - 随机种子
 - 运行时间
 
-## 外部后端替换原则
+## 外部后端评审原则
 
-Qlib 和 Backtrader 只能通过可删除的 adapter 接入。native 在 parity evidence 被接受前保持默认。vn.py 只作为 `quant-execution-engine` 的 transport。
+当前没有外部后端适配器。Qlib 与 LEAN 的历史候选没有进入 `main`，LEAN 只保留架构参考用途。Backtrader 仍处于规划阶段。vn.py 属于本仓库范围外。
+
+未来的 Backtrader 适配器需要保持可删除，并通过规范化结果转换进入现有后端协议。`native.position_replay` 在对照证据被接受前保持权威实现。
 
 删除重复 native 通用实现前必须同时满足：
 
 - 覆盖率达到 `framework-integration-ledger.yml` 的门槛。
-- golden scenarios 全部通过。
+- 固定对照场景全部通过。
 - 日期、持仓、换手、成本、成交和 PnL 差异已分类。
 - A 股领域语义无损。
 - 性能、迁移说明和回滚路径达到约定。
@@ -149,5 +151,5 @@ Qlib 和 Backtrader 只能通过可删除的 adapter 接入。native 在 parity 
 - 人工核对过的每日现金、持股和净值样例
 - 稀疏权重、价格缺失和延迟成交的性质测试
 - 重复和乱序订单事件的幂等归约
-- framework adapter 不泄露第三方对象
-- native、Qlib 和 Backtrader golden scenario 差分
+- 可选适配器不泄露第三方对象
+- `native` 与获准适配器的固定场景差分

@@ -8,7 +8,7 @@
 2. [常用入口](guides/entry-points.md)
 3. [组合式回测规范](concepts/backtest-spec.md)
 4. [回测后端与统一账本边界](concepts/backend-architecture.md)
-5. [机器可读框架集成账本](framework-integration-ledger.yml)
+5. [机器可读框架状态账本](framework-integration-ledger.yml)
 6. [成本与执行假设](concepts/execution-costs.md)
 7. [执行容量与每日净值模拟](guides/execution-simulation.md)
 8. [AFML 仓位与策略风险](concepts/afml-sizing-and-risk.md)
@@ -28,7 +28,7 @@
 | 高层 API | `src/portfolio_backtester/api.py` |
 | 输入和输出契约 | `src/portfolio_backtester/contracts.py` |
 | 执行领域契约 | `src/portfolio_backtester/execution_contracts.py` |
-| 后端协议与 canonical result | `src/portfolio_backtester/backends/` |
+| 后端协议与规范化结果 | `src/portfolio_backtester/backends/` |
 | 成本与滑点 | `src/portfolio_backtester/execution.py` |
 | 持仓回放 | `src/portfolio_backtester/position_backtest.py` |
 | 测试入口 | `scripts/dev/run_tests.sh` |

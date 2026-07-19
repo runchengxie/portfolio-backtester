@@ -18,6 +18,14 @@
 
 `DailyWatch20` 是为现有调用方保留的兼容例外。本仓库维护其组合选择与回执接口，不在此扩展研究假设、特征或晋升规则。
 
+## 后端与框架边界
+
+- 当前主分支只有 `NativePositionReplayBackend` 后端实现，registry 名称为 `native.position_replay`。
+- Qlib 与 LEAN 的历史候选没有进入 `main`。LEAN 只用于架构参考。
+- Backtrader 仍是规划项，仓库中没有适配器或运行时依赖。
+- vn.py、Gateway、实时传输和券商执行不在本仓库范围内。
+- 文档不得把历史候选、参考框架或规划项写成已注册能力。
+
 ## 开始修改前
 
 1. 阅读根目录 `README.md` 和相关的 `docs/` 页面。
@@ -64,6 +72,8 @@ scripts/dev/run_tests.sh basedpyright
 | `basedpyright` | 检查 `pyproject.toml` 中列出的文件 | 否 |
 
 当前类型检查只覆盖配置中列出的范围。不要把通过类型检查表述为整个包已经具备完整类型覆盖。
+
+仓库保留 `.github/workflows/ci.yml`，仓库级 GitHub Actions 当前关闭。本地命令和工作区共享 `pre-push` 是质量事实来源。
 
 ## 代码修改规则
 
