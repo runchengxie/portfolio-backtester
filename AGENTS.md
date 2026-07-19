@@ -48,14 +48,9 @@ uv sync --locked --extra dev
 scripts/dev/run_tests.sh lint
 scripts/dev/run_tests.sh format
 scripts/dev/run_tests.sh typecheck
+scripts/dev/run_tests.sh typecheck-release
 scripts/dev/run_tests.sh all
 scripts/dev/run_tests.sh maintainability
-```
-
-补充类型诊断：
-
-```bash
-scripts/dev/run_tests.sh basedpyright
 ```
 
 `fast` 和 `unit` 目前是 `all` 的兼容别名，都会运行完整的 `pytest` 测试集。不要把它们描述成更快的测试子集。
@@ -67,9 +62,9 @@ scripts/dev/run_tests.sh basedpyright
 | `lint` | 使用 Ruff 检查整个仓库 | 是 |
 | `format` | 使用 Ruff 检查整个仓库的格式 | 是 |
 | `typecheck` | 使用 `ty` 检查 `pyproject.toml` 配置的类型范围 | 是 |
+| `typecheck-release` | `typecheck` 的兼容别名 | 是 |
 | `all` | 运行完整的 `pytest` 测试集 | 是 |
 | `maintainability` | 检查静态可维护性指标是否超过当前阈值 | 是 |
-| `basedpyright` | 检查 `pyproject.toml` 中列出的文件 | 否 |
 
 当前类型检查只覆盖配置中列出的范围。不要把通过类型检查表述为整个包已经具备完整类型覆盖。
 

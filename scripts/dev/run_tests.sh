@@ -3,15 +3,14 @@ set -euo pipefail
 
 usage() {
   cat <<'EOF'
-Usage: scripts/dev/run_tests.sh [all|fast|unit|lint|typecheck|basedpyright|typecheck-release|format|format-all|maintainability] [args...]
+Usage: scripts/dev/run_tests.sh [all|fast|unit|lint|typecheck|typecheck-release|format|format-all|maintainability] [args...]
 
 Modes:
   all          Run the pytest suite.
   fast, unit   Run the pytest suite; aliases kept for shared CI ergonomics.
   lint         Run Ruff lint across the repository.
-  typecheck    Run ty check over the configured typed surface.
-  basedpyright, typecheck-release
-               Run BasedPyright diagnostics over the configured typed surface.
+  typecheck, typecheck-release
+               Run ty over the configured typed surface.
   format       Check Ruff formatting across the repository.
   format-all   Alias for format.
   maintainability
@@ -35,14 +34,6 @@ run_ty() {
   uv run --extra dev ty check "$@"
 }
 
-run_basedpyright() {
-  if [[ "${PORTFOLIO_BACKTESTER_NO_PROJECT_TOOLS:-0}" == "1" ]]; then
-    uv run --no-project --with "basedpyright>=1.39.9" basedpyright "$@"
-    return
-  fi
-  uv run --extra dev python -m basedpyright "$@"
-}
-
 mode="${1:-all}"
 if [[ $# -gt 0 ]]; then
   shift
@@ -55,13 +46,9 @@ case "$mode" in
   lint)
     run_ruff check . "$@"
     ;;
-  typecheck)
+  typecheck | typecheck-release)
     echo "Running ty typed surface from pyproject.toml."
-    run_ty "$@"
-    ;;
-  basedpyright | typecheck-release)
-    echo "Running BasedPyright diagnostics from pyproject.toml."
-    run_basedpyright "$@"
+    run_ty --error-on-warning "$@"
     ;;
   format | format-all)
     run_ruff format --check . "$@"

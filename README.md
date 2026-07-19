@@ -96,17 +96,12 @@ result = NativePositionReplayBackend().run(
 scripts/dev/run_tests.sh lint
 scripts/dev/run_tests.sh format
 scripts/dev/run_tests.sh typecheck
+scripts/dev/run_tests.sh typecheck-release
 scripts/dev/run_tests.sh all
 scripts/dev/run_tests.sh maintainability
 ```
 
-`fast` 和 `unit` 是 `all` 的兼容别名，都会运行完整测试集。
-
-BasedPyright 用于补充诊断：
-
-```bash
-scripts/dev/run_tests.sh basedpyright
-```
+`fast` 和 `unit` 是 `all` 的兼容别名，都会运行完整测试集。`typecheck-release` 与 `typecheck` 都运行 `ty`，检查范围相同。
 
 仓库保留 `.github/workflows/ci.yml` 作为轻量检查模板，仓库级 GitHub Actions 当前关闭，因此不会产生远程运行记录。本地命令和工作区 `pre-push` 是当前质量事实来源。
 

@@ -19,7 +19,6 @@ dependencies = [
 
 [project.optional-dependencies]
 dev = [
-  "basedpyright>=1.39.9",
   "pytest>=9.0.3",
   "ruff>=0.8",
   "ty>=0.0.55",
@@ -55,32 +54,17 @@ known-first-party = ["portfolio_backtester"]
 
 [tool.ty.src]
 include = [
-  "src/portfolio_backtester/api.py",
-  "src/portfolio_backtester/backtest_spec.py",
-  "src/portfolio_backtester/types.py",
-]
-exclude = [
-  ".venv",
-  "artifacts",
-  "build",
-  "dist",
-  "outputs",
-]
-
-[tool.basedpyright]
-include = [
   "src/portfolio_backtester/__init__.py",
   "src/portfolio_backtester/api.py",
   "src/portfolio_backtester/backtest_spec.py",
   "src/portfolio_backtester/capacity.py",
+  "src/portfolio_backtester/execution_sim/__init__.py",
+  "src/portfolio_backtester/execution_sim/results.py",
   "src/portfolio_backtester/period_outputs.py",
   "src/portfolio_backtester/portfolio.py",
   "src/portfolio_backtester/reports.py",
   "src/portfolio_backtester/types.py",
-  "src/portfolio_backtester/execution_sim/__init__.py",
-  "src/portfolio_backtester/execution_sim/results.py",
 ]
-stubPath = "typings"
 exclude = [
   ".venv",
   "artifacts",
@@ -88,8 +72,3 @@ exclude = [
   "dist",
   "outputs",
 ]
-venvPath = "."
-venv = ".venv"
-pythonVersion = "3.12"
-typeCheckingMode = "basic"
-reportMissingTypeStubs = false

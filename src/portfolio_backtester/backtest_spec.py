@@ -263,9 +263,9 @@ def _rebalance_dates_from_value(value: Any) -> tuple[pd.Timestamp, ...]:
 
 def _normalized_date(value: Any) -> pd.Timestamp:
     date = pd.Timestamp(value)
-    if pd.isna(date):
+    if not isinstance(date, pd.Timestamp):
         raise ValueError("BacktestSpec rebalance_dates must contain valid dates")
-    return cast(pd.Timestamp, date).normalize()
+    return date.normalize()
 
 
 def _optional_str(value: Any) -> str | None:

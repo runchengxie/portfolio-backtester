@@ -25,8 +25,7 @@ scripts/dev/run_tests.sh <mode> [args...]
 | `format` | Ruff 格式检查 |
 | `format-all` | `format` 的兼容别名 |
 | `typecheck` | `ty` 配置范围 |
-| `basedpyright` | BasedPyright 配置范围 |
-| `typecheck-release` | `basedpyright` 的兼容别名 |
+| `typecheck-release` | `typecheck` 的兼容别名 |
 | `maintainability` | 维护性指标和当前预算 |
 
 `fast` 和 `unit` 没有缩小测试范围。
@@ -41,15 +40,15 @@ scripts/dev/run_tests.sh all -k position_backtest
 scripts/dev/run_tests.sh lint
 scripts/dev/run_tests.sh format
 scripts/dev/run_tests.sh typecheck
+scripts/dev/run_tests.sh typecheck-release
 scripts/dev/run_tests.sh maintainability
-scripts/dev/run_tests.sh basedpyright
 ```
 
 ## 推送前检查
 
 在 `research-workspace` 受管检出中，顶层共享 `pre-push` 会按照工作区清单运行本仓库的导入检查、Ruff、格式检查、`ty` 和完整测试集。
 
-单独克隆本仓库时不会继承共享钩子。推送前应手动运行上方列出的 `lint`、`format`、`typecheck`、`all`、`maintainability` 和 `basedpyright`。
+单独克隆本仓库时不会继承共享钩子。推送前应手动运行上方列出的 `lint`、`format`、`typecheck`、`all` 和 `maintainability`。
 
 ## GitHub Actions 状态
 
@@ -65,11 +64,11 @@ scripts/dev/run_tests.sh basedpyright
 - 持仓回放回归。
 - 包导入检查。
 
-模板使用并发控制取消同一 pull request 的旧运行。重新启用仓库级 Actions 前，需要复核触发条件、配额和检查范围。完整测试、BasedPyright 和维护性预算继续由本地或工作区门禁执行。
+模板使用并发控制取消同一 pull request 的旧运行。重新启用仓库级 Actions 前，需要复核触发条件、配额和检查范围。完整测试和维护性预算继续由本地或工作区门禁执行。
 
 ## 类型检查范围
 
-`ty` 和 BasedPyright 只检查 `pyproject.toml` 中登记的文件。检查通过只说明这些路径没有发现阻塞问题。
+`ty` 只检查 `pyproject.toml` 中登记的文件。该范围已经合并迁移前的发布类型检查路径。检查通过只说明这些路径没有发现阻塞问题。
 
 扩大类型覆盖时，应先修复目标模块，再更新配置和测试说明。新后端边界先由运行时契约测试保护，后续在共享账本迁移时纳入完整静态检查。
 

@@ -53,11 +53,21 @@ def test_testing_docs_match_script_modes() -> None:
         "lint",
         "format",
         "typecheck",
-        "basedpyright",
+        "typecheck-release",
         "maintainability",
     ):
         assert f"`{mode}`" in docs
         assert mode in script
+
+
+def test_ty_is_the_only_configured_type_checker() -> None:
+    legacy_checker = "".join(("based", "py", "right"))
+    pyproject = (ROOT / "pyproject.toml").read_text(encoding="utf-8").lower()
+    script = (ROOT / "scripts" / "dev" / "run_tests.sh").read_text(encoding="utf-8").lower()
+
+    assert "[tool.ty.src]" in pyproject
+    assert legacy_checker not in pyproject
+    assert legacy_checker not in script
 
 
 def test_docs_record_current_automation_status() -> None:
