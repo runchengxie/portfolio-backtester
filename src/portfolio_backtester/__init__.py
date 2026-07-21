@@ -47,7 +47,11 @@ from .incumbent_requalification import (
     select_incumbent_requalified_portfolio,
 )
 from .metrics import summarize_period_returns
-from .position_backtest import PositionBacktestConfig, PositionBacktestResult, run_position_backtest
+from .position_backtest import (
+    PositionBacktestConfig,
+    PositionBacktestResult,
+    run_position_backtest,
+)
 from .position_evaluation import PositionBacktestEvaluation, evaluate_position_backtest
 from .rebalance import SessionRebalanceSchedule, get_session_interval_rebalance_dates
 from .sharpe_inference import (
