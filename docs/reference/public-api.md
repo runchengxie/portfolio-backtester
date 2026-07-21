@@ -8,6 +8,7 @@
 | 策略和持仓构造 | `StrategySpec`、`GroupCap`、`strategy_from_config`、`construct_positions_from_strategy` |
 | DailyWatch20 兼容入口 | `DailyWatch20Config`、`DailyWatch20Receipt`、`DailyWatch20Result`、`DailyWatch20SelectionError`、`GuardFactorSpec`、`select_daily_watch20` |
 | DailyWatch20 组合策略 | `PORTFOLIO_POLICY_SCHEMA`、`DailyWatch20PortfolioPolicy` |
+| 旧仓再资格组合构造 | `INCUMBENT_REQUALIFICATION_SCHEMA`、`IncumbentRequalificationConfig`、`IncumbentRequalificationPolicy`、`IncumbentRequalificationReceipt`、`IncumbentRequalificationResult`、`select_incumbent_requalified_portfolio` |
 | 错位持有执行 | `StaggeredCohortExecutionConfig`、`StaggeredCohortExecutionResult`、`simulate_staggered_cohort_execution` |
 | 错位持有汇总 | `EXECUTION_SUMMARY_SCHEMA`、`summarize_staggered_execution`、`execution_summary_frame` |
 | 持仓回放 | `PositionBacktestConfig`、`PositionBacktestResult`、`run_position_backtest` |
@@ -26,6 +27,8 @@
 `probabilistic_sharpe_ratio` 接收收益序列。`probabilistic_sharpe_ratio_from_stats` 接收已经计算好的周期 Sharpe、偏度和超额峰度。
 
 `DailyWatch20` 是现有调用方使用的兼容例外。新增研究假设、特征和晋升规则由研究层与编排层维护。
+
+旧仓再资格组合构造将新仓准入与旧仓退出分离。调用方显式提供当日评分、硬资格和新仓资格；未被新增预算填充的槽位保留现金。完整语义见[旧仓再资格组合构造](../guides/incumbent-requalification.md)。
 
 错位持有执行按 `horizon_days` 建立同样数量的独立 cohort，每个 cohort 初始分配
 `1 / horizon_days` 的组合资金。H1 只有一个 cohort，因此占用全部初始资金。汇总中的
