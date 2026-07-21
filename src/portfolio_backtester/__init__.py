@@ -38,6 +38,14 @@ from .execution_summary import (
     summarize_staggered_execution,
 )
 from .hrp import HrpConfig, HrpResult, hierarchical_risk_parity, rolling_hrp_weights
+from .incumbent_requalification import (
+    INCUMBENT_REQUALIFICATION_SCHEMA,
+    IncumbentRequalificationConfig,
+    IncumbentRequalificationPolicy,
+    IncumbentRequalificationReceipt,
+    IncumbentRequalificationResult,
+    select_incumbent_requalified_portfolio,
+)
 from .metrics import summarize_period_returns
 from .position_backtest import PositionBacktestConfig, PositionBacktestResult, run_position_backtest
 from .position_evaluation import PositionBacktestEvaluation, evaluate_position_backtest
@@ -76,6 +84,7 @@ from .types import CostBreakdown
 
 __all__ = [
     "EXECUTION_SUMMARY_SCHEMA",
+    "INCUMBENT_REQUALIFICATION_SCHEMA",
     "PORTFOLIO_POLICY_SCHEMA",
     "POSITIONS_BY_REBALANCE_CONTRACT",
     "BacktestSpec",
@@ -90,6 +99,10 @@ __all__ = [
     "GuardFactorSpec",
     "HrpConfig",
     "HrpResult",
+    "IncumbentRequalificationConfig",
+    "IncumbentRequalificationPolicy",
+    "IncumbentRequalificationReceipt",
+    "IncumbentRequalificationResult",
     "PositionBacktestConfig",
     "PositionBacktestEvaluation",
     "PositionBacktestResult",
@@ -131,6 +144,7 @@ __all__ = [
     "run_backtest",
     "run_position_backtest",
     "select_daily_watch20",
+    "select_incumbent_requalified_portfolio",
     "series_sha256",
     "sha256_file",
     "sharpe_standard_error",
