@@ -9,6 +9,11 @@ import pandas as pd
 
 from . import name_turnover, turnover_from_trade_weights
 from .daily_watch20 import DailyWatch20Config as SelectionConfig, select_daily_watch20
+from .incumbent_requalification import (
+    IncumbentRequalificationConfig,
+    IncumbentRequalificationPolicy,
+    select_incumbent_requalified_portfolio,
+)
 
 DEFAULT_SCORE_COLUMN = "relative_percentile"
 
@@ -239,6 +244,81 @@ def guarded_a4b16_daily_rows(
     return pd.DataFrame(rows)
 
 
+def incumbent_requalification_daily_rows(
+    scored: pd.DataFrame,
+    frame: pd.DataFrame,
+    *,
+    policy: IncumbentRequalificationPolicy,
+    single_side_cost_bps: float,
+    column_config: IncumbentRequalificationConfig | None = None,
+    score_column: str = DEFAULT_SCORE_COLUMN,
+) -> pd.DataFrame:
+    """Apply incumbent-requalification selection to rolling OOS scores.
+
+    Each date's cross-section is fed to
+    :func:`~portfolio_backtester.incumbent_requalification.select_incumbent_requalified_portfolio`
+    with the prior date's holdings carried forward as ``previous_symbols``.
+    The function produces one row per rebalance date with the same diagnostics
+    as :func:`guarded_a4b16_daily_rows`, plus incumbent-specific fields.
+    """
+
+    cfg = column_config or IncumbentRequalificationConfig()
+    rows: list[dict[str, Any]] = []
+    previous_weights: pd.Series | None = None
+    previous_symbols: tuple[str, ...] | None = None
+    previous_held: tuple[str, ...] = ()
+
+    for _trade_date, date_rows in scored.groupby("trade_date", sort=True):
+        candidates = date_rows.rename(columns={score_column: cfg.score_col})
+        if cfg.entry_eligibility_col not in candidates.columns:
+            candidates[cfg.entry_eligibility_col] = candidates.get(
+                cfg.hard_eligibility_col, pd.Series(True, index=candidates.index)
+            )
+        if cfg.hard_eligibility_col not in candidates.columns:
+            candidates[cfg.hard_eligibility_col] = True
+
+        result = select_incumbent_requalified_portfolio(
+            candidates,
+            previous_symbols=previous_held,
+            policy=policy,
+            config=cfg,
+        )
+        selected = result.positions.copy()
+        receipt = result.receipt.to_dict()
+        symbols = tuple(_series(selected, cfg.symbol_col).astype(str))
+        target = pd.Series(
+            _numeric_series(selected, "target_weight").to_numpy(dtype=float),
+            index=pd.Index(symbols),
+            dtype=float,
+        )
+        row = portfolio_daily_row(
+            selected,
+            frame,
+            target=target,
+            expected_size=policy.portfolio_size,
+            previous_weights=previous_weights,
+            previous_symbols=previous_symbols,
+            single_side_cost_bps=single_side_cost_bps,
+        )
+        row.update(
+            {
+                "retained_count": int(receipt.get("retained_count", 0)),
+                "buffered_incumbent_count": int(receipt.get("buffered_incumbent_count", 0)),
+                "new_position_count": int(receipt.get("new_position_count", 0)),
+                "exited_count": int(receipt.get("exited_count", 0)),
+                "cash_weight": float(receipt.get("cash_weight", 0.0)),
+                "selected_symbols": "|".join(sorted(symbols)),
+                "policy_id": policy.policy_id,
+            }
+        )
+        rows.append(row)
+        previous_weights = target
+        previous_symbols = symbols
+        previous_held = symbols
+
+    return pd.DataFrame(rows)
+
+
 def portfolio_summary_fields(daily: pd.DataFrame) -> dict[str, Any]:
     """Summarize return completeness, turnover, costs and blocked trading."""
 
@@ -285,6 +365,7 @@ __all__ = [
     "_portfolio_daily_rows",
     "_trade_audit",
     "guarded_a4b16_daily_rows",
+    "incumbent_requalification_daily_rows",
     "portfolio_daily_row",
     "portfolio_daily_rows",
     "portfolio_summary_fields",

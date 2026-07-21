@@ -8,6 +8,7 @@
 | 策略和持仓构造 | `StrategySpec`、`GroupCap`、`strategy_from_config`、`construct_positions_from_strategy` |
 | DailyWatch20 兼容入口 | `DailyWatch20Config`、`DailyWatch20Receipt`、`DailyWatch20Result`、`DailyWatch20SelectionError`、`GuardFactorSpec`、`select_daily_watch20` |
 | DailyWatch20 组合策略 | `PORTFOLIO_POLICY_SCHEMA`、`DailyWatch20PortfolioPolicy` |
+| 旧仓再资格组合 | `INCUMBENT_REQUALIFICATION_SCHEMA`、`IncumbentRequalificationPolicy`、`IncumbentRequalificationConfig`、`IncumbentRequalificationResult`、`IncumbentRequalificationReceipt`、`select_incumbent_requalified_portfolio` |
 | 错位持有执行 | `StaggeredCohortExecutionConfig`、`StaggeredCohortExecutionResult`、`simulate_staggered_cohort_execution` |
 | 错位持有汇总 | `EXECUTION_SUMMARY_SCHEMA`、`summarize_staggered_execution`、`execution_summary_frame` |
 | 持仓回放 | `PositionBacktestConfig`、`PositionBacktestResult`、`run_position_backtest` |
