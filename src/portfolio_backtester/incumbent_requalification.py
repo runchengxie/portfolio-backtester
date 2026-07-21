@@ -1,11 +1,4 @@
-"""Turnover-aware portfolio selection with separate entry and exit eligibility.
-
-The selector is model-agnostic. Callers provide one scored cross-section and the
-previous portfolio. New positions must satisfy the stricter entry rule, while
-incumbents may remain through a wider exit buffer after being re-scored on the
-current date. When the replacement budget cannot restore a full portfolio, the
-unallocated slots remain cash instead of being redistributed.
-"""
+"""Turnover-aware portfolio selection with separate entry and exit eligibility."""
 
 from __future__ import annotations
 
@@ -20,6 +13,7 @@ import numpy as np
 import pandas as pd
 
 INCUMBENT_REQUALIFICATION_SCHEMA = "portfolio_backtester.incumbent_requalification.v1"
+_INTERNAL_COLUMNS = ("_score", "_hard_eligible", "_entry_eligible", "_full_rank")
 
 
 @dataclass(frozen=True, slots=True)
@@ -51,9 +45,8 @@ class IncumbentRequalificationPolicy:
     @property
     def policy_id(self) -> str:
         payload = {"schema_version": INCUMBENT_REQUALIFICATION_SCHEMA, **asdict(self)}
-        digest = hashlib.sha256(
-            json.dumps(payload, sort_keys=True, separators=(",", ":")).encode("utf-8")
-        ).hexdigest()[:16]
+        encoded = json.dumps(payload, sort_keys=True, separators=(",", ":")).encode()
+        digest = hashlib.sha256(encoded).hexdigest()[:16]
         return f"{INCUMBENT_REQUALIFICATION_SCHEMA}:{digest}"
 
     def to_dict(self) -> dict[str, object]:
@@ -76,17 +69,10 @@ class IncumbentRequalificationConfig:
     entry_eligibility_col: str = "entry_eligible"
 
     def __post_init__(self) -> None:
-        values = (
-            self.date_col,
-            self.symbol_col,
-            self.score_col,
-            self.industry_col,
-            self.hard_eligibility_col,
-            self.entry_eligibility_col,
-        )
+        values = asdict(self).values()
         if any(not str(value).strip() for value in values):
             raise ValueError("column names must be non-empty")
-        if len(set(values)) != len(values):
+        if len(set(values)) != 6:
             raise ValueError("column names must be unique")
 
 
@@ -109,18 +95,18 @@ class IncumbentRequalificationReceipt:
 
 @dataclass(frozen=True, slots=True)
 class IncumbentRequalificationResult:
-    """Selected positions and the receipt proving how they were constructed."""
+    """Selected positions and their construction receipt."""
 
     positions: pd.DataFrame
     receipt: IncumbentRequalificationReceipt
 
 
 @dataclass(frozen=True, slots=True)
-class _PreparedCrossSection:
+class _Prepared:
     frame: pd.DataFrame
     trade_date: str
-    previous_symbols: frozenset[str]
-    input_summary: Mapping[str, int]
+    previous: frozenset[str]
+    summary: Mapping[str, int]
 
 
 def _truthy(series: pd.Series) -> pd.Series:
@@ -128,31 +114,18 @@ def _truthy(series: pd.Series) -> pd.Series:
         return series.fillna(False).astype(bool)
     if pd.api.types.is_numeric_dtype(series):
         return pd.to_numeric(series, errors="coerce").fillna(0).ne(0)
-    return series.astype("string").str.strip().str.lower().isin({"1", "true", "yes", "y"})
+    normalized = series.astype("string").str.strip().str.lower()
+    return normalized.isin({"1", "true", "yes", "y"})
 
 
-def _trade_date_text(value: object) -> str:
-    parsed = pd.to_datetime(value, errors="coerce")
-    if pd.isna(parsed):
-        raise ValueError(f"invalid trade date: {value!r}")
-    return cast(pd.Timestamp, parsed).strftime("%Y-%m-%d")
-
-
-def _prepare_cross_section(
+def _prepare(
     candidates: pd.DataFrame,
     previous_symbols: Collection[str],
     config: IncumbentRequalificationConfig,
-) -> _PreparedCrossSection:
+) -> _Prepared:
     if candidates is None or candidates.empty:
         raise ValueError("candidates must be non-empty")
-    required = {
-        config.date_col,
-        config.symbol_col,
-        config.score_col,
-        config.industry_col,
-        config.hard_eligibility_col,
-        config.entry_eligibility_col,
-    }
+    required = set(asdict(config).values())
     missing = sorted(required - set(candidates.columns))
     if missing:
         raise ValueError(f"candidates missing required columns: {missing}")
@@ -161,96 +134,53 @@ def _prepare_cross_section(
     dates = frame[config.date_col].drop_duplicates()
     if len(dates) != 1 or bool(dates.isna().any()):
         raise ValueError("candidates must contain exactly one non-null trade date")
-    trade_date = _trade_date_text(dates.iloc[0])
+    parsed_date = pd.to_datetime(dates.iloc[0], errors="coerce")
+    if pd.isna(parsed_date):
+        raise ValueError(f"invalid trade date: {dates.iloc[0]!r}")
+    trade_date = cast(pd.Timestamp, parsed_date).strftime("%Y-%m-%d")
 
-    frame[config.symbol_col] = frame[config.symbol_col].astype("string").str.strip()
-    if bool(frame[config.symbol_col].isna().any()) or bool(frame[config.symbol_col].eq("").any()):
+    symbol = frame[config.symbol_col].astype("string").str.strip()
+    if bool(symbol.isna().any()) or bool(symbol.eq("").any()):
         raise ValueError("symbols must be non-empty")
-    if bool(frame[config.symbol_col].duplicated().any()):
+    if bool(symbol.duplicated().any()):
         raise ValueError("candidates must contain one row per symbol")
+    frame[config.symbol_col] = symbol
 
-    frame[config.industry_col] = frame[config.industry_col].astype("string").str.strip()
-    if bool(frame[config.industry_col].isna().any()) or bool(
-        frame[config.industry_col].eq("").any()
-    ):
+    industry = frame[config.industry_col].astype("string").str.strip()
+    if bool(industry.isna().any()) or bool(industry.eq("").any()):
         raise ValueError("industry values must be non-empty")
+    frame[config.industry_col] = industry
 
-    hard_eligible = _truthy(cast(pd.Series, frame[config.hard_eligibility_col]))
-    entry_eligible = _truthy(cast(pd.Series, frame[config.entry_eligibility_col])) & hard_eligible
+    hard = _truthy(cast(pd.Series, frame[config.hard_eligibility_col]))
+    entry = _truthy(cast(pd.Series, frame[config.entry_eligibility_col])) & hard
     score = pd.to_numeric(frame[config.score_col], errors="coerce")
-    invalid_hard_score = hard_eligible & (score.isna() | ~np.isfinite(score))
-    if bool(invalid_hard_score.any()):
-        invalid = frame.loc[invalid_hard_score, config.symbol_col].astype(str).tolist()[:5]
-        raise ValueError(
-            "hard-eligible candidates require finite scores; "
-            f"invalid symbols={invalid}"
-        )
+    invalid = hard & (score.isna() | ~np.isfinite(score))
+    if bool(invalid.any()):
+        symbols = frame.loc[invalid, config.symbol_col].astype(str).tolist()[:5]
+        raise ValueError(f"hard-eligible candidates require finite scores; invalid={symbols}")
 
     frame["_score"] = score
-    frame["_hard_eligible"] = hard_eligible
-    frame["_entry_eligible"] = entry_eligible
-    eligible = frame.loc[hard_eligible].sort_values(
+    frame["_hard_eligible"] = hard
+    frame["_entry_eligible"] = entry
+    eligible = frame.loc[hard].sort_values(
         ["_score", config.symbol_col], ascending=[False, True], kind="mergesort"
     )
-    rank_by_index = pd.Series(range(1, len(eligible) + 1), index=eligible.index, dtype="int64")
     frame["_full_rank"] = pd.Series(pd.NA, index=frame.index, dtype="Int64")
-    frame.loc[eligible.index, "_full_rank"] = rank_by_index
+    frame.loc[eligible.index, "_full_rank"] = range(1, len(eligible) + 1)
 
     previous = frozenset(text for raw in previous_symbols if (text := str(raw).strip()))
-    observable_previous = previous & set(frame[config.symbol_col].astype(str))
-    return _PreparedCrossSection(
+    observable = previous & set(symbol.astype(str))
+    return _Prepared(
         frame=frame,
         trade_date=trade_date,
-        previous_symbols=previous,
-        input_summary={
+        previous=previous,
+        summary={
             "input_count": len(frame),
-            "hard_eligible_count": int(hard_eligible.sum()),
-            "entry_eligible_count": int(entry_eligible.sum()),
+            "hard_eligible_count": int(hard.sum()),
+            "entry_eligible_count": int(entry.sum()),
             "previous_count": len(previous),
-            "previous_observable_count": len(observable_previous),
+            "previous_observable_count": len(observable),
         },
-    )
-
-
-def _industry_counts(
-    selected: list[str],
-    row_by_symbol: Mapping[str, pd.Series],
-    industry_col: str,
-) -> Counter[str]:
-    return Counter(str(row_by_symbol[symbol][industry_col]) for symbol in selected)
-
-
-def _can_add(
-    symbol: str,
-    *,
-    selected: list[str],
-    row_by_symbol: Mapping[str, pd.Series],
-    industry_col: str,
-    industry_cap: int,
-) -> bool:
-    if symbol in selected:
-        return False
-    counts = _industry_counts(selected, row_by_symbol, industry_col)
-    industry = str(row_by_symbol[symbol][industry_col])
-    return counts[industry] < industry_cap
-
-
-def _can_replace(
-    outgoing: str,
-    incoming: str,
-    *,
-    selected: list[str],
-    row_by_symbol: Mapping[str, pd.Series],
-    industry_col: str,
-    industry_cap: int,
-) -> bool:
-    remaining = [symbol for symbol in selected if symbol != outgoing]
-    return _can_add(
-        incoming,
-        selected=remaining,
-        row_by_symbol=row_by_symbol,
-        industry_col=industry_col,
-        industry_cap=industry_cap,
     )
 
 
@@ -261,6 +191,123 @@ def _ranked_symbols(frame: pd.DataFrame, config: IncumbentRequalificationConfig)
     return ranked[config.symbol_col].astype(str).tolist()
 
 
+def _can_add(
+    symbol: str,
+    selected: Collection[str],
+    rows: Mapping[str, pd.Series],
+    config: IncumbentRequalificationConfig,
+    policy: IncumbentRequalificationPolicy,
+) -> bool:
+    if symbol in selected:
+        return False
+    counts = Counter(str(rows[item][config.industry_col]) for item in selected)
+    return counts[str(rows[symbol][config.industry_col])] < policy.industry_cap
+
+
+def _replaceable_incumbents(
+    selected: list[str],
+    previous: frozenset[str],
+    rank: Mapping[str, int],
+    score: Mapping[str, float],
+    policy: IncumbentRequalificationPolicy,
+) -> list[str]:
+    incumbents = [symbol for symbol in selected if symbol in previous]
+    return sorted(
+        incumbents,
+        key=lambda symbol: (
+            rank[symbol] <= policy.entry_rank_limit,
+            score[symbol],
+            symbol,
+        ),
+    )
+
+
+def _select_symbols(
+    eligible: pd.DataFrame,
+    prepared: _Prepared,
+    config: IncumbentRequalificationConfig,
+    policy: IncumbentRequalificationPolicy,
+) -> tuple[list[str], list[str], dict[str, int]]:
+    rows = {str(row[config.symbol_col]): row for _, row in eligible.iterrows()}
+    rank = {symbol: int(row["_full_rank"]) for symbol, row in rows.items()}
+    score = {symbol: float(row["_score"]) for symbol, row in rows.items()}
+    incumbent_frame = eligible.loc[
+        eligible[config.symbol_col].astype(str).isin(prepared.previous)
+        & eligible["_full_rank"].astype(int).le(policy.exit_rank_limit)
+    ]
+    entry_frame = eligible.loc[
+        eligible["_entry_eligible"] & eligible["_full_rank"].astype(int).le(policy.entry_rank_limit)
+    ]
+
+    selected: list[str] = []
+    blocked_incumbents = 0
+    for symbol in _ranked_symbols(incumbent_frame, config):
+        if len(selected) >= policy.portfolio_size:
+            break
+        if _can_add(symbol, selected, rows, config, policy):
+            selected.append(symbol)
+        else:
+            blocked_incumbents += 1
+
+    bootstrap = not prepared.previous
+    budget = policy.portfolio_size if bootstrap else policy.max_new_positions
+    opened: list[str] = []
+    blocked_new = 0
+    skipped_margin = 0
+    entry_symbols = [
+        symbol for symbol in _ranked_symbols(entry_frame, config) if symbol not in prepared.previous
+    ]
+    for incoming in entry_symbols:
+        if len(opened) >= budget:
+            break
+        if len(selected) < policy.portfolio_size:
+            if _can_add(incoming, selected, rows, config, policy):
+                selected.append(incoming)
+                opened.append(incoming)
+            else:
+                blocked_new += 1
+            continue
+
+        outgoing = next(
+            (
+                symbol
+                for symbol in _replaceable_incumbents(
+                    selected, prepared.previous, rank, score, policy
+                )
+                if _can_add(
+                    incoming,
+                    [item for item in selected if item != symbol],
+                    rows,
+                    config,
+                    policy,
+                )
+            ),
+            None,
+        )
+        if outgoing is None:
+            blocked_new += 1
+            continue
+        if score[incoming] - score[outgoing] < policy.min_score_improvement:
+            skipped_margin += 1
+            continue
+        selected[selected.index(outgoing)] = incoming
+        opened.append(incoming)
+
+    selected = sorted(selected, key=lambda symbol: (rank[symbol], symbol))
+    return (
+        selected,
+        opened,
+        {
+            "bootstrap": int(bootstrap),
+            "incumbent_exit_eligible_count": len(incumbent_frame),
+            "entry_candidate_count": len(entry_frame),
+            "industry_blocked_incumbent_count": blocked_incumbents,
+            "industry_blocked_new_count": blocked_new,
+            "score_margin_skipped_count": skipped_margin,
+        },
+    )
+
+
 def select_incumbent_requalified_portfolio(
     candidates: pd.DataFrame,
     *,
@@ -268,178 +315,64 @@ def select_incumbent_requalified_portfolio(
     policy: IncumbentRequalificationPolicy | None = None,
     config: IncumbentRequalificationConfig | None = None,
 ) -> IncumbentRequalificationResult:
-    """Build a turnover-aware portfolio from one scored cross-section.
+    """Select positions using strict entry and wider incumbent exit eligibility.
 
-    Entry eligibility is deliberately stricter than incumbent eligibility:
-
-    * New names must be entry-eligible and rank within ``entry_rank_limit``.
-    * Existing names may remain while hard-eligible and ranked within
-      ``exit_rank_limit``.
-    * No more than ``max_new_positions`` names are opened on a normal rebalance.
-      The first portfolio is allowed to bootstrap to ``portfolio_size``.
-    * Unfilled slots remain cash. Selected names keep one slot of weight each,
-      so retaining fewer names does not silently lever the remaining holdings.
+    New names require ``entry_eligible`` and an entry-buffer rank. Incumbents are
+    re-scored on the current date and may remain through the wider exit buffer.
+    A normal rebalance opens at most ``max_new_positions`` names. Missing slots
+    remain cash at a fixed slot weight instead of levering the remaining names.
     """
 
     cfg = config or IncumbentRequalificationConfig()
-    active_policy = policy or IncumbentRequalificationPolicy()
-    prepared = _prepare_cross_section(candidates, previous_symbols, cfg)
-    frame = prepared.frame
-    eligible = frame.loc[frame["_hard_eligible"]].copy()
-    row_by_symbol = {str(row[cfg.symbol_col]): row for _, row in eligible.iterrows()}
-    rank_by_symbol = {
-        str(row[cfg.symbol_col]): int(row["_full_rank"])
-        for _, row in eligible.iterrows()
-    }
-    score_by_symbol = {
-        str(row[cfg.symbol_col]): float(row["_score"])
-        for _, row in eligible.iterrows()
-    }
+    active = policy or IncumbentRequalificationPolicy()
+    prepared = _prepare(candidates, previous_symbols, cfg)
+    eligible = prepared.frame.loc[prepared.frame["_hard_eligible"]].copy()
+    selected, opened, diagnostics = _select_symbols(eligible, prepared, cfg, active)
+    if len(selected) < active.portfolio_size and not active.allow_cash:
+        raise ValueError("portfolio could not be filled without cash under the frozen policy")
 
-    incumbent_frame = eligible.loc[
-        eligible[cfg.symbol_col].astype(str).isin(prepared.previous_symbols)
-        & eligible["_full_rank"].astype(int).le(active_policy.exit_rank_limit)
-    ]
-    incumbent_symbols = _ranked_symbols(incumbent_frame, cfg)
-    entry_frame = eligible.loc[
-        eligible["_entry_eligible"]
-        & eligible["_full_rank"].astype(int).le(active_policy.entry_rank_limit)
-    ]
-    new_entry_symbols = [
-        symbol
-        for symbol in _ranked_symbols(entry_frame, cfg)
-        if symbol not in prepared.previous_symbols
-    ]
-
-    selected: list[str] = []
-    blocked_incumbents: list[str] = []
-    for symbol in incumbent_symbols:
-        if len(selected) >= active_policy.portfolio_size:
-            break
-        if _can_add(
-            symbol,
-            selected=selected,
-            row_by_symbol=row_by_symbol,
-            industry_col=cfg.industry_col,
-            industry_cap=active_policy.industry_cap,
-        ):
-            selected.append(symbol)
-        else:
-            blocked_incumbents.append(symbol)
-
-    bootstrap = not prepared.previous_symbols
-    new_budget = active_policy.portfolio_size if bootstrap else active_policy.max_new_positions
-    opened: list[str] = []
-    skipped_margin: list[str] = []
-    blocked_new: list[str] = []
-    for incoming in new_entry_symbols:
-        if len(opened) >= new_budget:
-            break
-        if len(selected) < active_policy.portfolio_size:
-            if _can_add(
-                incoming,
-                selected=selected,
-                row_by_symbol=row_by_symbol,
-                industry_col=cfg.industry_col,
-                industry_cap=active_policy.industry_cap,
-            ):
-                selected.append(incoming)
-                opened.append(incoming)
-            else:
-                blocked_new.append(incoming)
-            continue
-
-        replaceable = [symbol for symbol in selected if symbol in prepared.previous_symbols]
-        replaceable.sort(
-            key=lambda symbol: (
-                rank_by_symbol[symbol] <= active_policy.entry_rank_limit,
-                score_by_symbol[symbol],
-                symbol,
-            )
-        )
-        outgoing = next(
-            (
-                symbol
-                for symbol in replaceable
-                if _can_replace(
-                    symbol,
-                    incoming,
-                    selected=selected,
-                    row_by_symbol=row_by_symbol,
-                    industry_col=cfg.industry_col,
-                    industry_cap=active_policy.industry_cap,
-                )
-            ),
-            None,
-        )
-        if outgoing is None:
-            blocked_new.append(incoming)
-            continue
-        improvement = score_by_symbol[incoming] - score_by_symbol[outgoing]
-        if improvement < active_policy.min_score_improvement:
-            skipped_margin.append(incoming)
-            continue
-        selected[selected.index(outgoing)] = incoming
-        opened.append(incoming)
-
-    selected = sorted(selected, key=lambda symbol: (rank_by_symbol[symbol], symbol))
     selected_set = set(selected)
-    retained = selected_set & prepared.previous_symbols
-    exited = prepared.previous_symbols - retained
-    if len(selected) < active_policy.portfolio_size and not active_policy.allow_cash:
-        raise ValueError(
-            "portfolio could not be filled without cash under the frozen "
-            "eligibility and turnover policy"
-        )
-
+    retained = selected_set & prepared.previous
     positions = eligible.loc[eligible[cfg.symbol_col].astype(str).isin(selected_set)].copy()
     positions["full_rank"] = positions["_full_rank"].astype(int)
     positions["entry_eligible"] = positions["_entry_eligible"].astype(bool)
     symbols = positions[cfg.symbol_col].astype(str)
-    positions["was_held"] = symbols.isin(prepared.previous_symbols)
+    positions["was_held"] = symbols.isin(prepared.previous)
     positions["retained"] = symbols.isin(retained)
     positions["new_position"] = symbols.isin(opened)
     positions["buffered_incumbent"] = positions["retained"] & positions["full_rank"].gt(
-        active_policy.entry_rank_limit
+        active.entry_rank_limit
     )
-    positions["target_weight"] = 1.0 / active_policy.portfolio_size
-    positions = positions.sort_values(
-        ["full_rank", cfg.symbol_col], ascending=[True, True], kind="mergesort"
-    ).drop(columns=["_score", "_hard_eligible", "_entry_eligible", "_full_rank"])
-    positions = positions.reset_index(drop=True)
+    positions["target_weight"] = 1.0 / active.portfolio_size
+    positions = (
+        positions.sort_values(["full_rank", cfg.symbol_col], kind="mergesort")
+        .drop(columns=list(_INTERNAL_COLUMNS))
+        .reset_index(drop=True)
+    )
 
-    target_weight_sum = float(positions["target_weight"].sum()) if not positions.empty else 0.0
-    cash_weight = max(0.0, 1.0 - target_weight_sum)
+    weight_sum = float(positions["target_weight"].sum()) if not positions.empty else 0.0
     industry_counts = {
         str(name): int(count)
         for name, count in positions[cfg.industry_col].value_counts().sort_index().items()
     }
     summary: dict[str, Any] = {
-        **dict(prepared.input_summary),
-        "policy": active_policy.to_dict(),
-        "bootstrap": bootstrap,
-        "incumbent_exit_eligible_count": len(incumbent_symbols),
-        "entry_candidate_count": len(entry_frame),
+        **prepared.summary,
+        "policy": active.to_dict(),
+        **diagnostics,
+        "bootstrap": bool(diagnostics["bootstrap"]),
         "selected_count": len(positions),
         "retained_count": len(retained),
         "buffered_incumbent_count": int(positions["buffered_incumbent"].sum()),
         "new_position_count": len(opened),
-        "exited_count": len(exited),
-        "target_weight_sum": target_weight_sum,
-        "cash_weight": cash_weight,
+        "exited_count": len(prepared.previous - retained),
+        "target_weight_sum": weight_sum,
+        "cash_weight": max(0.0, 1.0 - weight_sum),
         "industry_counts": industry_counts,
-        "industry_blocked_incumbent_count": len(blocked_incumbents),
-        "industry_blocked_new_count": len(blocked_new),
-        "score_margin_skipped_count": len(skipped_margin),
-        "unobservable_previous_count": len(prepared.previous_symbols)
-        - int(dict(prepared.input_summary)["previous_observable_count"]),
+        "unobservable_previous_count": len(prepared.previous)
+        - int(prepared.summary["previous_observable_count"]),
     }
-    receipt = IncumbentRequalificationReceipt(
-        trade_date=prepared.trade_date,
-        policy_id=active_policy.policy_id,
-        summary=summary,
-    )
-    return IncumbentRequalificationResult(positions=positions, receipt=receipt)
+    receipt = IncumbentRequalificationReceipt(prepared.trade_date, active.policy_id, summary)
+    return IncumbentRequalificationResult(positions, receipt)
 
 
 __all__ = [
