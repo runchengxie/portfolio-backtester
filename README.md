@@ -6,6 +6,7 @@
 
 - 组合构造和持仓回放
 - 收益、成本和换手分析
+- 新仓准入与旧仓退出分离的低换手组合构造
 - 滑点、交易约束和执行容量模拟
 - 基准、暴露和报告
 - PSR、DSR 和多重试验 Sharpe 推断
@@ -39,6 +40,29 @@ from portfolio_backtester import (
 
 `run_position_backtest` 只汇总策略自身结果。需要信息比率、跟踪误差、alpha 和 beta 时，使用 `evaluate_position_backtest` 补充基准评估。
 
+新仓准入和旧仓退出需要使用不同资格时，可以从包根调用旧仓再资格组合构造：
+
+```python
+from portfolio_backtester import (
+    IncumbentRequalificationPolicy,
+    select_incumbent_requalified_portfolio,
+)
+
+result = select_incumbent_requalified_portfolio(
+    candidates,
+    previous_symbols=previous_symbols,
+    policy=IncumbentRequalificationPolicy(
+        portfolio_size=20,
+        entry_rank_limit=20,
+        exit_rank_limit=40,
+        max_new_positions=4,
+        industry_cap=4,
+    ),
+)
+```
+
+新仓必须满足严格准入条件。旧仓会使用当日信息重新评分，并在更宽的退出缓冲区内继续持有。每日新增预算无法填满组合时，空缺权重保留为现金，不会重新分配给剩余持仓。完整语义见[旧仓再资格组合构造](docs/guides/incumbent-requalification.md)。
+
 DailyWatch20 的组合策略、错位持有执行与稳定汇总也可以从包根导入：
 
 ```python
@@ -62,6 +86,7 @@ from portfolio_backtester import (
 公开 API 与契约见：
 
 - [公开 API](docs/reference/public-api.md)
+- [旧仓再资格组合构造](docs/guides/incumbent-requalification.md)
 - [组合式回测规范](docs/concepts/backtest-spec.md)
 - [回测后端与统一账本边界](docs/concepts/backend-architecture.md)
 - [持仓输出约定](docs/reference/outputs/positions.md)
@@ -125,6 +150,7 @@ scripts/dev/run_tests.sh maintainability
 
 - [文档首页](docs/README.md)
 - [常用入口](docs/guides/entry-points.md)
+- [旧仓再资格组合构造](docs/guides/incumbent-requalification.md)
 - [回测后端与统一账本边界](docs/concepts/backend-architecture.md)
 - [成本与执行假设](docs/concepts/execution-costs.md)
 - [执行容量与每日净值模拟](docs/guides/execution-simulation.md)
