@@ -31,6 +31,8 @@
 错位持有执行按 `horizon_days` 建立同样数量的独立 cohort，每个 cohort 初始分配
 `1 / horizon_days` 的组合资金。H1 只有一个 cohort，因此占用全部初始资金。汇总中的
 `total_return` 是整个 ledger 的累计收益，不是单个 cohort 收益再次除以持有期。
+信号候选数默认必须达到 `top_n`。只有显式设置 `allow_cash_shortfall=True` 时才允许少于
+`top_n`，此时未填满的固定槽位保留为现金，不向已选股票重新分配。
 
 执行容量与每日净值模拟从 `portfolio_backtester.execution_sim` 导入，详细入口见 [执行容量与每日净值模拟](../guides/execution-simulation.md)。AFML 仓位和风险入口见 [AFML 仓位、HRP 与策略风险](../concepts/afml-sizing-and-risk.md)。
 

@@ -25,12 +25,15 @@ class StaggeredCohortExecutionConfig:
     available_at_col: str = "available_at"
     valuation_price_col: str = "open"
     terminal_policy: str = TERMINAL_POLICY
+    allow_cash_shortfall: bool = False
 
     def __post_init__(self) -> None:
         if self.horizon_days not in {1, 3, 5}:
             raise ValueError("staggered execution supports only 1-, 3-, or 5-day horizons")
         if self.top_n <= 0:
             raise ValueError("top_n must be positive")
+        if not isinstance(self.allow_cash_shortfall, bool):
+            raise ValueError("allow_cash_shortfall must be a boolean")
         if not np.isfinite(self.initial_capital) or self.initial_capital <= 0:
             raise ValueError("initial_capital must be finite and positive")
         valid_cost = (

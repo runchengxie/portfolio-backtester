@@ -55,6 +55,7 @@ def simulate_staggered_cohort_execution(
         score_col=config.score_col,
         signal_date_col=config.signal_date_col,
         available_at_col=config.available_at_col,
+        allow_cash_shortfall=config.allow_cash_shortfall,
     )
     return _run_ledger(prices, trade_dates, targets, config)
 

@@ -140,8 +140,14 @@ def prepare_staggered_targets(
     score_col: str,
     signal_date_col: str,
     available_at_col: str,
+    allow_cash_shortfall: bool = False,
 ) -> list[StaggeredTarget]:
-    """Freeze TopN targets only after proving T-close/T+1 availability."""
+    """Freeze targets only after proving T-close/T+1 availability.
+
+    When ``allow_cash_shortfall`` is true, a signal date may provide fewer
+    than ``top_n`` names.  The missing fixed-size slots remain in cash rather
+    than being redistributed across the selected names.
+    """
 
     required = {signal_date_col, "symbol", score_col, available_at_col}
     missing = sorted(required - set(signals.columns))
@@ -178,7 +184,7 @@ def prepare_staggered_targets(
         group = work.loc[work[signal_date_col].eq(signal_date)].sort_values(
             [score_col, "symbol"], ascending=[False, True], kind="mergesort"
         )
-        if len(group) < top_n:
+        if len(group) < top_n and not allow_cash_shortfall:
             raise ValueError(f"signal date {signal_date.date()} has fewer than top_n candidates")
         entry_date = entry_map[signal_date]
         _validate_availability(

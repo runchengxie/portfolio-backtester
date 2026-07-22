@@ -163,6 +163,42 @@ def test_cash_positions_and_costs_conserve_nav() -> None:
     )
 
 
+def test_candidate_shortfall_is_fail_closed_by_default() -> None:
+    dates = ["2025-01-02", "2025-01-03", "2025-01-06"]
+    with pytest.raises(ValueError, match="fewer than top_n candidates"):
+        simulate_staggered_cohort_execution(
+            _signals([dates[0]], ["AAA"], [1.0]),
+            _prices(dates, ("AAA", "BBB")),
+            _config(horizon_days=1, top_n=2),
+            trade_calendar=_calendar(dates),
+        )
+
+
+def test_allowed_candidate_shortfall_keeps_empty_slot_in_cash() -> None:
+    dates = ["2025-01-02", "2025-01-03", "2025-01-06"]
+    result = simulate_staggered_cohort_execution(
+        _signals([dates[0]], ["AAA"], [1.0]),
+        _prices(dates, ("AAA", "BBB")),
+        _config(
+            horizon_days=1,
+            top_n=2,
+            initial_capital=200.0,
+            allow_cash_shortfall=True,
+        ),
+        trade_calendar=_calendar(dates),
+    )
+    buy = result.orders.loc[result.orders["side"].eq("buy")].iloc[0]
+    assert buy["filled_notional"] == pytest.approx(100.0)
+    assert result.daily.iloc[0]["cash"] == pytest.approx(100.0)
+    assert result.daily.iloc[0]["cash_weight"] == pytest.approx(0.5)
+    assert result.generations.iloc[0]["selected_symbols"] == ["AAA"]
+
+
+def test_allow_cash_shortfall_requires_boolean() -> None:
+    with pytest.raises(ValueError, match="allow_cash_shortfall must be a boolean"):
+        _config(allow_cash_shortfall=1)
+
+
 def test_adjusted_valuation_price_audits_raw_open() -> None:
     dates = ["2025-01-02", "2025-01-03", "2025-01-06"]
     pricing = _prices(

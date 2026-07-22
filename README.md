@@ -80,6 +80,8 @@ from portfolio_backtester import (
 
 错位持有执行按 `horizon_days` 建立同样数量的独立 cohort，并为每个 cohort 分配
 `1 / horizon_days` 的初始资金。H1 只有一个 cohort，因此其收益就是整个 ledger 的收益。
+默认每个信号日必须提供完整 `top_n` 候选。研究状态化组合需要保留未填满槽位为现金时，
+应显式设置 `allow_cash_shortfall=True`。空槽资金不会重分配给其余持仓。
 
 输入表、最小示例和返回值说明见 [docs/guides/entry-points.md](docs/guides/entry-points.md)。
 
