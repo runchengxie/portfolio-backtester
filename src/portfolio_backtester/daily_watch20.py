@@ -398,17 +398,18 @@ def _select_b(
             industry_cap=config.industry_cap,
         )
 
-    for symbol in ranked:
-        _try_add_with_cap(
-            symbol,
-            selected=selected,
-            selected_set=selected_set,
-            industry_by_symbol=industry_by_symbol,
-            industry_counts=industry_counts,
-            industry_cap=config.industry_cap,
-        )
-        if len(selected) >= count:
-            break
+    if len(selected) < count:
+        for symbol in ranked:
+            _try_add_with_cap(
+                symbol,
+                selected=selected,
+                selected_set=selected_set,
+                industry_by_symbol=industry_by_symbol,
+                industry_counts=industry_counts,
+                industry_cap=config.industry_cap,
+            )
+            if len(selected) >= count:
+                break
 
     retained = frozenset(selected_set & previous)
     exited_count = max(0, len(previous) - len(retained))
