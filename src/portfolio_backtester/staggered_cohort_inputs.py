@@ -131,6 +131,35 @@ def _validate_availability(
             raise ValueError("signal available_at must be strictly before the T+1 open")
 
 
+def _prepare_signal_frame(
+    signals: pd.DataFrame,
+    trade_dates: list[pd.Timestamp],
+    *,
+    score_col: str,
+    signal_date_col: str,
+    available_at_col: str,
+) -> tuple[pd.DataFrame, list[pd.Timestamp]]:
+    required = {signal_date_col, "symbol", score_col, available_at_col}
+    missing = sorted(required - set(signals.columns))
+    if missing:
+        raise ValueError(f"signals is missing required columns: {missing}")
+    work = signals.loc[:, sorted(required)].copy()
+    work[signal_date_col] = pd.to_datetime(work[signal_date_col], errors="coerce").dt.normalize()
+    work["symbol"] = work["symbol"].astype("string").str.strip()
+    work[score_col] = pd.to_numeric(work[score_col], errors="coerce")
+    if work[[signal_date_col, "symbol", score_col]].isna().any().any():
+        raise ValueError("signals contains invalid dates, symbols, or scores")
+    if not np.isfinite(work[score_col].to_numpy(dtype=float)).all():
+        raise ValueError("signals scores must be finite")
+    if work.duplicated([signal_date_col, "symbol"]).any():
+        raise ValueError("signals must be unique by signal date and symbol")
+    signal_dates = sorted(cast(list[pd.Timestamp], work[signal_date_col].unique().tolist()))
+    date_set = set(trade_dates)
+    if not signal_dates or any(date not in date_set for date in signal_dates):
+        raise ValueError("every signal date must be present in the authoritative calendar")
+    return work, signal_dates
+
+
 def prepare_staggered_targets(
     signals: pd.DataFrame,
     trade_dates: list[pd.Timestamp],
@@ -149,24 +178,13 @@ def prepare_staggered_targets(
     than being redistributed across the selected names.
     """
 
-    required = {signal_date_col, "symbol", score_col, available_at_col}
-    missing = sorted(required - set(signals.columns))
-    if missing:
-        raise ValueError(f"signals is missing required columns: {missing}")
-    work = signals.loc[:, sorted(required)].copy()
-    work[signal_date_col] = pd.to_datetime(work[signal_date_col], errors="coerce").dt.normalize()
-    work["symbol"] = work["symbol"].astype("string").str.strip()
-    work[score_col] = pd.to_numeric(work[score_col], errors="coerce")
-    if work[[signal_date_col, "symbol", score_col]].isna().any().any():
-        raise ValueError("signals contains invalid dates, symbols, or scores")
-    if not np.isfinite(work[score_col].to_numpy(dtype=float)).all():
-        raise ValueError("signals scores must be finite")
-    if work.duplicated([signal_date_col, "symbol"]).any():
-        raise ValueError("signals must be unique by signal date and symbol")
-    date_set = set(trade_dates)
-    signal_dates = sorted(cast(list[pd.Timestamp], work[signal_date_col].unique().tolist()))
-    if not signal_dates or any(date not in date_set for date in signal_dates):
-        raise ValueError("every signal date must be present in the authoritative calendar")
+    work, signal_dates = _prepare_signal_frame(
+        signals,
+        trade_dates,
+        score_col=score_col,
+        signal_date_col=signal_date_col,
+        available_at_col=available_at_col,
+    )
     entry_map = build_execution_date_map(
         signal_dates,
         1,
