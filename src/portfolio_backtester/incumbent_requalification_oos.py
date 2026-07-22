@@ -48,7 +48,9 @@ def _validate_scored(
         raise ValueError("scored must be non-empty")
     missing = sorted(_required_columns(config, score_column=score_column) - set(scored.columns))
     if missing:
-        raise ValueError("incumbent OOS scored input missing required columns: " + ", ".join(missing))
+        raise ValueError(
+            "incumbent OOS scored input missing required columns: " + ", ".join(missing)
+        )
     if score_column != config.score_col and config.score_col in scored.columns:
         raise ValueError(
             f"score column collision: both {score_column!r} and {config.score_col!r} are present"
@@ -126,9 +128,7 @@ def _incumbent_requalification_daily_rows(
         row.update(
             {
                 "retained_count": int(receipt.get("retained_count", 0)),
-                "buffered_incumbent_count": int(
-                    receipt.get("buffered_incumbent_count", 0)
-                ),
+                "buffered_incumbent_count": int(receipt.get("buffered_incumbent_count", 0)),
                 "new_position_count": int(receipt.get("new_position_count", 0)),
                 "exited_count": int(receipt.get("exited_count", 0)),
                 "cash_weight": float(receipt.get("cash_weight", 0.0)),
