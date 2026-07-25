@@ -1,4 +1,4 @@
-# 旧仓再资格 OOS 对照桥
+# 旧仓再资格样本外（OOS）对照桥
 
 `portfolio_backtester.incumbent_requalification_oos` 提供两条共享同一组合政策和诊断口径的逐日 OOS 桥：
 

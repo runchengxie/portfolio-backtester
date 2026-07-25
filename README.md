@@ -9,7 +9,7 @@
 - 新仓准入与旧仓退出分离的低换手组合构造
 - 滑点、交易约束和执行容量模拟
 - 基准、暴露和报告
-- PSR、DSR 和多重试验 Sharpe 推断
+- 概率夏普比（PSR）、修正夏普比（DSR）和多重试验 Sharpe 推断
 - 输入输出契约与稳定高层 API
 - 框架中立的执行契约、后端协议和规范化回测结果
 
@@ -79,7 +79,7 @@ from portfolio_backtester import (
 ```
 
 错位持有执行按 `horizon_days` 建立同样数量的独立 cohort，并为每个 cohort 分配
-`1 / horizon_days` 的初始资金。H1 只有一个 cohort，因此其收益就是整个 ledger 的收益。
+`1 / horizon_days` 的初始资金。H1 只有一个 cohort，因此其收益就是整个账本（ledger）的收益。
 默认每个信号日必须提供完整 `top_n` 候选。研究状态化组合需要保留未填满槽位为现金时，
 应显式设置 `allow_cash_shortfall=True`。空槽资金不会重分配给其余持仓。
 
@@ -115,7 +115,7 @@ result = NativePositionReplayBackend().run(
 
 该入口会拒绝空头、负权重和 `long_only=False`。分钟 VWAP 与过期的 `ffill` 成交价需要显式声明研究假设。
 
-当前 registry 只包含 `native.position_replay`。Qlib 与 LEAN 的历史候选没有进入 `main`，其中 LEAN 只保留架构参考价值。Backtrader 仍处于规划阶段。vn.py 属于本仓库范围外。状态和退役门禁见 [后端架构](docs/concepts/backend-architecture.md)与[机器可读集成账本](docs/framework-integration-ledger.yml)。
+当前注册表（registry）只包含 `native.position_replay`。Qlib 与 LEAN 的历史候选没有进入 `main`，其中 LEAN 只保留架构参考价值。Backtrader 仍处于规划阶段。vn.py 属于本仓库范围外。状态和退役门禁见 [后端架构](docs/concepts/backend-architecture.md)与[机器可读集成账本](docs/framework-integration-ledger.yml)。
 
 ## 开发检查
 
@@ -142,7 +142,7 @@ scripts/dev/run_tests.sh maintainability
 
 `DailyWatch20` 是现有调用方使用的兼容例外。本仓库只保留其组合选择、组合策略、错位持有执行与回执接口，研究假设、特征和晋升证据由 `alpha-research`、`research-apps` 与 `strategy-pipeline` 维护。新增策略专用规则不应继续扩展这一例外。
 
-工作区 2.0 已删除旧共享 namespace 和 facade。新代码只使用 `portfolio_backtester`。
+工作区 2.0 已删除旧共享命名空间（namespace）和门面（facade）。新代码只使用 `portfolio_backtester`。
 
 ## Python 包名
 

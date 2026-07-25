@@ -5,7 +5,7 @@
 | 指标 | 含义 | 适用场景 |
 |------|------|---------|
 | `name_turnover` | 持仓名称替换比例 | 描述 Top-K 名单稳定性 |
-| `TurnoverBreakdown.one_way_turnover` | 基于目标权重变化的单边换手率 | 成本核算 |
+| `TurnoverBreakdown.one_way_turnover` | 按目标权重变化计算的单边换手率 | 成本核算 |
 
 ## TurnoverBreakdown 字段
 
