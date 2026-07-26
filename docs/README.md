@@ -40,3 +40,9 @@
 本仓库记录通用组合构造和回测行为。数据下载、因子研究、模型训练、具体策略规则、任务编排和券商下单由调用方负责。
 
 历史迁移记录放在 PR、发布说明或维护记录中。用户指南优先说明当前版本的输入、行为和输出。
+
+## 迁移与历史归属
+
+- [组合回测命名空间](namespace-migration.md)
+- [DailyWatch20 组合职责归属](ownership-migration.md)
+- [旧仓再资格样本外（OOS）对照桥](guides/incumbent-requalification-oos-controls.md)
