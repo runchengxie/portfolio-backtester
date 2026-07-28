@@ -3,20 +3,43 @@
 This is the package-owned form of the historical strategy-pipeline root probe.
 The implementation is intentionally behavior-preserving so the boundary move
 does not change the simulation rules.
+
+The module-level configuration globals (``CAPITAL``, ``ROUND_LOT``,
+``USE_DETAILED_FEES``, ...) are intentionally kept on this shell module because
+they are monkeypatched by tests and read directly by the engine functions below.
+Global-free helpers live in :mod:`portfolio_backtester._aexe_io` and the CLI in
+:mod:`portfolio_backtester._aexe_cli`; both are re-exported here so external
+imports are unchanged.
 """
 
 from __future__ import annotations
 
-import argparse
-import json
 import math
-from pathlib import Path
 from typing import Any
 
 import numpy as np
 import pandas as pd
 
-DEFAULT_RUN = Path(
+from ._aexe_cli import main as main
+from ._aexe_io import (
+    _adv_bucket as _adv_bucket,
+    _adv_notional as _adv_notional,
+    _avg_impact_bps as _avg_impact_bps,
+    _blocked_trade_count as _blocked_trade_count,
+    _date8 as _date8,
+    _holding_values as _holding_values,
+    _market_rows_by_symbol as _market_rows_by_symbol,
+    _rank_map as _rank_map,
+    _row_value as _row_value,
+    _trade_notional as _trade_notional,
+    _turnover_action_order as _turnover_action_order,
+    compute_stats as compute_stats,
+    load_positions as load_positions,
+    load_prices as load_prices,
+    portfolio_value as portfolio_value,
+)
+
+DEFAULT_RUN = (
     "artifacts/runs/a_share_s_live15_biweekly_max08_min15k_full_oos_20260608_184943_c17c5bce"
 )
 CACHE_FILE_TEMPLATE = (
@@ -51,70 +74,6 @@ MAX_WEIGHT_BUFFER = 1.35
 ABS_MAX_WEIGHT = 0.18
 
 
-def _date8(value: Any) -> str:
-    text = str(value)
-    if "-" in text:
-        return pd.to_datetime(text).strftime("%Y%m%d")
-    return text[:8]
-
-
-def load_positions(run_dir: Path) -> pd.DataFrame:
-    pos = pd.read_csv(run_dir / "positions_by_rebalance_oos.csv")
-    pos["rebalance_date"] = pos["rebalance_date"].map(_date8)
-    pos["entry_date"] = pos["entry_date"].map(_date8)
-    pos["symbol"] = pos["symbol"].astype(str)
-    pos["rank"] = pd.to_numeric(pos["rank"], errors="coerce")
-    pos = pos.dropna(subset=["rank"])
-    return pos.sort_values(["rebalance_date", "rank", "symbol"])
-
-
-def load_prices(symbols: list[str], run_dir: Path) -> pd.DataFrame:
-    frames = []
-    cache = run_dir.parents[1] / "cache"
-    for sym in symbols:
-        path = cache / CACHE_FILE_TEMPLATE.format(symbol=sym)
-        if not path.exists():
-            continue
-        df = pd.read_parquet(path)
-        keep = [
-            c
-            for c in [
-                "trade_date",
-                "symbol",
-                "tr_close",
-                "amount",
-                "medadv20_amount",
-                "is_tradable",
-                "is_suspended",
-                "is_limit_up",
-                "is_limit_down",
-                "up_limit",
-                "down_limit",
-            ]
-            if c in df.columns
-        ]
-        df = df[keep].copy()
-        df["trade_date"] = df["trade_date"].map(_date8)
-        df["symbol"] = df["symbol"].astype(str)
-        frames.append(df)
-    if not frames:
-        raise FileNotFoundError("No daily price cache files found for OOS symbols")
-    return (
-        pd.concat(frames, ignore_index=True)
-        .dropna(subset=["trade_date", "symbol", "tr_close"])
-        .drop_duplicates(["trade_date", "symbol"], keep="last")
-    )
-
-
-def portfolio_value(holdings: dict[str, int], prices: pd.Series, cash: float) -> float:
-    value = cash
-    for sym, qty in holdings.items():
-        px = prices.get(sym, np.nan)
-        if pd.notna(px) and px > 0:
-            value += float(px) * qty
-    return float(value)
-
-
 def _candidate_row(
     row: pd.Series, entry_prices: pd.Series, target_notional: float, target_weight: float
 ) -> dict[str, Any] | None:
@@ -127,10 +86,6 @@ def _candidate_row(
     if one_lot > target_notional:
         return None
     return {"symbol": sym, "rank": int(row["rank"]), "price": px, "target_weight": target_weight}
-
-
-def _rank_map(candidates: pd.DataFrame) -> dict[str, int]:
-    return {str(row["symbol"]): int(row["rank"]) for _, row in candidates.iterrows()}
 
 
 def _buffer_keep_symbols(candidates: pd.DataFrame, holdings: dict[str, int]) -> set[str]:
@@ -249,23 +204,6 @@ def allocate_with_redistribution(
     return alloc, diag
 
 
-def _trade_notional(
-    holdings: dict[str, int], target_alloc: dict[str, int], prices: pd.Series
-) -> float:
-    traded = 0.0
-    for sym in sorted(set(holdings) | set(target_alloc)):
-        pxv = prices.get(sym, np.nan)
-        if pd.isna(pxv) or pxv <= 0:
-            continue
-        delta = target_alloc.get(sym, 0) - holdings.get(sym, 0)
-        traded += abs(delta) * float(pxv)
-    return traded
-
-
-def _row_value(row: pd.Series, name: str, default: Any = np.nan) -> Any:
-    return row.get(name, default) if name in row.index else default
-
-
 def _is_blocked_trade(row: pd.Series, delta: int) -> bool:
     if not REALISTIC_DAILY_EXECUTION:
         return False
@@ -276,16 +214,6 @@ def _is_blocked_trade(row: pd.Series, delta: int) -> bool:
     if delta > 0 and bool(_row_value(row, "is_limit_up", False)):
         return True
     return delta < 0 and bool(_row_value(row, "is_limit_down", False))
-
-
-def _adv_notional(row: pd.Series) -> float:
-    value = _row_value(row, "medadv20_amount", np.nan)
-    if pd.isna(value) or float(value) <= 0:
-        value = _row_value(row, "amount", np.nan)
-    if pd.isna(value) or float(value) <= 0:
-        return np.nan
-    # Tushare daily amount is conventionally reported in thousand CNY.
-    return float(value) * 1000.0
 
 
 def _cap_delta_by_participation(delta: int, px: float, row: pd.Series) -> int:
@@ -300,35 +228,6 @@ def _cap_delta_by_participation(delta: int, px: float, row: pd.Series) -> int:
     if max_shares <= 0:
         return 0
     return int(math.copysign(min(abs(delta), max_shares), delta))
-
-
-def _adv_bucket(adv_notional: float) -> str:
-    if not math.isfinite(adv_notional) or adv_notional <= 0:
-        return "missing"
-    if adv_notional < 10_000_000:
-        return "lt_10m"
-    if adv_notional < 50_000_000:
-        return "10m_50m"
-    if adv_notional < 200_000_000:
-        return "50m_200m"
-    return "gte_200m"
-
-
-def _turnover_action_order(
-    holdings: dict[str, int], target_alloc: dict[str, int], prices: pd.Series
-) -> list[tuple[int, str, int, float]]:
-    actions = []
-    for sym in sorted(set(holdings) | set(target_alloc)):
-        pxv = prices.get(sym, np.nan)
-        if pd.isna(pxv) or pxv <= 0:
-            continue
-        delta = target_alloc.get(sym, 0) - holdings.get(sym, 0)
-        if delta == 0:
-            continue
-        priority = 0 if delta < 0 and target_alloc.get(sym, 0) == 0 else 1
-        priority = 2 if delta > 0 else priority
-        actions.append((priority, sym, delta, float(pxv)))
-    return sorted(actions)
 
 
 def _apply_turnover_cap(
@@ -441,34 +340,6 @@ def _trade_to_target(
         )
     next_holdings = {s: q for s, q in next_holdings.items() if q > 0}
     return next_holdings, cash, total_cost, trade_rows
-
-
-def _holding_values(holdings: dict[str, int], prices: pd.Series) -> list[float]:
-    return [
-        float(prices.get(s, np.nan)) * q
-        for s, q in holdings.items()
-        if pd.notna(prices.get(s, np.nan))
-    ]
-
-
-def _market_rows_by_symbol(px: pd.DataFrame, date: str) -> dict[str, pd.Series]:
-    rows = px[px["trade_date"] == date]
-    return {str(row["symbol"]): row for _, row in rows.iterrows()}
-
-
-def _blocked_trade_count(trades: pd.DataFrame) -> int:
-    if trades.empty or "blocked_or_capped" not in trades.columns:
-        return 0
-    return int(trades["blocked_or_capped"].fillna(False).sum())
-
-
-def _avg_impact_bps(trades: pd.DataFrame) -> float:
-    if trades.empty or "impact_bps" not in trades.columns:
-        return 0.0
-    active = trades[pd.to_numeric(trades["notional"], errors="coerce").fillna(0.0) > 0]
-    if active.empty:
-        return 0.0
-    return float(pd.to_numeric(active["impact_bps"], errors="coerce").fillna(0.0).mean())
 
 
 def _daily_row(
@@ -631,173 +502,6 @@ def simulate(
     trades = pd.DataFrame(trade_rows)
     stats = _summary_stats(compute_stats(daily), daily, diag, trades, top_k)
     return stats, daily, diag, trades
-
-
-def compute_stats(daily: pd.DataFrame) -> dict[str, Any]:
-    r = pd.to_numeric(daily["daily_return"], errors="coerce").fillna(0.0)
-    nav = pd.to_numeric(daily["nav"], errors="coerce").ffill()
-    years = len(daily) / 252.0
-    total = float(nav.iloc[-1] - 1.0)
-    ann = float(nav.iloc[-1] ** (1 / years) - 1) if years > 0 and nav.iloc[-1] > 0 else np.nan
-    vol = float(r.std(ddof=1) * np.sqrt(252)) if len(r) > 1 else np.nan
-    sharpe = (
-        float(r.mean() / r.std(ddof=1) * np.sqrt(252))
-        if len(r) > 1 and r.std(ddof=1) > 0
-        else np.nan
-    )
-    dd = nav / nav.cummax() - 1.0
-    roll63 = r.rolling(63).mean() / r.rolling(63).std(ddof=1) * np.sqrt(252)
-    roll126 = r.rolling(126).mean() / r.rolling(126).std(ddof=1) * np.sqrt(252)
-    return {
-        "daily_rows": len(daily),
-        "start": str(daily["trade_date"].iloc[0]),
-        "end": str(daily["trade_date"].iloc[-1]),
-        "total_return": total,
-        "ann_return": ann,
-        "ann_vol": vol,
-        "sharpe": sharpe,
-        "max_drawdown": float(dd.min()),
-        "rolling_sharpe_3m_last": float(roll63.dropna().iloc[-1])
-        if roll63.notna().any()
-        else np.nan,
-        "rolling_sharpe_6m_last": float(roll126.dropna().iloc[-1])
-        if roll126.notna().any()
-        else np.nan,
-    }
-
-
-def _parse_top_ks(text: str) -> list[int]:
-    return [int(item) for item in text.split(",") if item]
-
-
-def _parse_optional_float(value: str) -> float | None:
-    if value.lower() in {"", "none", "null", "off"}:
-        return None
-    return float(value)
-
-
-def _parse_bool(value: str) -> bool:
-    return value.lower() in {"1", "true", "yes", "y", "on"}
-
-
-def _set_trade_fee_args(args: argparse.Namespace) -> None:
-    global USE_DETAILED_FEES, BUY_COMMISSION_BPS, SELL_COMMISSION_BPS, STAMP_TAX_SELL_BPS
-    global TRANSFER_FEE_BPS, MIN_COMMISSION_CNY, BUY_SLIPPAGE_BPS, SELL_SLIPPAGE_BPS
-
-    USE_DETAILED_FEES = _parse_bool(args.use_detailed_fees)
-    BUY_COMMISSION_BPS = float(args.buy_commission_bps)
-    SELL_COMMISSION_BPS = float(args.sell_commission_bps)
-    STAMP_TAX_SELL_BPS = float(args.stamp_tax_sell_bps)
-    TRANSFER_FEE_BPS = float(args.transfer_fee_bps)
-    MIN_COMMISSION_CNY = float(args.min_commission_cny)
-    BUY_SLIPPAGE_BPS = float(args.buy_slippage_bps)
-    SELL_SLIPPAGE_BPS = float(args.sell_slippage_bps)
-
-
-def _add_trade_fee_args(parser: argparse.ArgumentParser) -> None:
-    parser.add_argument("--use-detailed-fees", default="false")
-    parser.add_argument("--buy-commission-bps", type=float, default=BUY_COMMISSION_BPS)
-    parser.add_argument("--sell-commission-bps", type=float, default=SELL_COMMISSION_BPS)
-    parser.add_argument("--stamp-tax-sell-bps", type=float, default=STAMP_TAX_SELL_BPS)
-    parser.add_argument("--transfer-fee-bps", type=float, default=TRANSFER_FEE_BPS)
-    parser.add_argument("--min-commission-cny", type=float, default=MIN_COMMISSION_CNY)
-    parser.add_argument("--buy-slippage-bps", type=float, default=BUY_SLIPPAGE_BPS)
-    parser.add_argument("--sell-slippage-bps", type=float, default=SELL_SLIPPAGE_BPS)
-
-
-def main() -> None:
-    global CAPITAL, ROUND_LOT, COST_BPS, TOP_KS, REBALANCE_STRIDE, MAX_TURNOVER_PER_REBALANCE
-    global HOLD_BUFFER_RANK, REALISTIC_DAILY_EXECUTION, ADV_PARTICIPATION_LIMIT, IMPACT_BPS_PER_ADV
-
-    parser = argparse.ArgumentParser()
-    parser.add_argument("--run-dir", default=str(DEFAULT_RUN))
-    parser.add_argument("--out-dir", default="")
-    parser.add_argument("--capital", type=float, default=DEFAULT_CAPITAL)
-    parser.add_argument("--round-lot", type=int, default=DEFAULT_ROUND_LOT)
-    parser.add_argument("--cost-bps", type=float, default=DEFAULT_COST_BPS)
-    parser.add_argument("--top-ks", default=",".join(str(x) for x in DEFAULT_TOP_KS))
-    parser.add_argument("--rebalance-stride", type=int, default=DEFAULT_REBALANCE_STRIDE)
-    parser.add_argument("--max-turnover-per-rebalance", default="none")
-    parser.add_argument("--hold-buffer-rank", default="none")
-    parser.add_argument("--realistic-daily-execution", default="false")
-    parser.add_argument("--adv-participation-limit", default="none")
-    parser.add_argument("--impact-bps-per-adv", type=float, default=IMPACT_BPS_PER_ADV)
-    _add_trade_fee_args(parser)
-    args = parser.parse_args()
-
-    CAPITAL = float(args.capital)
-    ROUND_LOT = int(args.round_lot)
-    COST_BPS = float(args.cost_bps)
-    TOP_KS = _parse_top_ks(args.top_ks)
-    REBALANCE_STRIDE = max(1, int(args.rebalance_stride))
-    MAX_TURNOVER_PER_REBALANCE = _parse_optional_float(args.max_turnover_per_rebalance)
-    parsed_buffer = _parse_optional_float(args.hold_buffer_rank)
-    HOLD_BUFFER_RANK = int(parsed_buffer) if parsed_buffer is not None else None
-    REALISTIC_DAILY_EXECUTION = _parse_bool(args.realistic_daily_execution)
-    ADV_PARTICIPATION_LIMIT = _parse_optional_float(args.adv_participation_limit)
-    IMPACT_BPS_PER_ADV = float(args.impact_bps_per_adv)
-    _set_trade_fee_args(args)
-
-    run_dir = Path(args.run_dir)
-    out_dir = Path(args.out_dir) if args.out_dir else run_dir / "live_executable_500k_oos_topk"
-    out_dir.mkdir(parents=True, exist_ok=True)
-    pos = load_positions(run_dir)
-    px = load_prices(sorted(pos["symbol"].unique()), run_dir)
-    summaries = []
-    all_diag = []
-    for top_k in TOP_KS:
-        stats, daily, diag, trades = simulate(pos, px, top_k)
-        summaries.append(stats)
-        all_diag.append(diag)
-        daily.to_csv(out_dir / f"daily_top{top_k}.csv", index=False)
-        diag.to_csv(out_dir / f"rebalance_diag_top{top_k}.csv", index=False)
-        trades.to_csv(out_dir / f"rebalance_trades_top{top_k}.csv", index=False)
-        print(
-            "done",
-            top_k,
-            "sharpe",
-            round(stats["sharpe"], 3),
-            "ret",
-            round(stats["total_return"], 3),
-            "cash",
-            round(stats["avg_cash_weight_daily"], 3),
-        )
-    summary = pd.DataFrame(summaries).sort_values("top_k")
-    summary.to_csv(out_dir / "topk_summary.csv", index=False)
-    pd.concat(all_diag, ignore_index=True).to_csv(out_dir / "rebalance_diag_all.csv", index=False)
-    meta = {
-        "source_run": str(run_dir),
-        "positions_source": "positions_by_rebalance_oos.csv",
-        "capital": CAPITAL,
-        "round_lot": ROUND_LOT,
-        "cost_bps": COST_BPS,
-        "rebalance_stride": REBALANCE_STRIDE,
-        "max_turnover_per_rebalance": MAX_TURNOVER_PER_REBALANCE,
-        "hold_buffer_rank": HOLD_BUFFER_RANK,
-        "realistic_daily_execution": REALISTIC_DAILY_EXECUTION,
-        "adv_participation_limit": ADV_PARTICIPATION_LIMIT,
-        "impact_bps_per_adv": IMPACT_BPS_PER_ADV,
-        "use_detailed_fees": USE_DETAILED_FEES,
-        "buy_commission_bps": BUY_COMMISSION_BPS,
-        "sell_commission_bps": SELL_COMMISSION_BPS,
-        "stamp_tax_sell_bps": STAMP_TAX_SELL_BPS,
-        "transfer_fee_bps": TRANSFER_FEE_BPS,
-        "min_commission_cny": MIN_COMMISSION_CNY,
-        "buy_slippage_bps": BUY_SLIPPAGE_BPS,
-        "sell_slippage_bps": SELL_SLIPPAGE_BPS,
-        "affordability_filter": (
-            "drop candidate if one 100-share lot exceeds equal target slot at "
-            "current equity; backfill from ranks available in source top15"
-        ),
-        "cash_redistribution": (
-            "floor lots, then add one lot at a time to most-underweight "
-            "selected names without breaching min(abs 18%, 1/k * 1.35)"
-        ),
-    }
-    (out_dir / "meta.json").write_text(
-        json.dumps(meta, ensure_ascii=False, indent=2), encoding="utf-8"
-    )
-    print("WROTE", out_dir)
 
 
 if __name__ == "__main__":

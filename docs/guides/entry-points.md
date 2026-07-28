@@ -16,23 +16,23 @@ from portfolio_backtester.execution import build_execution_model
 execution = build_execution_model(
     None,
     default_cost_bps=10.0,
-    default_exit_price_policy='strict',
-    default_exit_fallback_policy='ffill',
-    default_price_col='close',
+    default_exit_price_policy="strict",
+    default_exit_fallback_policy="ffill",
+    default_price_col="close",
 )
 spec = BacktestSpec(
     strategy=StrategySpec(
-        name='topk-demo',
-        type='topk_buffered_long_only',
-        score_col='signal',
+        name="topk-demo",
+        type="topk_buffered_long_only",
+        score_col="signal",
         top_k=20,
         buffer_exit=5,
-        weighting='equal',
+        weighting="equal",
     ),
     execution=execution,
     rebalance_dates=(
-        pd.Timestamp('2026-01-05'),
-        pd.Timestamp('2026-01-12'),
+        pd.Timestamp("2026-01-05"),
+        pd.Timestamp("2026-01-12"),
     ),
     shift_days=1,
     trading_days_per_year=252,

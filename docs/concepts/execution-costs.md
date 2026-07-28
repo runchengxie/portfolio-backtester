@@ -145,36 +145,36 @@ from portfolio_backtester.execution import build_execution_model
 
 execution = build_execution_model(
     {
-        'cost': {
-            'name': 'side_bps',
-            'buy_bps': 6,
-            'sell_bps': 8,
+        "cost": {
+            "name": "side_bps",
+            "buy_bps": 6,
+            "sell_bps": 8,
         },
-        'slippage': {
-            'name': 'participation',
-            'base_bps': 2,
-            'impact_bps': 10,
-            'amount_col': 'adv20_amount',
-            'portfolio_value': 1_000_000,
-            'power': 0.5,
+        "slippage": {
+            "name": "participation",
+            "base_bps": 2,
+            "impact_bps": 10,
+            "amount_col": "adv20_amount",
+            "portfolio_value": 1_000_000,
+            "power": 0.5,
         },
-        'entry': {
-            'price_col': 'open',
+        "entry": {
+            "price_col": "open",
         },
-        'exit': {
-            'price': 'delay',
-            'fallback': 'ffill',
-            'price_col': 'close',
+        "exit": {
+            "price": "delay",
+            "fallback": "ffill",
+            "price_col": "close",
         },
-        'constraints': {
-            'min_price': 2,
-            'min_amount': 5_000_000,
-            'amount_col': 'adv20_amount',
+        "constraints": {
+            "min_price": 2,
+            "min_amount": 5_000_000,
+            "amount_col": "adv20_amount",
         },
     },
     default_cost_bps=0,
-    default_exit_price_policy='strict',
-    default_exit_fallback_policy='ffill',
+    default_exit_price_policy="strict",
+    default_exit_fallback_policy="ffill",
 )
 ```
 
