@@ -91,6 +91,9 @@ class _NavOrder:
     last_fill_date: pd.Timestamp | None = None
     fill_days: int = 0
     status: str | None = None
+    requested_quantity: float | None = None
+    remaining_quantity: float | None = None
+    filled_quantity: float = 0.0
 
 
 @dataclass(frozen=True)
@@ -399,7 +402,7 @@ def _retain_open_adjusted_nav_orders(
     still_open: list[_NavOrder] = []
     for order in ledger.open_orders:
         day_number = trade_idx - order.start_idx + 1
-        if order.remaining_notional <= 1e-8:
+        if _nav_order_is_complete(order):
             order.status = "filled"
             _append_nav_order_row(
                 ledger.order_rows,
@@ -1647,6 +1650,15 @@ def _build_nav_orders_for_target(
             )
         elif delta < -1e-8:
             amount = abs(float(delta))
+            held_quantity = max(float(shares.get(symbol, 0.0)), 0.0)
+            reference_price = (
+                current_notional / held_quantity if held_quantity > 1e-12 else np.nan
+            )
+            requested_quantity = (
+                amount / reference_price
+                if np.isfinite(reference_price) and reference_price > 0
+                else None
+            )
             orders.append(
                 _NavOrder(
                     rebalance_date=rebalance_date,
@@ -1657,6 +1669,8 @@ def _build_nav_orders_for_target(
                     remaining_notional=amount,
                     start_idx=trade_idx,
                     max_days=sell_max_days,
+                    requested_quantity=requested_quantity,
+                    remaining_quantity=requested_quantity,
                 )
             )
     return orders
@@ -1739,14 +1753,17 @@ def _execute_nav_sell_orders_for_day(
     traded_notional = 0.0
     transaction_cost = 0.0
     for order in sorted(
-        [item for item in open_orders if item.side == "sell" and item.remaining_notional > 1e-8],
+        [
+            item
+            for item in open_orders
+            if item.side == "sell" and not _nav_order_is_complete(item)
+        ],
         key=lambda item: item.symbol,
     ):
         price = _price_at(order.symbol, trade_date, tables.price_table)
         if not np.isfinite(price):
             continue
         held_quantity = max(float(shares.get(order.symbol, 0.0)), 0.0)
-        held_notional = held_quantity * float(price)
         capacity = _capacity_notional(
             order.symbol,
             trade_date,
@@ -1755,16 +1772,31 @@ def _execute_nav_sell_orders_for_day(
             tradable_table=tables.sell_tradable_table,
             liquidity_tables=tables.liquidity_tables,
         )
-        fill = min(float(order.remaining_notional), capacity, held_notional)
+        remaining_quantity = (
+            max(float(order.remaining_quantity), 0.0)
+            if order.remaining_quantity is not None
+            else max(float(order.remaining_notional) / float(price), 0.0)
+        )
+        fill_quantity = min(
+            remaining_quantity,
+            held_quantity,
+            max(float(capacity) / float(price), 0.0),
+        )
+        fill = fill_quantity * float(price)
         if fill <= 1e-8:
             continue
-        quantity = fill / float(price)
-        shares[order.symbol] = max(held_quantity - quantity, 0.0)
+        remaining_before_notional = remaining_quantity * float(price)
+        shares[order.symbol] = max(held_quantity - fill_quantity, 0.0)
         if shares[order.symbol] <= 1e-10:
             shares.pop(order.symbol, None)
         cost = _trade_fee(fill, side="sell", cost_rate=cost_rate, fee_model=trade_fee_model)
         cash_ref["cash"] = float(cash_ref.get("cash", 0.0)) + fill - cost
-        _update_nav_order(order, trade_date, fill)
+        _update_nav_order(
+            order,
+            trade_date,
+            fill,
+            filled_quantity=fill_quantity,
+        )
         _record_nav_fill(
             fill_rows,
             order=order,
@@ -1773,6 +1805,7 @@ def _execute_nav_sell_orders_for_day(
             capacity_notional=capacity,
             filled_notional=fill,
             transaction_cost=cost,
+            remaining_before_notional=remaining_before_notional,
         )
         traded_notional += fill
         transaction_cost += cost
@@ -1852,9 +1885,41 @@ def _execute_nav_buy_orders_for_day(
     return float(traded_notional), float(transaction_cost)
 
 
-def _update_nav_order(order: _NavOrder, trade_date: pd.Timestamp, fill: float) -> None:
+def _nav_order_is_complete(order: _NavOrder) -> bool:
+    if order.remaining_quantity is not None:
+        return bool(order.remaining_quantity <= 1e-10)
+    return bool(order.remaining_notional <= 1e-8)
+
+
+def _update_nav_order(
+    order: _NavOrder,
+    trade_date: pd.Timestamp,
+    fill: float,
+    *,
+    filled_quantity: float | None = None,
+) -> None:
     order.filled_notional += float(fill)
-    order.remaining_notional = max(float(order.remaining_notional) - float(fill), 0.0)
+    if (
+        filled_quantity is not None
+        and order.requested_quantity is not None
+        and order.remaining_quantity is not None
+    ):
+        order.filled_quantity += float(filled_quantity)
+        order.remaining_quantity = max(
+            float(order.remaining_quantity) - float(filled_quantity),
+            0.0,
+        )
+        reference_price = (
+            float(order.requested_notional) / float(order.requested_quantity)
+            if order.requested_quantity > 0
+            else 0.0
+        )
+        order.remaining_notional = float(order.remaining_quantity) * reference_price
+    else:
+        order.remaining_notional = max(
+            float(order.remaining_notional) - float(fill),
+            0.0,
+        )
     if order.first_fill_date is None:
         order.first_fill_date = trade_date
     order.last_fill_date = trade_date
@@ -1870,6 +1935,7 @@ def _record_nav_fill(
     capacity_notional: float,
     filled_notional: float,
     transaction_cost: float,
+    remaining_before_notional: float | None = None,
 ) -> None:
     fill_rows.append(
         {
@@ -1879,7 +1945,11 @@ def _record_nav_fill(
             "day_number": int(trade_idx - order.start_idx + 1),
             "side": order.side,
             "symbol": order.symbol,
-            "remaining_before_notional": float(order.remaining_notional + filled_notional),
+            "remaining_before_notional": float(
+                order.remaining_notional + filled_notional
+                if remaining_before_notional is None
+                else remaining_before_notional
+            ),
             "capacity_notional": float(capacity_notional),
             "filled_notional": float(filled_notional),
             "transaction_cost": float(transaction_cost),
@@ -1902,7 +1972,7 @@ def _finalize_open_nav_orders(
     status_by_side: dict[str, str],
 ) -> None:
     for order in open_orders:
-        if order.remaining_notional <= 1e-8:
+        if _nav_order_is_complete(order):
             order.status = "filled"
         else:
             order.status = status_by_side.get(order.side, "cancelled")
@@ -1921,7 +1991,16 @@ def _append_nav_order_row(
     trade_date: pd.Timestamp,
     participation_rate: float,
 ) -> None:
-    status = order.status or ("filled" if order.remaining_notional <= 1e-8 else "open")
+    status = order.status or ("filled" if _nav_order_is_complete(order) else "open")
+    fill_ratio = (
+        float(order.filled_quantity / order.requested_quantity)
+        if order.requested_quantity is not None and order.requested_quantity > 0
+        else (
+            float(order.filled_notional / order.requested_notional)
+            if order.requested_notional > 0
+            else np.nan
+        )
+    )
     order_rows.append(
         {
             "rebalance_date": _format_date(order.rebalance_date),
@@ -1931,9 +2010,7 @@ def _append_nav_order_row(
             "requested_notional": float(order.requested_notional),
             "filled_notional": float(order.filled_notional),
             "unfilled_notional": float(max(order.remaining_notional, 0.0)),
-            "fill_ratio": float(order.filled_notional / order.requested_notional)
-            if order.requested_notional > 0
-            else np.nan,
+            "fill_ratio": fill_ratio,
             "status": status,
             "first_fill_date": _format_date(order.first_fill_date),
             "last_fill_date": _format_date(order.last_fill_date),

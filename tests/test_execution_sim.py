@@ -315,6 +315,69 @@ def test_execution_adjusted_nav_tracks_fully_filled_position_return():
     assert result.summary["stats"]["total_return"] == pytest.approx(0.10)
 
 
+def test_execution_adjusted_nav_delayed_sell_tracks_quantity_across_price_change():
+    dates = pd.to_datetime(
+        ["2020-01-02", "2020-01-03", "2020-01-06", "2020-01-07"]
+    )
+    positions = pd.DataFrame(
+        {
+            "rebalance_date": ["20200101", "20200102"],
+            "entry_date": ["20200102", "20200103"],
+            "symbol": ["AAA", "__CASH__"],
+            "weight": [1.0, 0.0],
+            "side": ["long", "long"],
+        }
+    )
+    pricing = _pricing_frame(
+        dates,
+        ["AAA"],
+        amount_map={
+            ("AAA", "20200102"): 10_000.0,
+            ("AAA", "20200103"): 0.0,
+            ("AAA", "20200106"): 1_200.0,
+            ("AAA", "20200107"): 5_000.0,
+        },
+        tradable_map={
+            ("AAA", "20200103"): False,
+        },
+        price_map={
+            ("AAA", "20200102"): 10.0,
+            ("AAA", "20200103"): 10.0,
+            ("AAA", "20200106"): 20.0,
+            ("AAA", "20200107"): 20.0,
+        },
+    )
+    config = ExecutionSimConfig(
+        enabled=True,
+        portfolio_value=1_000.0,
+        participation_rate=1.0,
+        liquidity_cols=("amount",),
+        buy_max_days=1,
+        sell_max_days=4,
+    )
+
+    result = simulate_execution_adjusted_nav(
+        positions,
+        pricing,
+        config,
+        price_col="open",
+        tradable_col="is_tradable",
+        transaction_cost_bps=0.0,
+        trading_days_per_year=252,
+    )
+
+    sell_order = result.orders.loc[result.orders["side"].eq("sell")].iloc[0]
+    sell_fills = result.fills.loc[result.fills["side"].eq("sell")]
+    assert sell_fills["filled_notional"].tolist() == pytest.approx([1_200.0, 800.0])
+    assert sell_order["requested_notional"] == pytest.approx(1_000.0)
+    assert sell_order["filled_notional"] == pytest.approx(2_000.0)
+    assert sell_order["unfilled_notional"] == pytest.approx(0.0)
+    assert sell_order["fill_ratio"] == pytest.approx(1.0)
+    assert sell_order["status"] == "filled"
+    assert result.daily["gross_exposure"].iloc[-1] == pytest.approx(0.0)
+    assert result.daily["executed_nav"].iloc[-1] == pytest.approx(2.0)
+
+
 def test_ideal_daily_nav_tracks_fully_invested_position_return():
     dates = pd.date_range("2020-01-02", periods=2, freq="B")
     positions = pd.DataFrame(
