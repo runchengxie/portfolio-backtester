@@ -10,11 +10,13 @@ from .config import (
     required_execution_sim_columns as required_execution_sim_columns,
 )
 from .core import (
-    TradeFeeModel as TradeFeeModel,
-    describe_trade_fee_model as describe_trade_fee_model,
     simulate_capacity_execution as simulate_capacity_execution,
     simulate_execution_adjusted_nav as simulate_execution_adjusted_nav,
     simulate_ideal_daily_nav as simulate_ideal_daily_nav,
+)
+from .models import (
+    TradeFeeModel as TradeFeeModel,
+    describe_trade_fee_model as describe_trade_fee_model,
 )
 from .results import (
     ExecutionAdjustedNavResult as ExecutionAdjustedNavResult,
