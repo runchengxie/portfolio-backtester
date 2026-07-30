@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-from collections.abc import Mapping
 from typing import Any
 
 import numpy as np
@@ -13,11 +12,9 @@ from .capacity import (
     _capacity_notional,
     _capacity_weight,
     _execution_window_dates,
-    _position_values_by_symbol,
     _price_at,
 )
 from .config import (
-    SELL_UNTIL_NEXT_REBALANCE,
     ExecutionSimConfig,
 )
 from .models import (
