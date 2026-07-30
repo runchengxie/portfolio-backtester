@@ -1,4 +1,5 @@
 """Shared dataclasses for execution simulation."""
+
 from __future__ import annotations
 
 from dataclasses import dataclass
@@ -12,14 +13,15 @@ from ..execution import DetailedTradeFeeModel
 TradeFeeModel = DetailedTradeFeeModel
 
 __all__ = [
-    '_AdjustedNavLedger',
-    '_AdjustedNavPlan',
-    '_ExecutionTables',
-    '_NavOrder',
-    '_OrderSink',
-    '_trade_fee',
-    'describe_trade_fee_model',
+    "_AdjustedNavLedger",
+    "_AdjustedNavPlan",
+    "_ExecutionTables",
+    "_NavOrder",
+    "_OrderSink",
+    "_trade_fee",
+    "describe_trade_fee_model",
 ]
+
 
 def describe_trade_fee_model(
     fee_model: TradeFeeModel | None,
@@ -115,5 +117,3 @@ class _AdjustedNavLedger:
     order_rows: list[dict[str, Any]]
     fill_rows: list[dict[str, Any]]
     daily_rows: list[dict[str, Any]]
-
-

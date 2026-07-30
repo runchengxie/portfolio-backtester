@@ -102,8 +102,6 @@ def _execute_sell_orders(
     return cash_weight
 
 
-
-
 def _execute_buy_orders(
     *,
     rebalance_date: pd.Timestamp,
@@ -203,8 +201,6 @@ def _execute_buy_orders(
     return cash_weight
 
 
-
-
 def _execute_nav_orders_for_day(
     *,
     open_orders: list[_NavOrder],
@@ -252,8 +248,6 @@ def _execute_nav_orders_for_day(
     return float(traded_notional), float(transaction_cost)
 
 
-
-
 def _execute_nav_sell_orders_for_day(
     *,
     open_orders: list[_NavOrder],
@@ -270,11 +264,7 @@ def _execute_nav_sell_orders_for_day(
     traded_notional = 0.0
     transaction_cost = 0.0
     for order in sorted(
-        [
-            item
-            for item in open_orders
-            if item.side == "sell" and not _nav_order_is_complete(item)
-        ],
+        [item for item in open_orders if item.side == "sell" and not _nav_order_is_complete(item)],
         key=lambda item: item.symbol,
     ):
         price = _price_at(order.symbol, trade_date, tables.price_table)
@@ -327,8 +317,6 @@ def _execute_nav_sell_orders_for_day(
         traded_notional += fill
         transaction_cost += cost
     return float(traded_notional), float(transaction_cost)
-
-
 
 
 def _execute_nav_buy_orders_for_day(
@@ -404,14 +392,10 @@ def _execute_nav_buy_orders_for_day(
     return float(traded_notional), float(transaction_cost)
 
 
-
-
 def _nav_order_is_complete(order: _NavOrder) -> bool:
     if order.remaining_quantity is not None:
         return bool(order.remaining_quantity <= 1e-10)
     return bool(order.remaining_notional <= 1e-8)
-
-
 
 
 def _update_nav_order(
@@ -449,8 +433,6 @@ def _update_nav_order(
     order.fill_days += 1
 
 
-
-
 def _record_nav_fill(
     fill_rows: list[dict[str, Any]],
     *,
@@ -482,14 +464,10 @@ def _record_nav_fill(
     )
 
 
-
-
 def _nav_order_should_abort_buy(order: _NavOrder, config: ExecutionSimConfig) -> bool:
     return config.zero_fill_abort_days_buy is not None and order.zero_fill_days >= int(
         config.zero_fill_abort_days_buy
     )
-
-
 
 
 def _finalize_open_nav_orders(
@@ -511,8 +489,6 @@ def _finalize_open_nav_orders(
             trade_date=trade_date,
             participation_rate=participation_rate,
         )
-
-
 
 
 def _append_nav_order_row(
@@ -554,8 +530,6 @@ def _append_nav_order_row(
     )
 
 
-
-
 def _build_order_states(requests: dict[str, float]) -> dict[str, dict[str, Any]]:
     return {
         symbol: {
@@ -570,16 +544,12 @@ def _build_order_states(requests: dict[str, float]) -> dict[str, dict[str, Any]]
     }
 
 
-
-
 def _update_state(state: dict[str, Any], trade_date: pd.Timestamp, fill: float) -> None:
     state["filled"] += float(fill)
     if state["first_fill_date"] is None:
         state["first_fill_date"] = trade_date
     state["last_fill_date"] = trade_date
     state["fill_days"] += 1
-
-
 
 
 def _append_order_rows(
@@ -632,8 +602,6 @@ def _append_order_rows(
         )
 
 
-
-
 def _record_fill(
     fill_rows: list[dict[str, Any]],
     *,
@@ -663,6 +631,3 @@ def _record_fill(
             "filled_notional": float(fill) * config.portfolio_value,
         }
     )
-
-
-

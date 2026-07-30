@@ -316,9 +316,7 @@ def test_execution_adjusted_nav_tracks_fully_filled_position_return():
 
 
 def test_execution_adjusted_nav_delayed_sell_tracks_quantity_across_price_change():
-    dates = pd.to_datetime(
-        ["2020-01-02", "2020-01-03", "2020-01-06", "2020-01-07"]
-    )
+    dates = pd.to_datetime(["2020-01-02", "2020-01-03", "2020-01-06", "2020-01-07"])
     positions = pd.DataFrame(
         {
             "rebalance_date": ["20200101", "20200102"],

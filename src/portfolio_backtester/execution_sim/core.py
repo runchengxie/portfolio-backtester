@@ -1,4 +1,5 @@
 """Order-level capacity execution simulation for rebalance targets."""
+
 from __future__ import annotations
 
 from typing import Any
@@ -54,6 +55,7 @@ from .results import (
 )
 
 TradeFeeModel = DetailedTradeFeeModel
+
 
 def simulate_capacity_execution(
     positions: pd.DataFrame | None,
@@ -816,5 +818,3 @@ def _build_tradable_table(
         return None
     table = pricing.pivot(index="trade_date", columns="symbol", values=tradable_col)
     return table.mask(table.isna(), False).astype(bool)
-
-

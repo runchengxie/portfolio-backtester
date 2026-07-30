@@ -101,8 +101,6 @@ def _rebalance_ideal_target(
     return float(sell_traded + buy_traded), float(sell_cost + buy_cost)
 
 
-
-
 def _build_ideal_rebalance_orders(
     *,
     rebalance_date: pd.Timestamp,
@@ -142,8 +140,6 @@ def _build_ideal_rebalance_orders(
     return sell_orders, buy_orders
 
 
-
-
 def _ideal_nav_order(
     *,
     rebalance_date: pd.Timestamp,
@@ -163,8 +159,6 @@ def _ideal_nav_order(
         start_idx=trade_idx,
         max_days=1,
     )
-
-
 
 
 def _build_nav_orders_for_target(
@@ -215,9 +209,7 @@ def _build_nav_orders_for_target(
         elif delta < -1e-8:
             amount = abs(float(delta))
             held_quantity = max(float(shares.get(symbol, 0.0)), 0.0)
-            reference_price = (
-                current_notional / held_quantity if held_quantity > 1e-12 else np.nan
-            )
+            reference_price = current_notional / held_quantity if held_quantity > 1e-12 else np.nan
             requested_quantity = (
                 amount / reference_price
                 if np.isfinite(reference_price) and reference_price > 0
@@ -240,8 +232,6 @@ def _build_nav_orders_for_target(
     return orders
 
 
-
-
 def _nav_sell_max_days(
     config: ExecutionSimConfig,
     *,
@@ -254,8 +244,6 @@ def _nav_sell_max_days(
             return max(1, int(tables.date_to_idx[next_entry_date] - trade_idx))
         return max(1, int(len(tables.trade_dates) - trade_idx))
     return int(config.sell_max_days)
-
-
 
 
 def _execute_ideal_sell_orders(
@@ -306,8 +294,6 @@ def _execute_ideal_sell_orders(
     return float(traded_notional), float(transaction_cost)
 
 
-
-
 def _apply_ideal_sell_fill(
     *,
     order: _NavOrder,
@@ -342,14 +328,10 @@ def _apply_ideal_sell_fill(
     return float(cost)
 
 
-
-
 def _ideal_sell_status(order: _NavOrder, price: float) -> str:
     if order.remaining_notional <= 1e-8:
         return "filled"
     return "missing_price" if not np.isfinite(price) else "partially_filled"
-
-
 
 
 def _execute_ideal_buy_orders(
@@ -422,8 +404,6 @@ def _execute_ideal_buy_orders(
     return float(traded_notional), float(transaction_cost)
 
 
-
-
 def _apply_ideal_buy_fill(
     *,
     order: _NavOrder,
@@ -455,11 +435,7 @@ def _apply_ideal_buy_fill(
     return float(cost)
 
 
-
-
 def _ideal_buy_status(order: _NavOrder, price: float) -> str:
     if order.remaining_notional <= 1e-8:
         return "filled"
     return "missing_price" if not np.isfinite(price) else "insufficient_cash"
-
-

@@ -22,8 +22,6 @@ def _target_cash_notional(target_weights: Mapping[str, float], nav: float) -> fl
     return max(1.0 - float(target_gross), 0.0) * float(nav)
 
 
-
-
 def _cash_weight_breakdown(
     *,
     cash: float,
@@ -42,8 +40,6 @@ def _cash_weight_breakdown(
         float(target_cash_weight),
         float(max(cash_weight - target_cash_weight, 0.0)),
     )
-
-
 
 
 def _cost_adjusted_target_notional(
@@ -89,8 +85,6 @@ def _cost_adjusted_target_notional(
     return {symbol: weight * lower for symbol, weight in clean_weights.items()}
 
 
-
-
 def _build_targets_by_rebalance(
     positions: pd.DataFrame,
 ) -> list[tuple[pd.Timestamp, dict[str, Any]]]:
@@ -108,5 +102,3 @@ def _build_targets_by_rebalance(
             (pd.to_datetime(rebalance_date), {"entry_date": entry_date, "weights": weights})
         )
     return grouped
-
-

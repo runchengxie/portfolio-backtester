@@ -1,4 +1,5 @@
 """Result aggregation and column schemas."""
+
 from __future__ import annotations
 
 from typing import Any
@@ -23,20 +24,21 @@ from .results import (
 TradeFeeModel = DetailedTradeFeeModel
 
 __all__ = [
-    '_daily_period_info',
-    '_empty_adjusted_nav_result',
-    '_empty_result',
-    '_executed_daily_columns',
-    '_fill_columns',
-    '_format_date',
-    '_nav_fill_columns',
-    '_nav_order_columns',
-    '_nav_side_fill_ratio',
-    '_order_columns',
-    '_side_fill_ratio',
-    '_summarize_adjusted_nav',
-    '_summarize_orders',
+    "_daily_period_info",
+    "_empty_adjusted_nav_result",
+    "_empty_result",
+    "_executed_daily_columns",
+    "_fill_columns",
+    "_format_date",
+    "_nav_fill_columns",
+    "_nav_order_columns",
+    "_nav_side_fill_ratio",
+    "_order_columns",
+    "_side_fill_ratio",
+    "_summarize_adjusted_nav",
+    "_summarize_orders",
 ]
+
 
 def _summarize_orders(
     config: ExecutionSimConfig,

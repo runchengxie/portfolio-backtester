@@ -1,4 +1,5 @@
 """Price and liquidity capacity queries."""
+
 from __future__ import annotations
 
 import numpy as np
@@ -13,17 +14,18 @@ from .config import (
 TradeFeeModel = DetailedTradeFeeModel
 
 __all__ = [
-    '_capacity_notional',
-    '_capacity_weight',
-    '_execution_window_dates',
-    '_position_values_by_symbol',
-    '_positions_value',
-    '_price_at',
-    '_refresh_last_prices',
-    '_table_bool_at',
-    '_table_float_at',
-    '_valuation_price',
+    "_capacity_notional",
+    "_capacity_weight",
+    "_execution_window_dates",
+    "_position_values_by_symbol",
+    "_positions_value",
+    "_price_at",
+    "_refresh_last_prices",
+    "_table_bool_at",
+    "_table_float_at",
+    "_valuation_price",
 ]
+
 
 def _execution_window_dates(
     entry_date: pd.Timestamp,
@@ -180,5 +182,3 @@ def _position_values_by_symbol(
         price = _valuation_price(symbol, trade_date, price_table, last_prices)
         values[symbol] = float(quantity) * float(price) if np.isfinite(price) else 0.0
     return values
-
-
