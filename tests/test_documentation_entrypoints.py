@@ -73,11 +73,13 @@ def test_ty_is_the_only_configured_type_checker() -> None:
 def test_docs_record_current_automation_status() -> None:
     docs = (ROOT / "docs" / "testing.md").read_text(encoding="utf-8")
 
-    assert "`.github/workflows/ci.yml`" in docs
+    assert "`.github/workflows/ci.yml.disabled`" in docs
+    assert "已被刻意删除" in docs
     assert "仓库级 GitHub Actions 当前关闭" in docs
     assert "只作为轻量检查模板保留" in docs
     assert "本地命令和工作区 `pre-push` 是当前质量事实来源" in docs
-    assert (ROOT / ".github" / "workflows" / "ci.yml").is_file()
+    assert (ROOT / ".github" / "workflows" / "ci.yml.disabled").is_file()
+    assert not (ROOT / ".github" / "workflows" / "ci.yml").is_file()
     assert ".github/workflows/tests.yml" not in docs
 
 

@@ -185,6 +185,7 @@ dependencies = [
     { name = "pandas" },
     { name = "pyarrow" },
     { name = "pyyaml" },
+    { name = "research-dev-metrics" },
     { name = "scikit-learn" },
     { name = "xgboost" },
 ]
@@ -203,6 +204,7 @@ requires-dist = [
     { name = "pyarrow", specifier = ">=23.0.1" },
     { name = "pytest", marker = "extra == 'dev'", specifier = ">=9.0.3" },
     { name = "pyyaml", specifier = ">=6.0" },
+    { name = "research-dev-metrics", git = "https://github.com/runchengxie/research-dev-metrics.git?rev=e1d6e278b0645a23adb523ada9fa8d4743c2e3bf" },
     { name = "ruff", marker = "extra == 'dev'", specifier = ">=0.8" },
     { name = "scikit-learn", specifier = ">=1.2" },
     { name = "ty", marker = "extra == 'dev'", specifier = ">=0.0.55" },
@@ -335,6 +337,11 @@ wheels = [
     { url = "https://files.pythonhosted.org/packages/f0/7a/1c7270340330e575b92f397352af856a8c06f230aa3e76f86b39d01b416a/pyyaml-6.0.3-cp314-cp314t-win_amd64.whl", hash = "sha256:4ad1906908f2f5ae4e5a8ddfce73c320c2a1429ec52eafd27138b7f1cbe341c9", size = 174062, upload-time = "2025-09-25T21:32:55.767Z" },
     { url = "https://files.pythonhosted.org/packages/f1/12/de94a39c2ef588c7e6455cfbe7343d3b2dc9d6b6b2f40c4c6565744c873d/pyyaml-6.0.3-cp314-cp314t-win_arm64.whl", hash = "sha256:ebc55a14a21cb14062aa4162f906cd962b28e2e9ea38f9b4391244cd8de4ae0b", size = 149341, upload-time = "2025-09-25T21:32:56.828Z" },
 ]
+
+[[package]]
+name = "research-dev-metrics"
+version = "0.1.2"
+source = { git = "https://github.com/runchengxie/research-dev-metrics.git?rev=e1d6e278b0645a23adb523ada9fa8d4743c2e3bf#e1d6e278b0645a23adb523ada9fa8d4743c2e3bf" }
 
 [[package]]
 name = "ruff"

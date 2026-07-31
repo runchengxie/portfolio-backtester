@@ -52,7 +52,7 @@ scripts/dev/run_tests.sh maintainability
 
 ## GitHub Actions 状态
 
-`.github/workflows/ci.yml` 文件存在，并声明 pull request 与手动触发入口。仓库级 GitHub Actions 当前关闭，GitHub 不会为该文件创建运行记录。这个文件只作为轻量检查模板保留。本地命令和工作区 `pre-push` 是当前质量事实来源。
+`.github/workflows/ci.yml` 已被刻意删除，仅保留 `.github/workflows/ci.yml.disabled` 只作为轻量检查模板保留。仓库级 GitHub Actions 当前关闭，GitHub 不会为已禁用的模板创建运行记录。本地命令和工作区 `pre-push` 是当前质量事实来源。
 
 模板覆盖：
 

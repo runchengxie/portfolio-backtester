@@ -54,7 +54,7 @@ case "$mode" in
     run_ruff format --check . "$@"
     ;;
   maintainability)
-    python scripts/dev/maintainability_metrics.py --ratchet "$@"
+    uv run --extra dev python scripts/dev/maintainability_metrics.py --ratchet "$@"
     ;;
   -h | --help | help)
     usage
