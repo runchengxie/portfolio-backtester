@@ -142,7 +142,7 @@ def test_backtest_spec_is_frozen_and_json_serializable() -> None:
     assert restored.max_positive_names == 10
     assert describe_execution_model(restored.execution) == describe_execution_model(spec.execution)
     with pytest.raises(FrozenInstanceError):
-        spec.rank_offset = 1  # type: ignore[misc]
+        spec.rank_offset = 1  # ty: ignore[invalid-assignment]
 
 
 def test_backtest_spec_rejects_unknown_schema_version() -> None:

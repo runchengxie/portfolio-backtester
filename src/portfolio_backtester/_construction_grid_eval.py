@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from pathlib import Path
-from typing import Any
+from typing import Any, cast
 
 import pandas as pd
 
@@ -19,6 +19,7 @@ from ._construction_grid_signal import (
 )
 from .benchmarking import build_benchmark_series
 from .execution import build_execution_model
+from ._execution_models import ExitFallbackPolicy, ExitPricePolicy
 from .metrics import (
     daily_ic_series,
     estimate_turnover,
@@ -253,8 +254,8 @@ def _build_variant_backtest_options(
         "execution_model": build_execution_model(
             execution_cfg,
             default_cost_bps=float(row["cost_bps"]),
-            default_exit_price_policy=exit_price_policy,
-            default_exit_fallback_policy=exit_fallback_policy,
+            default_exit_price_policy=cast(ExitPricePolicy, exit_price_policy),
+            default_exit_fallback_policy=cast(ExitFallbackPolicy, exit_fallback_policy),
             default_price_col=price_col,
         ),
         "exit_horizon_days": int(label_horizon) if label_horizon is not None else None,

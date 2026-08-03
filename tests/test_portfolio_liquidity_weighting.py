@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import numpy as np
 import pandas as pd
+from typing import cast
 import pytest
 
 from portfolio_backtester.portfolio import build_position_weights, build_positions_by_rebalance
@@ -33,8 +34,8 @@ def test_sqrt_liquidity_weighting_uses_liquidity_and_caps_concentration():
 
 
 def test_build_positions_can_apply_quantile_liquidity_floor_before_topk():
-    trade_date = pd.Timestamp("2024-01-01")
-    entry_date = pd.Timestamp("2024-01-02")
+    trade_date = cast(pd.Timestamp, pd.Timestamp("2024-01-01"))
+    entry_date = cast(pd.Timestamp, pd.Timestamp("2024-01-02"))
     data = pd.DataFrame(
         {
             "trade_date": [trade_date] * 4,
@@ -70,8 +71,8 @@ def test_build_positions_can_apply_quantile_liquidity_floor_before_topk():
 
 
 def test_build_positions_can_tiebreak_within_score_bucket_by_size():
-    trade_date = pd.Timestamp("2024-01-01")
-    entry_date = pd.Timestamp("2024-01-02")
+    trade_date = cast(pd.Timestamp, pd.Timestamp("2024-01-01"))
+    entry_date = cast(pd.Timestamp, pd.Timestamp("2024-01-02"))
     data = pd.DataFrame(
         {
             "trade_date": [trade_date] * 3,
@@ -106,8 +107,8 @@ def test_build_positions_can_tiebreak_within_score_bucket_by_size():
 
 
 def test_build_positions_score_margin_keeps_prior_holding_with_close_score():
-    first = pd.Timestamp("2024-01-01")
-    second = pd.Timestamp("2024-01-08")
+    first = cast(pd.Timestamp, pd.Timestamp("2024-01-01"))
+    second = cast(pd.Timestamp, pd.Timestamp("2024-01-08"))
     data = pd.DataFrame(
         {
             "trade_date": [first, first, second, second],
@@ -133,8 +134,8 @@ def test_build_positions_score_margin_keeps_prior_holding_with_close_score():
 
 
 def test_build_positions_supports_sqrt_liquidity_weighting_with_pricing_liquidity():
-    trade_date = pd.Timestamp("2024-01-01")
-    entry_date = pd.Timestamp("2024-01-02")
+    trade_date = cast(pd.Timestamp, pd.Timestamp("2024-01-01"))
+    entry_date = cast(pd.Timestamp, pd.Timestamp("2024-01-02"))
     symbols = [f"S{i:03d}" for i in range(100)]
     data = pd.DataFrame(
         {

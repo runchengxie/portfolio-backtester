@@ -6,6 +6,7 @@ import sys
 from pathlib import Path
 
 import pandas as pd
+from typing import cast
 import pytest
 
 from portfolio_backtester import (
@@ -16,6 +17,10 @@ from portfolio_backtester import (
 )
 
 ROOT = Path(__file__).resolve().parents[1]
+
+
+def _ts(value: str) -> pd.Timestamp:
+    return cast(pd.Timestamp, pd.Timestamp(value))
 
 
 def test_external_signal_can_build_positions_and_run_position_backtest() -> None:
@@ -47,7 +52,7 @@ def test_external_signal_can_build_positions_and_run_position_backtest() -> None
         signals,
         strategy=strategy,
         price_col="close",
-        rebalance_dates=[pd.Timestamp("2026-01-05")],
+        rebalance_dates=[_ts("2026-01-05")],
         shift_days=1,
     )
     periods = pd.DataFrame(
@@ -120,7 +125,7 @@ positions = construct_positions_from_strategy(
         top_k=1,
     ),
     price_col="close",
-    rebalance_dates=[pd.Timestamp("2026-01-05")],
+    rebalance_dates=[_ts("2026-01-05")],
     shift_days=1,
 )
 periods = pd.DataFrame(

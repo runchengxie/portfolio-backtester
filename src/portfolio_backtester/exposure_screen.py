@@ -57,7 +57,7 @@ def _active_summary_from_summary(summary_path: Path) -> Path | None:
     return _resolve_path(exposure.get("active_summary_file"), base_dir=summary_path.parent)
 
 
-def _finite_float(value: object) -> float | None:
+def _finite_float(value: Any) -> float | None:
     try:
         result = float(value)
     except (TypeError, ValueError):

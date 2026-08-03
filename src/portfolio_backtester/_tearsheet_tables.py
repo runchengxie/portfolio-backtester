@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from collections.abc import Mapping
-from typing import Any
+from typing import Any, cast
 
 import numpy as np
 import pandas as pd
@@ -46,7 +46,7 @@ def _monthly_returns_table(returns: pd.Series) -> str:
     rows.append("<tbody>")
     for year, row in pivot.iterrows():
         year_return = float((1.0 + row.dropna()).prod() - 1.0) if row.notna().any() else np.nan
-        cells = [f"<td>{int(year)}</td>"]
+        cells = [f"<td>{int(cast(Any, year))}</td>"]
         for month in range(1, 13):
             value = row.get(month, np.nan)
             cells.append(
@@ -166,7 +166,9 @@ def _eoy_returns_table(
         if not benchmark.empty
         else pd.Series(dtype=float, index=pd.DatetimeIndex([], name="trade_date"))
     )
-    years = sorted(set(strategy_yearly.index.year) | set(benchmark_yearly.index.year))
+    years = sorted(
+        set(cast(Any, strategy_yearly.index).year) | set(cast(Any, benchmark_yearly.index).year)
+    )
     benchmark_header = benchmark_label or "Benchmark"
     rows = [
         "<table>",
@@ -233,19 +235,19 @@ def _drawdown_periods(returns: pd.Series, *, limit: int) -> list[dict[str, Any]]
     trough_value = 0.0
     last_date: pd.Timestamp | None = None
     for date, value in drawdown.items():
-        last_date = pd.Timestamp(date)
+        last_date = cast(pd.Timestamp, pd.Timestamp(date))
         value = float(value)
         if value < 0 and not in_drawdown:
             in_drawdown = True
-            start_date = pd.Timestamp(date)
-            trough_date = pd.Timestamp(date)
+            start_date = cast(pd.Timestamp, pd.Timestamp(date))
+            trough_date = cast(pd.Timestamp, pd.Timestamp(date))
             trough_value = value
         elif value < 0 and in_drawdown:
             if value < trough_value:
                 trough_value = value
-                trough_date = pd.Timestamp(date)
+                trough_date = cast(pd.Timestamp, pd.Timestamp(date))
         elif value >= 0 and in_drawdown:
-            recovered = pd.Timestamp(date)
+            recovered = cast(pd.Timestamp, pd.Timestamp(date))
             periods.append(
                 _drawdown_period_record(
                     start=start_date,

@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import replace
+from typing import Any, cast
 
 import pandas as pd
 import pytest
@@ -25,7 +26,7 @@ def _position_frame(*, tradable_a: bool = True) -> pd.DataFrame:
 
 
 def test_fixed_slots_and_strict_entry_cutoff_leave_unfilled_slots_in_cash() -> None:
-    date = pd.Timestamp("2024-01-02")
+    date = cast(pd.Timestamp, pd.Timestamp("2024-01-02"))
     data = _position_frame()
 
     fixed = build_positions_by_rebalance(
@@ -70,9 +71,9 @@ def test_strict_entry_cutoff_keeps_buffered_incumbents_without_weak_name_fallbac
 
 
 def test_target_first_freezes_names_before_entry_tradability_is_applied() -> None:
-    date = pd.Timestamp("2024-01-02")
+    date = cast(pd.Timestamp, pd.Timestamp("2024-01-02"))
     data = _position_frame(tradable_a=False)
-    common = {
+    common: dict[str, Any] = {
         "pred_col": "score",
         "price_col": "close",
         "rebalance_dates": [date],
@@ -186,6 +187,9 @@ def _backtest_spec() -> BacktestSpec:
         default_exit_fallback_policy="ffill",
         default_price_col="close",
     )
+    rebalance_dates = cast(
+        "tuple[pd.Timestamp, ...]", (pd.Timestamp("2024-01-02"),)
+    )
     return BacktestSpec(
         strategy=StrategySpec(
             name="fixed-slot",
@@ -196,7 +200,7 @@ def _backtest_spec() -> BacktestSpec:
             long_only=True,
         ),
         execution=execution,
-        rebalance_dates=(pd.Timestamp("2024-01-02"),),
+        rebalance_dates=rebalance_dates,
         shift_days=1,
         trading_days_per_year=252,
     )

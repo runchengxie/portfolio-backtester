@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from collections.abc import Mapping
-from typing import Any
+from typing import Any, cast
 
 import numpy as np
 import pandas as pd
@@ -99,6 +99,6 @@ def _build_targets_by_rebalance(
             .to_dict()
         )
         grouped.append(
-            (pd.to_datetime(rebalance_date), {"entry_date": entry_date, "weights": weights})
+            (pd.to_datetime(cast(pd.Timestamp, rebalance_date)), {"entry_date": entry_date, "weights": weights})
         )
     return grouped

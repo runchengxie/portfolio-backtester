@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import json
 from pathlib import Path
-from typing import Any
+from typing import Any, cast
 
 import numpy as np
 import pandas as pd
@@ -85,7 +85,7 @@ def _coerce_bool(value: Any, *, default: bool) -> bool:
 def _periods_per_year(stats: dict[str, Any], fallback: int) -> float:
     value = stats.get("periods_per_year")
     try:
-        number = float(value)
+        number = float(cast(Any, value))
     except (TypeError, ValueError):
         return float(fallback)
     return number if np.isfinite(number) and number > 0 else float(fallback)
@@ -145,7 +145,7 @@ def _parse_date_list(values: Any) -> list[pd.Timestamp]:
         if pd.isna(dt):
             dt = pd.to_datetime(raw, errors="coerce")
         if not pd.isna(dt):
-            parsed.append(pd.Timestamp(dt))
+            parsed.append(cast(pd.Timestamp, dt))
     return sorted(dict.fromkeys(parsed))
 
 

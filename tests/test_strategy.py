@@ -1,8 +1,13 @@
 from __future__ import annotations
 
 import pandas as pd
+from typing import cast
 
 from portfolio_backtester.strategy import construct_positions_from_strategy, strategy_from_config
+
+
+def _ts(value: str) -> pd.Timestamp:
+    return cast(pd.Timestamp, pd.Timestamp(value))
 
 
 def _signals() -> pd.DataFrame:
@@ -32,7 +37,7 @@ def test_strategy_from_config_maps_legacy_backtest_and_constructs_positions() ->
         _signals(),
         strategy=strategy,
         price_col="close",
-        rebalance_dates=[pd.Timestamp("2026-01-05")],
+        rebalance_dates=[_ts("2026-01-05")],
         shift_days=1,
     )
 

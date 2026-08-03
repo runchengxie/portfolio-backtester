@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import pandas as pd
+from typing import cast
 import pytest
 
 from portfolio_backtester.engine import backtest_topk
@@ -22,7 +23,7 @@ def _frame(rows: list[tuple[str, str, float]]) -> pd.DataFrame:
 
 
 def test_selection_min_score_leaves_long_portfolio_below_top_k() -> None:
-    date = pd.Timestamp("2024-01-02")
+    date = cast(pd.Timestamp, pd.Timestamp("2024-01-02"))
     data = _frame(
         [
             ("2024-01-02", "A", 3.0),
@@ -53,7 +54,7 @@ def test_selection_controls_keep_empty_input_empty() -> None:
         data,
         pred_col="score",
         price_col="close",
-        rebalance_dates=[pd.Timestamp("2024-01-02")],
+        rebalance_dates=[cast(pd.Timestamp, pd.Timestamp("2024-01-02"))],
         top_k=3,
         shift_days=0,
         selection_min_score=2.0,
@@ -64,7 +65,7 @@ def test_selection_controls_keep_empty_input_empty() -> None:
 
 
 def test_selection_min_score_uses_ascending_semantics_for_short_side() -> None:
-    date = pd.Timestamp("2024-01-02")
+    date = cast(pd.Timestamp, pd.Timestamp("2024-01-02"))
     data = _frame(
         [
             ("2024-01-02", "A", 5.0),
@@ -95,7 +96,7 @@ def test_selection_min_score_uses_ascending_semantics_for_short_side() -> None:
 
 
 def test_long_short_threshold_uses_actual_long_count_for_short_capacity() -> None:
-    date = pd.Timestamp("2024-01-02")
+    date = cast(pd.Timestamp, pd.Timestamp("2024-01-02"))
     data = _frame(
         [
             ("2024-01-02", "A", 5.0),
@@ -129,8 +130,8 @@ def test_long_short_threshold_uses_actual_long_count_for_short_capacity() -> Non
 
 
 def test_max_new_names_exempts_initial_build_and_limits_later_replacements() -> None:
-    first = pd.Timestamp("2024-01-02")
-    second = pd.Timestamp("2024-01-09")
+    first = cast(pd.Timestamp, pd.Timestamp("2024-01-02"))
+    second = cast(pd.Timestamp, pd.Timestamp("2024-01-09"))
     data = _frame(
         [
             ("2024-01-02", "A", 6.0),
@@ -163,8 +164,8 @@ def test_max_new_names_exempts_initial_build_and_limits_later_replacements() -> 
 
 
 def test_max_new_names_runs_after_tradability_and_respects_group_cap() -> None:
-    first = pd.Timestamp("2024-01-02")
-    second = pd.Timestamp("2024-01-09")
+    first = cast(pd.Timestamp, pd.Timestamp("2024-01-02"))
+    second = cast(pd.Timestamp, pd.Timestamp("2024-01-09"))
     rows = [
         ("2024-01-02", "A", 6.0, "X", True),
         ("2024-01-02", "B", 5.0, "Y", True),
@@ -208,8 +209,8 @@ def test_max_new_names_runs_after_tradability_and_respects_group_cap() -> None:
 
 
 def test_threshold_and_new_name_limit_do_not_refill_ineligible_names() -> None:
-    first = pd.Timestamp("2024-01-02")
-    second = pd.Timestamp("2024-01-09")
+    first = cast(pd.Timestamp, pd.Timestamp("2024-01-02"))
+    second = cast(pd.Timestamp, pd.Timestamp("2024-01-09"))
     data = _frame(
         [
             ("2024-01-02", "A", 6.0),
@@ -240,8 +241,8 @@ def test_threshold_and_new_name_limit_do_not_refill_ineligible_names() -> None:
 
 
 def test_score_threshold_takes_precedence_over_weight_turnover_cap() -> None:
-    first = pd.Timestamp("2024-01-02")
-    second = pd.Timestamp("2024-01-09")
+    first = cast(pd.Timestamp, pd.Timestamp("2024-01-02"))
+    second = cast(pd.Timestamp, pd.Timestamp("2024-01-09"))
     data = _frame(
         [
             ("2024-01-02", "A", 6.0),
@@ -304,8 +305,8 @@ def test_backtest_records_weak_signal_period_as_cash() -> None:
 
 
 def test_backtest_long_short_threshold_does_not_underfill_short_leg() -> None:
-    first = pd.Timestamp("2024-01-02")
-    second = pd.Timestamp("2024-01-09")
+    first = cast(pd.Timestamp, pd.Timestamp("2024-01-02"))
+    second = cast(pd.Timestamp, pd.Timestamp("2024-01-09"))
     scores = {"A": 5.0, "B": -1.0, "C": -2.0, "D": -3.0, "E": -4.0}
     ending_prices = {"A": 10.0, "B": 9.0, "C": 8.0, "D": 7.0, "E": 6.0}
     data = pd.DataFrame(
@@ -379,8 +380,8 @@ def test_backtest_applies_new_name_budget_after_initial_build() -> None:
 
 
 def test_first_non_empty_selection_is_treated_as_initial_build() -> None:
-    first = pd.Timestamp("2024-01-02")
-    second = pd.Timestamp("2024-01-09")
+    first = cast(pd.Timestamp, pd.Timestamp("2024-01-02"))
+    second = cast(pd.Timestamp, pd.Timestamp("2024-01-09"))
     data = _frame(
         [
             ("2024-01-02", "A", 1.0),
@@ -408,7 +409,7 @@ def test_first_non_empty_selection_is_treated_as_initial_build() -> None:
 
 @pytest.mark.parametrize("threshold", [float("nan"), float("inf"), float("-inf")])
 def test_selection_min_score_must_be_finite(threshold: float) -> None:
-    date = pd.Timestamp("2024-01-02")
+    date = cast(pd.Timestamp, pd.Timestamp("2024-01-02"))
     data = _frame([("2024-01-02", "A", 1.0)])
 
     with pytest.raises(ValueError, match="selection_min_score must be finite"):
@@ -424,7 +425,7 @@ def test_selection_min_score_must_be_finite(threshold: float) -> None:
 
 
 def test_max_new_names_must_be_non_negative() -> None:
-    date = pd.Timestamp("2024-01-02")
+    date = cast(pd.Timestamp, pd.Timestamp("2024-01-02"))
     data = _frame([("2024-01-02", "A", 1.0)])
 
     with pytest.raises(ValueError, match="max_new_names_per_rebalance must be >= 0"):
@@ -441,7 +442,7 @@ def test_max_new_names_must_be_non_negative() -> None:
 
 @pytest.mark.parametrize("invalid", [True, 1.5, "1"])
 def test_max_new_names_must_be_an_integer(invalid: object) -> None:
-    date = pd.Timestamp("2024-01-02")
+    date = cast(pd.Timestamp, pd.Timestamp("2024-01-02"))
     data = _frame([("2024-01-02", "A", 1.0)])
 
     with pytest.raises(ValueError, match="non-negative integer"):
@@ -452,5 +453,5 @@ def test_max_new_names_must_be_an_integer(invalid: object) -> None:
             rebalance_dates=[date],
             top_k=1,
             shift_days=0,
-            max_new_names_per_rebalance=invalid,  # type: ignore[arg-type]
+            max_new_names_per_rebalance=invalid,  # ty: ignore[invalid-argument-type]
         )

@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from typing import Any, cast
+
 import pytest
 
 from portfolio_backtester.execution import (
@@ -18,7 +20,7 @@ from portfolio_backtester.execution import (
 
 @pytest.mark.parametrize("value", ["none", "off", "zero"])
 def test_build_cost_model_string_aliases_disable_cost(value: str) -> None:
-    model = build_cost_model(value, default_bps=15.0)
+    model = build_cost_model(cast(Any, value), default_bps=15.0)
 
     assert isinstance(model, NoCostModel)
 

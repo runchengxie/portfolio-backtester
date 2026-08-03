@@ -52,9 +52,11 @@ def _config_from_run(
     tradable_col: str | None,
     preserve_gross_exposure: bool | None,
 ) -> PositionBacktestConfig:
-    payload = _read_yaml(config_path)
-    data = payload.get("data") if isinstance(payload.get("data"), dict) else {}
-    backtest = payload.get("backtest") if isinstance(payload.get("backtest"), dict) else {}
+    payload: dict[str, Any] = _read_yaml(config_path)
+    raw_data = payload.get("data")
+    data: dict[str, Any] = raw_data if isinstance(raw_data, dict) else {}
+    raw_backtest = payload.get("backtest")
+    backtest: dict[str, Any] = raw_backtest if isinstance(raw_backtest, dict) else {}
     resolved_exit_policy = str(
         exit_price_policy or backtest.get("exit_price_policy") or "period"
     ).strip()
@@ -74,8 +76,8 @@ def _config_from_run(
         trading_days_per_year=int(backtest.get("trading_days_per_year") or 252),
         long_only=bool(backtest.get("long_only", True)),
         preserve_gross_exposure=preserve,
-        exit_price_policy=resolved_exit_policy,  # type: ignore[arg-type]
-        exit_fallback_policy=resolved_fallback,  # type: ignore[arg-type]
+        exit_price_policy=resolved_exit_policy,  # ty: ignore[invalid-argument-type]
+        exit_fallback_policy=resolved_fallback,  # ty: ignore[invalid-argument-type]
         tradable_col=tradable_col or backtest.get("tradable_col"),
     )
 

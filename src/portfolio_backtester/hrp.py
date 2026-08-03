@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from collections.abc import Callable
 from dataclasses import asdict, dataclass
 from itertools import pairwise
 
@@ -12,9 +13,9 @@ try:
     from scipy.cluster.hierarchy import leaves_list, linkage
     from scipy.spatial.distance import squareform
 except Exception:  # pragma: no cover - optional dependency guard
-    leaves_list = None
-    linkage = None
-    squareform = None
+    leaves_list: Callable | None = None
+    linkage: Callable | None = None
+    squareform: Callable | None = None
 
 
 @dataclass(frozen=True)

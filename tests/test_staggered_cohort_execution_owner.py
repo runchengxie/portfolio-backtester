@@ -47,7 +47,7 @@ def _config(**overrides: object) -> StaggeredCohortExecutionConfig:
         "single_side_cost_bps": 0.0,
     }
     values.update(overrides)
-    return StaggeredCohortExecutionConfig(**values)  # type: ignore[arg-type]
+    return StaggeredCohortExecutionConfig(**values)  # ty: ignore[invalid-argument-type]
 
 
 def _calendar(dates: list[str]) -> pd.DataFrame:

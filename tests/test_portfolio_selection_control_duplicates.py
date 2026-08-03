@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import pandas as pd
+from typing import cast
 import pytest
 
 from portfolio_backtester.engine import backtest_topk
@@ -23,7 +24,7 @@ def _frame(rows: list[tuple[str, str, float]]) -> pd.DataFrame:
 
 @pytest.mark.parametrize("weighting", ["equal", "signal"])
 def test_selection_controls_do_not_count_duplicate_symbol_twice(weighting: str) -> None:
-    date = pd.Timestamp("2024-01-02")
+    date = cast(pd.Timestamp, pd.Timestamp("2024-01-02"))
     data = _frame(
         [
             ("2024-01-02", "A", 3.0),
@@ -49,8 +50,8 @@ def test_selection_controls_do_not_count_duplicate_symbol_twice(weighting: str) 
 
 
 def test_backtest_controls_deduplicate_before_signal_weighting() -> None:
-    first = pd.Timestamp("2024-01-02")
-    second = pd.Timestamp("2024-01-09")
+    first = cast(pd.Timestamp, pd.Timestamp("2024-01-02"))
+    second = cast(pd.Timestamp, pd.Timestamp("2024-01-09"))
     data = _frame(
         [
             ("2024-01-02", "A", 3.0),

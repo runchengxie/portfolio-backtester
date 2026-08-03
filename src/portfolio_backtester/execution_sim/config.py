@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from collections.abc import Mapping
 from dataclasses import dataclass
-from typing import Any
+from typing import Any, cast
 
 import numpy as np
 
@@ -58,7 +58,7 @@ def build_execution_sim_config(
         label="execution_sim.participation_rate",
     )
     liquidity_cols = _resolve_liquidity_cols(
-        sim_cfg,
+        cast("Mapping[str, Any]", sim_cfg),
         default_liquidity_col=default_liquidity_col,
     )
     buy_max_days = _coerce_positive_int(
@@ -155,14 +155,14 @@ def _resolve_sell_max_days(value: object) -> int | str:
     return _coerce_positive_int(value, label="execution_sim.sell_max_days")
 
 
-def _coerce_positive_float(value: object, *, label: str) -> float:
+def _coerce_positive_float(value: Any, *, label: str) -> float:
     number = float(value)
     if not np.isfinite(number) or number <= 0:
         raise ValueError(f"{label} must be > 0.")
     return number
 
 
-def _coerce_positive_int(value: object, *, label: str) -> int:
+def _coerce_positive_int(value: Any, *, label: str) -> int:
     number = int(value)
     if number <= 0:
         raise ValueError(f"{label} must be a positive integer.")

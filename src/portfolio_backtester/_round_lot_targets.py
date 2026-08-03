@@ -54,7 +54,7 @@ def select_round_lot_targets(
         industry = str(row.get("first_industry_name") or "UNKNOWN")
         if industry_counts.get(industry, 0) >= variant.industry_cap:
             continue
-        selected.append(cast("pd.Series", row))
+        selected.append(row)
         industry_counts[industry] = industry_counts.get(industry, 0) + 1
         if len(selected) >= variant.target_holdings:
             break

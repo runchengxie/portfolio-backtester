@@ -1,3 +1,4 @@
+import argparse
 import pandas as pd
 import pytest
 import yaml
@@ -142,16 +143,12 @@ def test_benchmark_ladder_cli_writes_csv(tmp_path):
     )
 
     benchmark_ladder.run(
-        type(
-            "Args",
-            (),
-            {
-                "config": str(config_path),
-                "output": None,
-                "output_json": None,
-                "log_level": "INFO",
-            },
-        )()
+        argparse.Namespace(
+            config=str(config_path),
+            output=None,
+            output_json=None,
+            log_level="INFO",
+        )
     )
 
     assert output.exists()

@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from collections.abc import Mapping, Sequence
-from typing import Any
+from typing import Any, cast
 
 import numpy as np
 import pandas as pd
@@ -112,9 +112,10 @@ def _build_exposure_rows(
     factor_meta: dict[str, dict[str, Any]] = {}
     by_date = scored.groupby("trade_date", sort=True)
     for rebalance_date, pos_day in positions.groupby("rebalance_date_ts", sort=True):
+        rebalance_date = cast(pd.Timestamp, rebalance_date)
         if rebalance_date not in by_date.groups:
             continue
-        day = by_date.get_group(rebalance_date).copy()
+        day = cast(pd.DataFrame, by_date.get_group(rebalance_date).copy())
         entry_date = pos_day["entry_date_ts"].iloc[0] if not pos_day.empty else None
         style_rows.extend(
             _style_rows_for_rebalance(

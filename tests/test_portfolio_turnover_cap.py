@@ -1,8 +1,13 @@
 from __future__ import annotations
 
 import pandas as pd
+from typing import cast
 
 from portfolio_backtester.portfolio import build_positions_by_rebalance
+
+
+def _ts(value: str) -> pd.Timestamp:
+    return cast(pd.Timestamp, pd.Timestamp(value))
 
 
 def test_build_positions_by_rebalance_limits_target_weight_turnover() -> None:
@@ -21,7 +26,7 @@ def test_build_positions_by_rebalance_limits_target_weight_turnover() -> None:
         frame,
         pred_col="pred",
         price_col="close",
-        rebalance_dates=[pd.Timestamp("2024-01-01"), pd.Timestamp("2024-01-08")],
+        rebalance_dates=[_ts("2024-01-01"), _ts("2024-01-08")],
         top_k=2,
         shift_days=0,
         weighting="equal",

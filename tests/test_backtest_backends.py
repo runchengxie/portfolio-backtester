@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import json
 from pathlib import Path
-from typing import ClassVar
+from typing import Any, ClassVar
 
 import pandas as pd
 import pytest
@@ -56,7 +56,7 @@ def _request(**overrides) -> NativePositionReplayRequest:
             }
         ]
     )
-    values = {
+    values: dict[str, Any] = {
         "positions": positions,
         "pricing": pricing,
         "periods": periods,

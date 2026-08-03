@@ -90,7 +90,7 @@ def _prepare_grid_config(
     return cfg
 
 
-def _finite(value: object) -> float | None:
+def _finite(value: Any) -> float | None:
     try:
         number = float(value)
     except (TypeError, ValueError):
@@ -98,7 +98,7 @@ def _finite(value: object) -> float | None:
     return number if np.isfinite(number) else None
 
 
-def _ratio(numerator: object, denominator: object) -> float | None:
+def _ratio(numerator: Any, denominator: Any) -> float | None:
     top = _finite(numerator)
     bottom = _finite(denominator)
     if top is None or bottom is None or bottom <= 0:

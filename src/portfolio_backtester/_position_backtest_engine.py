@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Any
+from typing import Any, cast
 
 import pandas as pd
 
@@ -18,6 +18,7 @@ from ._position_backtest_config import (
 )
 from .engine import _compute_trade_summary
 from .execution import BpsCostModel, ExitPolicy
+from ._execution_models import ExitFallbackPolicy, ExitPricePolicy
 from .metrics import summarize_period_returns
 from .portfolio_weights import normalize_position_weights
 
@@ -124,8 +125,8 @@ def _idx_for_price_table_date(
     date_ts = _date_value(date)
     if pd.isna(date_ts):
         return int(fallback)
-    trade_dates = pd.Index(pd.to_datetime(price_table.index).normalize())
-    matches = trade_dates.get_indexer([pd.Timestamp(date_ts).normalize()])
+    trade_dates = pd.Index(cast(Any, pd.to_datetime(price_table.index)).normalize())
+    matches = trade_dates.get_indexer([cast(pd.Timestamp, date_ts).normalize()])
     if len(matches) and int(matches[0]) >= 0:
         return int(matches[0])
     return int(fallback)
@@ -206,9 +207,9 @@ def _resolve_exit_policy_prices(
         )
 
     trade_dates = list(price_table.index)
-    date_to_idx = {pd.Timestamp(date): idx for idx, date in enumerate(trade_dates)}
+    date_to_idx = {cast(pd.Timestamp, pd.Timestamp(date)): idx for idx, date in enumerate(trade_dates)}
     exit_policy = ExitPolicy(
-        config.exit_price_policy,
+        cast(ExitPricePolicy, config.exit_price_policy),
         config.exit_fallback_policy,
         config.price_col,
     )
@@ -231,7 +232,7 @@ def _resolve_exit_policy_prices(
         exit_prices=exit_prices.reindex(target.index),
         entry_idx=entry_idx,
         planned_exit_idx=planned_exit_idx,
-        exit_date=pd.Timestamp(trade_dates[int(exit_idx)]),
+        exit_date=cast(pd.Timestamp, pd.Timestamp(trade_dates[int(exit_idx)])),
         exit_idx=int(exit_idx),
         missing_prices=missing,
     )
@@ -258,11 +259,11 @@ def _resolve_position_period_prices(
     config: PositionBacktestConfig,
 ) -> _PositionPeriodPrices:
     exit_table = exit_price_table if exit_price_table is not None else price_table
-    entry_date = pd.Timestamp(period.entry_date_ts)
+    entry_date = cast(pd.Timestamp, pd.Timestamp(period.entry_date_ts))
     entry_idx = _idx_for_price_table_date(price_table, entry_date, int(period.entry_idx))
     planned_exit_idx = _planned_exit_idx_for_price_table(period, price_table)
     if config.exit_price_policy == "period":
-        exit_date = pd.Timestamp(period.exit_date_ts)
+        exit_date = cast(pd.Timestamp, pd.Timestamp(period.exit_date_ts))
         return _valid_period_policy_prices(
             weights=weights,
             price_table=exit_table,
@@ -492,8 +493,9 @@ def _evaluate_position_periods(
     rows: list[dict[str, Any]] = []
     skipped: list[dict[str, Any]] = []
     for period in periods.itertuples(index=False):
+        period = cast(Any, period)
         rebalance_key = str(period.rebalance_key)
-        entry_date = pd.Timestamp(period.entry_date_ts)
+        entry_date = cast(pd.Timestamp, pd.Timestamp(period.entry_date_ts))
         target = _weights_for_rebalance(
             positions,
             rebalance_key,

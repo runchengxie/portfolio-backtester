@@ -3,9 +3,10 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Any, Literal
+from typing import Any, Literal, cast
 
 import pandas as pd
+from pandas.api.typing import NaTType
 
 from .contracts import assert_positions_by_rebalance_frame
 
@@ -51,7 +52,7 @@ def _date_series(values: pd.Series) -> pd.Series:
     return parsed.dt.normalize()
 
 
-def _date_value(value: Any) -> pd.Timestamp:
+def _date_value(value: Any) -> pd.Timestamp | NaTType:
     text = str(value).strip()
     if text.endswith(".0"):
         text = text[:-2]
@@ -61,7 +62,7 @@ def _date_value(value: Any) -> pd.Timestamp:
         parsed = pd.to_datetime(value, errors="coerce")
     if pd.isna(parsed):
         return pd.NaT
-    return pd.Timestamp(parsed).normalize()
+    return cast(pd.Timestamp, parsed).normalize()
 
 
 def _date_key(value: Any) -> str:

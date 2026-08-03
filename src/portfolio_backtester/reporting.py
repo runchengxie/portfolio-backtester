@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import re
 from collections.abc import Mapping, Sequence
-from typing import Any
+from typing import Any, cast
 
 import numpy as np
 import pandas as pd
@@ -280,7 +280,7 @@ def _extract_periods_per_year(stats: Mapping[str, Any] | None) -> float:
         return np.nan
     value = stats.get("periods_per_year")
     try:
-        periods_per_year = float(value)
+        periods_per_year = float(cast("str | int | float", value))
     except (TypeError, ValueError):
         return np.nan
     return periods_per_year if np.isfinite(periods_per_year) and periods_per_year > 0 else np.nan

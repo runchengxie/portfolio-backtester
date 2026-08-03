@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from dataclasses import replace
 from functools import partial
+from typing import Any, cast
 
 import numpy as np
 import pandas as pd
@@ -83,7 +84,7 @@ def _append_position_rows(
                 "entry_date": selection.entry_date.strftime("%Y%m%d"),
                 "symbol": code,
                 "weight": float(weight_sign * weights.get(code, 0.0)),
-                "signal": float(signal_map.get(code, np.nan)),
+                "signal": float(cast(Any, signal_map.get(code, np.nan))),
                 "rank": int(rank_map.get(code, 0)),
                 "side": side,
             }

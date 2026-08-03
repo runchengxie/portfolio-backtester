@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from typing import Any
+from typing import Any, cast
 
 import numpy as np
 import pandas as pd
@@ -130,7 +130,7 @@ def _empty_result(
 def _empty_adjusted_nav_result(
     config: ExecutionSimConfig,
     *,
-    status: str,
+    status: str | None,
     extra: dict[str, Any] | None = None,
 ) -> ExecutionAdjustedNavResult:
     daily = pd.DataFrame(columns=_executed_daily_columns())
@@ -269,7 +269,7 @@ def _side_fill_ratio(frame: pd.DataFrame) -> float:
 def _format_date(value: object) -> str | None:
     if value is None or pd.isna(value):
         return None
-    return pd.to_datetime(value).strftime("%Y%m%d")
+    return pd.to_datetime(cast(str, value)).strftime("%Y%m%d")
 
 
 def _order_columns() -> list[str]:

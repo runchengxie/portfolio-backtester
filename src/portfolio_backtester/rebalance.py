@@ -4,7 +4,7 @@ import operator
 import re
 from collections.abc import Iterable
 from dataclasses import dataclass
-from typing import Literal
+from typing import Literal, SupportsIndex, cast
 
 import numpy as np
 import pandas as pd
@@ -55,7 +55,7 @@ class SessionRebalanceSchedule:
             raise ValueError("holding_mode must be 'until_next_rebalance'.")
         object.__setattr__(self, "rebalance_interval_sessions", interval)
         object.__setattr__(self, "phase", phase)
-        object.__setattr__(self, "anchor", pd.Timestamp(anchor).normalize())
+        object.__setattr__(self, "anchor", anchor.normalize())
 
     def dates(self, trading_sessions: Iterable[pd.Timestamp]) -> list[pd.Timestamp]:
         """Return the sessions selected by this anchored phase."""
@@ -72,7 +72,7 @@ def _positive_session_interval(value: object) -> int:
     if isinstance(value, bool):
         raise ValueError("rebalance_interval_sessions must be a positive integer.")
     try:
-        normalized = operator.index(value)
+        normalized = operator.index(cast(SupportsIndex, value))
     except TypeError as exc:
         raise ValueError("rebalance_interval_sessions must be a positive integer.") from exc
     if normalized <= 0:
@@ -84,7 +84,7 @@ def _session_phase(value: object, *, interval: int) -> int:
     if isinstance(value, bool):
         raise ValueError("phase must be an integer in [0, rebalance_interval_sessions).")
     try:
-        normalized = operator.index(value)
+        normalized = operator.index(cast(SupportsIndex, value))
     except TypeError as exc:
         raise ValueError("phase must be an integer in [0, rebalance_interval_sessions).") from exc
     if not 0 <= normalized < interval:
@@ -112,7 +112,7 @@ def get_session_interval_rebalance_dates(
     normalized_anchor = pd.to_datetime(anchor, errors="coerce")
     if pd.isna(normalized_anchor):
         raise ValueError("anchor must be a valid trading-session date.")
-    anchor_session = pd.Timestamp(normalized_anchor).normalize()
+    anchor_session = normalized_anchor.normalize()
     if anchor_session not in sessions:
         raise ValueError("anchor must be present in trading_sessions.")
     anchor_index = sessions.index(anchor_session)
@@ -125,12 +125,12 @@ def get_session_interval_rebalance_dates(
 
 def _clean_dates(dates: Iterable[pd.Timestamp]) -> list[pd.Timestamp]:
     date_series = pd.to_datetime(pd.Series(list(dates), name="date"), errors="coerce")
-    return sorted(pd.Timestamp(date).normalize() for date in date_series.dropna().unique())
+    return sorted(cast(pd.Timestamp, date).normalize() for date in date_series.dropna().unique())
 
 
 def _parse_anchor(value: str) -> pd.Timestamp:
     anchor = pd.to_datetime(value, format="%Y%m%d" if "-" not in value else None)
-    return pd.Timestamp(anchor).normalize()
+    return anchor.normalize()
 
 
 def _parse_multiweek_frequency(freq: str) -> _MultiweekFrequency | None:
@@ -176,7 +176,7 @@ def _multiweek_rebalance_dates(
     selected_dates: list[pd.Timestamp] = []
     for period, date in weekly_dates.items():
         if (period.ordinal - anchor_ordinal - phase) % weeks == 0:
-            selected_dates.append(pd.Timestamp(date))
+            selected_dates.append(cast(pd.Timestamp, date))
     return selected_dates
 
 
@@ -209,7 +209,7 @@ def get_rebalance_dates(dates: Iterable[pd.Timestamp], freq: str) -> list[pd.Tim
 
 
 def _timestamp_set(dates: Iterable[pd.Timestamp]) -> set[pd.Timestamp]:
-    return {pd.Timestamp(date) for date in pd.to_datetime(list(dates))}
+    return {cast(pd.Timestamp, date) for date in pd.to_datetime(list(dates))}
 
 
 def sample_rebalance_frame(
@@ -229,7 +229,7 @@ def sample_rebalance_frame(
         index=frame_sorted.index,
     )
     trade_dates_sorted = sorted(
-        pd.Timestamp(date) for date in normalized_trade_dates.dropna().unique()
+        cast(pd.Timestamp, date) for date in normalized_trade_dates.dropna().unique()
     )
     rebalance_dates = get_rebalance_dates(trade_dates_sorted, frequency)
     if valid_dates:
