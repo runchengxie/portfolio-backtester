@@ -43,7 +43,7 @@ def resolve_backtest_period_plan(
     if exit_mode == "rebalance":
         if rebalance_index >= len(rebalance_dates) - 1:
             return None
-        next_rebalance = pd.Timestamp(rebalance_dates[rebalance_index + 1]).normalize()
+        next_rebalance = rebalance_dates[rebalance_index + 1].normalize()
         if next_rebalance not in date_to_idx:
             return None
         planned_exit_date = resolve_execution_date(

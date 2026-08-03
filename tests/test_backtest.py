@@ -1,9 +1,14 @@
 import numpy as np
 import pandas as pd
 import pytest
+from typing import cast
 
 from portfolio_backtester.engine import backtest_topk
 from portfolio_backtester.execution import build_execution_model
+
+
+def _ts(value: str) -> pd.Timestamp:
+    return cast(pd.Timestamp, pd.Timestamp(value))
 
 
 def test_backtest_initial_cost_applied():
@@ -15,7 +20,7 @@ def test_backtest_initial_cost_applied():
             "close": [100.0, 100.0, 110.0, 90.0],
         }
     )
-    rebalance_dates = [pd.Timestamp("2020-01-01"), pd.Timestamp("2020-01-02")]
+    rebalance_dates = [_ts("2020-01-01"), _ts("2020-01-02")]
     result = backtest_topk(
         df,
         pred_col="pred",
@@ -53,7 +58,7 @@ def test_backtest_rank_offset_skips_top_ranked_names():
             "close": [100.0, 100.0, 100.0, 200.0, 150.0, 80.0],
         }
     )
-    rebalance_dates = [pd.Timestamp("2020-01-01"), pd.Timestamp("2020-01-02")]
+    rebalance_dates = [_ts("2020-01-01"), _ts("2020-01-02")]
 
     _, _, gross_series, _, _ = backtest_topk(
         df,
@@ -80,7 +85,7 @@ def test_backtest_accepts_legacy_ts_code_input():
             "close": [100.0, 100.0, 110.0, 90.0],
         }
     )
-    rebalance_dates = [pd.Timestamp("2020-01-01"), pd.Timestamp("2020-01-02")]
+    rebalance_dates = [_ts("2020-01-01"), _ts("2020-01-02")]
 
     stats, net_series, gross_series, turnover_series, _ = backtest_topk(
         df,
@@ -119,9 +124,9 @@ def test_backtest_turnover_accounts_for_weight_drift():
         }
     )
     rebalance_dates = [
-        pd.Timestamp("2020-01-01"),
-        pd.Timestamp("2020-01-02"),
-        pd.Timestamp("2020-01-03"),
+        _ts("2020-01-01"),
+        _ts("2020-01-02"),
+        _ts("2020-01-03"),
     ]
     result = backtest_topk(
         df,
@@ -168,9 +173,9 @@ def test_backtest_label_horizon_overlap_raises():
         }
     )
     rebalance_dates = [
-        pd.Timestamp("2020-01-01"),
-        pd.Timestamp("2020-01-02"),
-        pd.Timestamp("2020-01-03"),
+        _ts("2020-01-01"),
+        _ts("2020-01-02"),
+        _ts("2020-01-03"),
     ]
     with pytest.raises(ValueError):
         backtest_topk(
@@ -196,7 +201,7 @@ def test_backtest_long_short_basic():
             "close": [100.0, 100.0, 110.0, 90.0],
         }
     )
-    rebalance_dates = [pd.Timestamp("2020-01-01"), pd.Timestamp("2020-01-02")]
+    rebalance_dates = [_ts("2020-01-01"), _ts("2020-01-02")]
     result = backtest_topk(
         df,
         pred_col="pred",
@@ -226,7 +231,7 @@ def test_backtest_signal_weighting_uses_signal_magnitude():
             "close": [100.0, 100.0, 120.0, 100.0],
         }
     )
-    rebalance_dates = [pd.Timestamp("2020-01-01"), pd.Timestamp("2020-01-02")]
+    rebalance_dates = [_ts("2020-01-01"), _ts("2020-01-02")]
     result = backtest_topk(
         df,
         pred_col="pred",
@@ -287,7 +292,7 @@ def test_backtest_group_cap_limits_names_per_group():
             "industry": ["A", "A", "B", "B", "C", "C"] * 2,
         }
     )
-    rebalance_dates = [pd.Timestamp("2020-01-01"), pd.Timestamp("2020-01-02")]
+    rebalance_dates = [_ts("2020-01-01"), _ts("2020-01-02")]
     result = backtest_topk(
         df,
         pred_col="pred",
@@ -319,7 +324,7 @@ def test_backtest_exit_delay_uses_next_available_price():
             "close": [100.0, 100.0, 100.0, 90.0, 100.0],
         }
     )
-    rebalance_dates = [pd.Timestamp("2020-01-01"), pd.Timestamp("2020-01-02")]
+    rebalance_dates = [_ts("2020-01-01"), _ts("2020-01-02")]
     result = backtest_topk(
         df,
         pred_col="pred",
@@ -359,7 +364,7 @@ def test_backtest_can_exit_with_raw_pricing_data_after_selection_filter():
             "close": [100.0, 100.0, 110.0, 100.0],
         }
     )
-    rebalance_dates = [pd.Timestamp("2020-01-01"), pd.Timestamp("2020-01-02")]
+    rebalance_dates = [_ts("2020-01-01"), _ts("2020-01-02")]
 
     assert (
         backtest_topk(
@@ -417,9 +422,9 @@ def test_backtest_buffer_reduces_turnover():
         }
     )
     rebalance_dates = [
-        pd.Timestamp("2020-01-01"),
-        pd.Timestamp("2020-01-02"),
-        pd.Timestamp("2020-01-03"),
+        _ts("2020-01-01"),
+        _ts("2020-01-02"),
+        _ts("2020-01-03"),
     ]
     result = backtest_topk(
         df,
@@ -448,7 +453,7 @@ def test_backtest_exit_strict_skips_missing_price():
             "close": [100.0, np.nan],
         }
     )
-    rebalance_dates = [pd.Timestamp("2020-01-01"), pd.Timestamp("2020-01-02")]
+    rebalance_dates = [_ts("2020-01-01"), _ts("2020-01-02")]
     result = backtest_topk(
         df,
         pred_col="pred",
@@ -473,7 +478,7 @@ def test_backtest_exit_ffill_uses_last_price():
             "close": [100.0, np.nan],
         }
     )
-    rebalance_dates = [pd.Timestamp("2020-01-01"), pd.Timestamp("2020-01-02")]
+    rebalance_dates = [_ts("2020-01-01"), _ts("2020-01-02")]
     result = backtest_topk(
         df,
         pred_col="pred",
@@ -502,7 +507,7 @@ def test_backtest_tradable_filters_entry_selection():
             "is_tradable": [False, True, False, True],
         }
     )
-    rebalance_dates = [pd.Timestamp("2020-01-01"), pd.Timestamp("2020-01-02")]
+    rebalance_dates = [_ts("2020-01-01"), _ts("2020-01-02")]
     result = backtest_topk(
         df,
         pred_col="pred",
@@ -530,7 +535,7 @@ def test_backtest_requires_declared_tradable_column():
             "close": [100.0, 100.0, 110.0, 90.0],
         }
     )
-    rebalance_dates = [pd.Timestamp("2020-01-01"), pd.Timestamp("2020-01-02")]
+    rebalance_dates = [_ts("2020-01-01"), _ts("2020-01-02")]
 
     with pytest.raises(ValueError, match="missing columns: is_tradable"):
         backtest_topk(
@@ -557,7 +562,7 @@ def test_backtest_exit_delay_with_none_fallback_skips_unresolved_exit():
             "is_tradable": [True, False, False],
         }
     )
-    rebalance_dates = [pd.Timestamp("2020-01-01"), pd.Timestamp("2020-01-02")]
+    rebalance_dates = [_ts("2020-01-01"), _ts("2020-01-02")]
     result = backtest_topk(
         df,
         pred_col="pred",
@@ -585,7 +590,7 @@ def test_backtest_exit_delay_with_ffill_fallback_uses_previous_tradable_price():
             "is_tradable": [True, False, False],
         }
     )
-    rebalance_dates = [pd.Timestamp("2020-01-01"), pd.Timestamp("2020-01-02")]
+    rebalance_dates = [_ts("2020-01-01"), _ts("2020-01-02")]
     result = backtest_topk(
         df,
         pred_col="pred",
@@ -622,7 +627,7 @@ def test_backtest_execution_can_use_open_entry_price():
         default_exit_price_policy="strict",
         default_exit_fallback_policy="ffill",
     )
-    rebalance_dates = [pd.Timestamp("2020-01-01"), pd.Timestamp("2020-01-02")]
+    rebalance_dates = [_ts("2020-01-01"), _ts("2020-01-02")]
     result = backtest_topk(
         df,
         pred_col="pred",
@@ -657,7 +662,7 @@ def test_backtest_execution_min_amount_filters_illiquid_entries():
         default_exit_price_policy="strict",
         default_exit_fallback_policy="ffill",
     )
-    rebalance_dates = [pd.Timestamp("2020-01-01"), pd.Timestamp("2020-01-02")]
+    rebalance_dates = [_ts("2020-01-01"), _ts("2020-01-02")]
     result = backtest_topk(
         df,
         pred_col="pred",
@@ -694,7 +699,7 @@ def test_backtest_side_cost_and_bps_slippage_are_applied():
         default_exit_price_policy="strict",
         default_exit_fallback_policy="ffill",
     )
-    rebalance_dates = [pd.Timestamp("2020-01-01"), pd.Timestamp("2020-01-02")]
+    rebalance_dates = [_ts("2020-01-01"), _ts("2020-01-02")]
     result = backtest_topk(
         df,
         pred_col="pred",
@@ -741,7 +746,7 @@ def test_backtest_participation_slippage_uses_amount_column():
         default_exit_price_policy="strict",
         default_exit_fallback_policy="ffill",
     )
-    rebalance_dates = [pd.Timestamp("2020-01-01"), pd.Timestamp("2020-01-02")]
+    rebalance_dates = [_ts("2020-01-01"), _ts("2020-01-02")]
     result = backtest_topk(
         df,
         pred_col="pred",

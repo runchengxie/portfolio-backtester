@@ -525,7 +525,7 @@ def simulate_execution_adjusted_nav(
         return _empty_adjusted_nav_result(config, status="no_pricing_data")
 
     work_positions, status, extra = _prepare_long_only_execution_positions(positions)
-    if status is not None:
+    if status is not None or work_positions is None:
         return _empty_adjusted_nav_result(config, status=status, extra=extra)
 
     tables, status, extra = _prepare_execution_tables(
@@ -590,7 +590,7 @@ def simulate_ideal_daily_nav(
         return _empty_adjusted_nav_result(config, status="no_pricing_data")
 
     work_positions, status, extra = _prepare_long_only_execution_positions(positions)
-    if status is not None:
+    if status is not None or work_positions is None:
         return _empty_adjusted_nav_result(config, status=status, extra=extra)
     tables, targets_by_entry, status, extra = _prepare_ideal_nav_targets(
         work_positions,

@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from collections.abc import Mapping, Sequence
-from typing import Any
+from typing import Any, cast
 
 import numpy as np
 import pandas as pd
@@ -143,7 +143,7 @@ def _zscore(series: pd.Series) -> pd.Series:
 def _safe_log(series: pd.Series) -> pd.Series:
     values = _as_numeric(series)
     values = values.where(values > 0)
-    return np.log(values)
+    return pd.Series(np.log(values))
 
 
 def _resolve_industry_column(
@@ -239,7 +239,7 @@ def _build_benchmark_daily_returns(
 ) -> pd.Series:
     if benchmark_return_series is not None and not benchmark_return_series.empty:
         series = benchmark_return_series.copy()
-        series.index = pd.to_datetime(series.index, errors="coerce").normalize()
+        series.index = cast(Any, pd.to_datetime(series.index, errors="coerce")).normalize()
         series = pd.to_numeric(series, errors="coerce").replace([np.inf, -np.inf], np.nan)
         return series.dropna().sort_index()
     if benchmark_df is None or benchmark_df.empty or price_col not in benchmark_df.columns:

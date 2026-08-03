@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from collections.abc import Mapping
 from pathlib import Path
-from typing import Any
+from typing import Any, cast
 
 import pandas as pd
 
@@ -19,7 +19,7 @@ def _cfg_enabled(value: object) -> bool:
 
 def _as_mapping(value: object) -> Mapping[str, Any]:
     if isinstance(value, Mapping):
-        return value
+        return cast("Mapping[str, Any]", value)
     if isinstance(value, bool):
         return {"enabled": value}
     return {}

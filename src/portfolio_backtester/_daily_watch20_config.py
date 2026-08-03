@@ -167,7 +167,7 @@ def _truthy(series: pd.Series) -> pd.Series:
 
 
 def _trade_date_text(value: object) -> str:
-    parsed = pd.to_datetime(value, errors="coerce")
+    parsed = pd.to_datetime(cast(Any, value), errors="coerce")
     if not pd.isna(parsed):
         return cast(pd.Timestamp, parsed).strftime("%Y-%m-%d")
     return str(value)

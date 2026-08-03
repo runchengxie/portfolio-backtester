@@ -57,18 +57,7 @@ combine-as-imports = true
 known-first-party = ["portfolio_backtester"]
 
 [tool.ty.src]
-include = [
-  "src/portfolio_backtester/__init__.py",
-  "src/portfolio_backtester/api.py",
-  "src/portfolio_backtester/backtest_spec.py",
-  "src/portfolio_backtester/capacity.py",
-  "src/portfolio_backtester/execution_sim/__init__.py",
-  "src/portfolio_backtester/execution_sim/results.py",
-  "src/portfolio_backtester/period_outputs.py",
-  "src/portfolio_backtester/portfolio.py",
-  "src/portfolio_backtester/reports.py",
-  "src/portfolio_backtester/types.py",
-]
+include = ["src", "scripts", "tests"]
 exclude = [
   ".venv",
   "artifacts",

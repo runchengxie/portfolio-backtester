@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import html
 from collections.abc import Mapping
-from typing import Any
+from typing import Any, cast
 
 import numpy as np
 import pandas as pd
@@ -72,7 +72,7 @@ def _date_range(series: pd.Series) -> tuple[str, str]:
 def _year_value(series: pd.Series, year: int) -> float:
     if series.empty:
         return np.nan
-    matches = series[series.index.year == year]
+    matches = series[cast(Any, series.index).year == year]
     return float(matches.iloc[0]) if not matches.empty else np.nan
 
 

@@ -171,10 +171,7 @@ def validate_backtest_pricing_frame(
     if pricing.empty:
         return issues
 
-    trade_dates = cast(
-        pd.Series,
-        pd.to_datetime(_column_series(pricing, "trade_date"), errors="coerce"),
-    )
+    trade_dates = pd.to_datetime(_column_series(pricing, "trade_date"), errors="coerce")
     if bool(trade_dates.isna().any()):
         issues.append("trade_date must be datetime-like")
     elif require_two_trade_dates and int(trade_dates.dt.normalize().nunique()) < 2:

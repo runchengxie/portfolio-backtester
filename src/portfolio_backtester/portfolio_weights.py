@@ -165,7 +165,7 @@ def _calibrated_weights(
     sized = build_sized_weights(
         selected,
         score_col=pred_col,
-        config=SizingConfig(method=mode),  # type: ignore[arg-type]
+        config=SizingConfig(method=mode),  # ty: ignore[invalid-argument-type]
     )
     return normalize_position_weights(sized.reindex(holdings).fillna(0.0))
 

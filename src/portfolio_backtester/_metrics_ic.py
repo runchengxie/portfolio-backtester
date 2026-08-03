@@ -4,11 +4,12 @@ from __future__ import annotations
 
 import numpy as np
 import pandas as pd
+from typing import Any, cast
 
 try:
     from scipy import stats as scipy_stats
 except Exception:  # pragma: no cover - optional dependency
-    scipy_stats = None
+    scipy_stats: Any = None
 
 
 def spearman_corr(x: pd.Series, y: pd.Series) -> float:
@@ -44,7 +45,7 @@ def daily_ic_series(
             continue
         ic = corr_fn(group[pred_col], group[target_col])
         if not np.isnan(ic):
-            records.append((pd.to_datetime(date), float(ic)))
+            records.append((pd.to_datetime(cast(Any, date)), float(ic)))
     if not records:
         return pd.Series(dtype=float, name="ic")
     records.sort(key=lambda x: x[0])

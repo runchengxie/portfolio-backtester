@@ -239,7 +239,7 @@ def _window_turnover_rows(positions: pd.DataFrame) -> tuple[pd.DataFrame, pd.Dat
     grouped = list(positions.sort_values("rebalance_date").groupby("rebalance_date", sort=True))
     previous: pd.DataFrame | None = None
     for rebalance_date, current in grouped:
-        rebalance_ts = pd.Timestamp(cast(Any, rebalance_date))
+        rebalance_ts = cast(pd.Timestamp, rebalance_date)
         current_weights = current.groupby("symbol", sort=False)["weight"].sum()
         if previous is None:
             previous = current.copy()
@@ -381,7 +381,7 @@ def _regime_attribution(by_window: pd.DataFrame) -> pd.DataFrame:
     work["year"] = pd.to_datetime(work["rebalance_date"], errors="coerce").dt.year
     rows = []
     for keys, group in work.groupby(["year", "turnover_regime"], dropna=False):
-        year, regime = keys
+        year, regime = cast("tuple[Any, Any]", keys)
         rows.append(
             {
                 "year": int(year) if pd.notna(year) else None,

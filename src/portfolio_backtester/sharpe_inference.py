@@ -1,11 +1,15 @@
 from __future__ import annotations
 
 import math
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from scipy.stats import norm_gen
 
 try:
     from scipy.stats import norm as scipy_norm
 except Exception:  # pragma: no cover - optional dependency
-    scipy_norm = None
+    scipy_norm: norm_gen | None = None
 
 _SQRT_TWO = math.sqrt(2.0)
 _EULER_GAMMA = getattr(math, "euler_gamma", 0.5772156649015329)

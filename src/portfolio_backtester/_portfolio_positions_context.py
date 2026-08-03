@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+from typing import Any, cast
 
 import pandas as pd
 
@@ -91,7 +92,7 @@ def _build_optional_tables(
 def _group_by_trade_date(data: pd.DataFrame) -> dict[pd.Timestamp, pd.DataFrame]:
     groups: dict[pd.Timestamp, pd.DataFrame] = {}
     for date, group in data.groupby("trade_date", sort=False):
-        groups[date] = group
+        groups[cast(pd.Timestamp, date)] = group
     return groups
 
 
@@ -112,10 +113,13 @@ def _prepare_portfolio_context(
         raise ValueError(f"Portfolio entry price column not found: {entry_price_col}")
 
     trade_dates = [
-        pd.Timestamp(date).normalize() for date in sorted(pricing_source["trade_date"].unique())
+        cast(pd.Timestamp, pd.Timestamp(date)).normalize()
+        for date in sorted(pricing_source["trade_date"].unique())
     ]
     explicit_entry_dates = {
-        pd.Timestamp(key).normalize(): pd.Timestamp(value).normalize()
+        cast(pd.Timestamp, pd.Timestamp(key)).normalize(): cast(
+            pd.Timestamp, pd.Timestamp(value)
+        ).normalize()
         for key, value in (entry_dates_by_rebalance or {}).items()
     }
     if len(trade_dates) < 2 and not explicit_entry_dates:
@@ -163,7 +167,7 @@ def _resolve_rebalance_selection(
     liquidity_floor_col: str | None,
     liquidity_floor_quantile: float | None,
 ) -> RebalanceSelection | None:
-    reb_date = pd.Timestamp(rebalance_date).normalize()
+    reb_date = cast(pd.Timestamp, pd.Timestamp(rebalance_date)).normalize()
     if reb_date not in context.date_to_idx:
         return None
 
@@ -176,7 +180,7 @@ def _resolve_rebalance_selection(
         if entry_idx >= len(context.trade_dates):
             return None
         entry_date = context.trade_dates[entry_idx]
-    entry_date = pd.Timestamp(entry_date).normalize()
+    entry_date = cast(pd.Timestamp, pd.Timestamp(entry_date)).normalize()
     if entry_date not in context.date_to_idx:
         entry_lookup_date = reb_date
 

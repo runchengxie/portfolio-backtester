@@ -6,6 +6,7 @@ from collections.abc import Mapping
 
 import numpy as np
 import pandas as pd
+from typing import Any, cast
 
 from ._execution_models import (
     BpsCostModel,
@@ -31,14 +32,14 @@ from .execution_calendar import (
 )
 
 
-def _coerce_non_negative_float(value: object, *, label: str) -> float:
+def _coerce_non_negative_float(value: Any, *, label: str) -> float:
     number = float(value)
     if not np.isfinite(number) or number < 0:
         raise ValueError(f"{label} must be >= 0.")
     return number
 
 
-def _coerce_positive_float(value: object, *, label: str) -> float:
+def _coerce_positive_float(value: Any, *, label: str) -> float:
     number = float(value)
     if not np.isfinite(number) or number <= 0:
         raise ValueError(f"{label} must be > 0.")
@@ -267,7 +268,7 @@ def build_exit_policy(
         raise ValueError("exit_policy.fallback must be one of: ffill, none.")
     if not price_col:
         raise ValueError("exit_policy.price_col cannot be empty.")
-    return ExitPolicy(price, fallback, price_col)
+    return ExitPolicy(cast(ExitPricePolicy, price), cast(ExitFallbackPolicy, fallback), price_col)
 
 
 def build_execution_model(

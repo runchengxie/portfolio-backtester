@@ -152,7 +152,7 @@ def build_inertia_selection_report(
     }
 
 
-def _finite_float(value: object) -> float | None:
+def _finite_float(value: Any) -> float | None:
     try:
         result = float(value)
     except (TypeError, ValueError):

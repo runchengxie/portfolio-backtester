@@ -1,11 +1,15 @@
 from __future__ import annotations
 
-from typing import Any
+from typing import Any, cast
 
 import pandas as pd
 import pytest
 
 from portfolio_backtester import evaluation
+
+
+def _ts(value: str) -> pd.Timestamp:
+    return cast(pd.Timestamp, pd.Timestamp(value))
 
 
 def _evaluation_context() -> dict[str, Any]:
@@ -81,7 +85,7 @@ def test_evaluation_adapters_forward_selection_controls(
     )
     evaluation._build_period_positions(
         eval_df_full=frame,
-        bt_rebalance=[pd.Timestamp("2026-07-17")],
+        bt_rebalance=[_ts("2026-07-17")],
         context=context,
         allow_live_fallback=False,
         build_positions_by_rebalance_fn=capture_positions,
@@ -89,7 +93,7 @@ def test_evaluation_adapters_forward_selection_controls(
     period_context = context | {"backtest_topk_fn": capture_backtest}
     evaluation._run_period_backtest(
         eval_df_full=frame,
-        bt_rebalance=[pd.Timestamp("2026-07-17")],
+        bt_rebalance=[_ts("2026-07-17")],
         context=period_context,
         label_prefix="",
     )

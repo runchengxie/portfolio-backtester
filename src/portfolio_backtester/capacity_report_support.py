@@ -6,7 +6,9 @@ import json
 from collections.abc import Iterable, Mapping
 from datetime import datetime
 from pathlib import Path
-from typing import Any
+from typing import Any, cast
+
+from ._execution_models import ExitFallbackPolicy, ExitPricePolicy
 
 import numpy as np
 import pandas as pd
@@ -89,7 +91,7 @@ def capacity_cfg(config: Mapping[str, Any]) -> Mapping[str, Any]:
 
 
 def mapping(value: object) -> Mapping[str, Any]:
-    return value if isinstance(value, Mapping) else {}
+    return cast("Mapping[str, Any]", value) if isinstance(value, Mapping) else {}
 
 
 def as_list(value: object) -> list[Any]:
@@ -301,8 +303,8 @@ def build_execution_context(config: Mapping[str, Any]) -> dict[str, Any]:
     execution_model = build_execution_model(
         merge_execution_cfg(execution_cfg=execution_cfg, backtest_cfg=backtest_cfg),
         default_cost_bps=cost_bps,
-        default_exit_price_policy=exit_price_policy,
-        default_exit_fallback_policy=exit_fallback_policy,
+        default_exit_price_policy=cast(ExitPricePolicy, exit_price_policy),
+        default_exit_fallback_policy=cast(ExitFallbackPolicy, exit_fallback_policy),
         default_price_col=price_col,
     )
     return {

@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from typing import cast
+from typing import Any, cast
 
 import numpy as np
 import pandas as pd
@@ -61,7 +61,7 @@ def _recovery_timing(
 
 def _index_day_distance(nav: pd.Series, end_pos: int, start_pos: int) -> float:
     if isinstance(nav.index, pd.DatetimeIndex):
-        dt_index = cast(pd.DatetimeIndex, nav.index)
+        dt_index = nav.index
         return float((dt_index[end_pos] - dt_index[start_pos]).days)
     return np.nan
 
@@ -251,8 +251,8 @@ def _calendar_half_year_split(returns: pd.Series) -> dict:
     if returns.empty:
         return {"h1_return": None, "h2_return": None, "h1h2_gap": None}
     idx = pd.DatetimeIndex(returns.index)
-    h1_mask = idx.month <= 6
-    h2_mask = idx.month >= 7
+    h1_mask = cast(Any, idx).month <= 6
+    h2_mask = cast(Any, idx).month >= 7
     h1_ret = float(returns.loc[h1_mask].sum()) if h1_mask.any() else None
     h2_ret = float(returns.loc[h2_mask].sum()) if h2_mask.any() else None
     gap = (h1_ret - h2_ret) if (h1_ret is not None and h2_ret is not None) else None

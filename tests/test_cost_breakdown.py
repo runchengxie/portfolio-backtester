@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import pandas as pd
 import pytest
+from typing import cast
 
 from portfolio_backtester.turnover import build_rebalance_turnover_report
 from portfolio_backtester.types import BacktestLegResult, CostBreakdown
@@ -24,7 +25,7 @@ def test_backtest_leg_result_exposes_net_cost_and_turnover_breakdown() -> None:
         weights=pd.Series({"A": 1.0}),
         entry_prices=pd.Series({"A": 10.0}),
         exit_idx=1,
-        exit_date=pd.Timestamp("2026-01-02"),
+        exit_date=cast(pd.Timestamp, pd.Timestamp("2026-01-02")),
         gross=0.02,
         turnover=0.75,
         fee_cost=0.001,

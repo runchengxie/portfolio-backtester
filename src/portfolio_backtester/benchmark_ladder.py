@@ -6,7 +6,7 @@ import json
 import logging
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any
+from typing import Any, cast
 
 import numpy as np
 import pandas as pd
@@ -172,8 +172,9 @@ def _compound_daily_returns_to_periods(
     values: list[float] = []
     dates: list[pd.Timestamp] = []
     for period in periods.itertuples(index=False):
-        entry_date = pd.Timestamp(period.entry_date)
-        exit_date = pd.Timestamp(period.exit_date)
+        period = cast(Any, period)
+        entry_date = cast(pd.Timestamp, pd.Timestamp(period.entry_date))
+        exit_date = cast(pd.Timestamp, pd.Timestamp(period.exit_date))
         if include_entry_date:
             window = daily[(daily.index >= entry_date) & (daily.index <= exit_date)]
         else:

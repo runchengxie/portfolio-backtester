@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from collections.abc import Iterable, Mapping
-from typing import Any
+from typing import Any, cast
 
 import pandas as pd
 
@@ -57,7 +57,7 @@ def coerce_date_set(values: object | None) -> tuple[pd.Timestamp, ...]:
         )
         if pd.isna(parsed):
             raise ValueError(f"Invalid execution calendar date: {value}")
-        dates.append(pd.Timestamp(parsed).normalize())
+        dates.append(parsed.normalize())
     return tuple(sorted(set(dates)))
 
 
@@ -81,7 +81,9 @@ def execution_calendar_from_config(cfg: Mapping[str, Any] | None) -> dict[str, A
 def _normalize_dates(values: Iterable[object] | None) -> list[pd.Timestamp]:
     if values is None:
         return []
-    dates = [pd.Timestamp(value).normalize() for value in pd.to_datetime(list(values))]
+    dates = [
+        cast(pd.Timestamp, value).normalize() for value in pd.to_datetime(list(values))
+    ]
     return sorted(set(dates))
 
 
@@ -139,8 +141,8 @@ def resolve_execution_open_dates(
     market: str = "hk",
 ) -> list[pd.Timestamp]:
     calendar = normalize_execution_calendar(calendar)
-    start = pd.Timestamp(start).normalize()
-    end = pd.Timestamp(end).normalize()
+    start = start.normalize()
+    end = end.normalize()
     explicit_open = set(coerce_date_set(open_dates))
     explicit_closed = set(coerce_date_set(closed_dates))
 
@@ -188,7 +190,7 @@ def is_execution_open(
     closed_dates: Iterable[object] | None = None,
     market: str = "hk",
 ) -> bool:
-    date = pd.Timestamp(value).normalize()
+    date = cast(pd.Timestamp, pd.to_datetime(cast(Any, value), errors="coerce")).normalize()
     return date in set(
         resolve_execution_open_dates(
             date,
@@ -216,7 +218,7 @@ def resolve_execution_date(
     horizon_days: int = 45,
 ) -> pd.Timestamp | None:
     calendar = normalize_execution_calendar(calendar)
-    signal = pd.Timestamp(signal_date).normalize()
+    signal = cast(pd.Timestamp, pd.to_datetime(cast(Any, signal_date), errors="coerce")).normalize()
     normalized_trade_dates = _normalize_dates(trade_dates)
     end = max(normalized_trade_dates) if normalized_trade_dates else signal
     if allow_future:
@@ -224,7 +226,7 @@ def resolve_execution_date(
 
     open_candidates = resolve_execution_open_dates(
         min(signal, min(normalized_trade_dates) if normalized_trade_dates else signal),
-        end,
+        cast(pd.Timestamp, end),
         calendar=calendar,
         base_dates=normalized_trade_dates if not allow_future else None,
         rqdatac_module=rqdatac_module,
@@ -244,7 +246,7 @@ def resolve_execution_date(
         offset = int(shift_days) - 1
     if offset >= len(candidates):
         return None
-    return pd.Timestamp(candidates[offset]).normalize()
+    return candidates[offset].normalize()
 
 
 def build_execution_date_map(

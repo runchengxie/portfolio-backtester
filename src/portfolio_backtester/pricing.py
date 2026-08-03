@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import Literal
+from typing import Literal, cast
 
 import pandas as pd
 
@@ -100,7 +100,7 @@ def prepare_backtest_pricing_context(
 
     pricing_source = pricing_source.drop_duplicates(subset=["trade_date", "symbol"]).copy()
     trade_dates = [
-        pd.Timestamp(date).normalize() for date in sorted(pricing_source["trade_date"].unique())
+        cast(pd.Timestamp, date).normalize() for date in sorted(pricing_source["trade_date"].unique())
     ]
     if len(trade_dates) < 2:
         return None
@@ -114,7 +114,7 @@ def prepare_backtest_pricing_context(
     day_groups: dict[pd.Timestamp, pd.DataFrame] = {}
     if data is not None:
         for date, group in data.groupby("trade_date", sort=False):
-            day_groups[date] = group
+            day_groups[cast(pd.Timestamp, date)] = group
     tradable_table = None
     if tradable_col and tradable_col in pricing_source.columns:
         tradable_table = pricing_source.pivot(

@@ -163,8 +163,8 @@ def _drift_previous_weights(
 ) -> pd.Series:
     if prev_prices is None or prev_date is None:
         return prev_clean
-    prev_prices_valid = cast(pd.Series, prev_prices.reindex(prev_clean.index))
-    prev_prices_valid = cast(pd.Series, prev_prices_valid[prev_prices_valid.notna()])
+    prev_prices_valid = prev_prices.reindex(prev_clean.index)
+    prev_prices_valid = prev_prices_valid[prev_prices_valid.notna()]
     if prev_prices_valid.empty or entry_date not in price_table.index:
         return prev_clean
     prev_clean = prev_clean.reindex(prev_prices_valid.index).dropna()

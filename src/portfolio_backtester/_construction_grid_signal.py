@@ -46,7 +46,7 @@ def _prepare_signal_column(
             summary = {}
         method = "dynamic_ensemble"
         columns = ",".join(str(col) for col in ensemble.get("signal_cols", []))
-        meta = {
+        meta: dict[str, Any] = {
             "dynamic_ensemble_active": True,
             "dynamic_ensemble_signal_cols": columns,
             "dynamic_ensemble_avg_active_factor_count": summary.get("avg_active_factor_count"),

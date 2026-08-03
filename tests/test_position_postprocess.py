@@ -1,5 +1,6 @@
 import pandas as pd
 import pytest
+from typing import Any, cast
 
 from portfolio_backtester.execution import build_execution_model
 from portfolio_backtester.position_postprocess import (
@@ -36,6 +37,7 @@ def test_cash_gross_overlay_scales_weights_from_schedule(tmp_path):
             "cash_gross_overlay": {"enabled": True, "schedule_file": str(schedule)},
         },
     )
+    overlaid = cast(pd.DataFrame, overlaid)
 
     gross = overlaid.groupby("rebalance_date")["weight"].sum().to_dict()
     assert gross[20200101] == pytest.approx(0.90)
@@ -82,6 +84,7 @@ def test_cash_gross_overlay_honors_top_level_tier_conditions():
             },
         },
     )
+    overlaid = cast(pd.DataFrame, overlaid)
 
     gross = overlaid.groupby("rebalance_date")["weight"].sum().to_dict()
     assert gross[20200101] == pytest.approx(0.5)
@@ -135,6 +138,7 @@ def test_auto_exposure_repair_generates_breaches_without_file():
             "industry_source_df": pd.DataFrame(),
         },
     )
+    repaired = cast(pd.DataFrame, repaired)
 
     repair_meta = metadata["post_buffer_exposure_repair"]
     bank_weight = repaired.loc[repaired["symbol"] == "BANK", "weight"].iloc[0]
@@ -211,6 +215,7 @@ def test_rebuild_backtest_uses_postprocessed_positions_gross(tmp_path):
             "backtest_tradable_col": "is_tradable",
         },
     )
+    rebuilt = cast("tuple[Any, Any, Any, Any, Any]", rebuilt)
 
     stats, net_series, gross_series, turnover_series, periods = rebuilt
     assert stats["avg_gross_exposure"] == pytest.approx(0.90)

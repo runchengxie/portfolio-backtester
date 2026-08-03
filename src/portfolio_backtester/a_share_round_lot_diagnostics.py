@@ -90,7 +90,9 @@ def prepare_round_lot_simulation_calendar(
 ) -> RoundLotSimulationCalendar:
     sig = scored.merge(industry[["symbol", "first_industry_name"]], on="symbol", how="left")
     sig["first_industry_name"] = sig["first_industry_name"].fillna("UNKNOWN")
-    groups = dict(tuple(sig.groupby("trade_date", sort=False)))
+    groups: dict[str, pd.DataFrame] = {
+        str(key): group for key, group in sig.groupby("trade_date", sort=False)
+    }
     price_table = pricing.pivot(
         index="trade_date", columns="symbol", values="tr_close"
     ).sort_index()

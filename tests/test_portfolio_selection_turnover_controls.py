@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import pandas as pd
+from typing import cast
 import pytest
 
 from portfolio_backtester.engine import backtest_topk
@@ -197,7 +198,7 @@ def test_selection_margin_can_use_relevance_while_ranking_numeric_score() -> Non
 
 
 def test_selection_margin_column_missing_fails_fast() -> None:
-    date = pd.Timestamp("2024-01-02")
+    date = cast(pd.Timestamp, pd.Timestamp("2024-01-02"))
     data = _frame([("2024-01-02", "A", 1.0)])
 
     with pytest.raises(ValueError, match="margin column not found"):
