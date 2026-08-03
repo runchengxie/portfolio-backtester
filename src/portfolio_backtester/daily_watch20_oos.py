@@ -98,9 +98,15 @@ def portfolio_daily_row(
     previous_weights: pd.Series | None,
     previous_symbols: tuple[str, ...] | None,
     single_side_cost_bps: float,
+    date_context: pd.DataFrame | None = None,
 ) -> dict[str, Any]:
+    """Build one portfolio row, using candidate metadata for an all-cash target."""
+
     symbols = tuple(_series(selected, "symbol").astype(str))
-    trade_dates = pd.to_datetime(_series(selected, "trade_date")).dropna().unique()
+    metadata = selected if not selected.empty else date_context
+    if metadata is None or metadata.empty:
+        raise ValueError("DailyWatch20 OOS empty selection requires non-empty date context")
+    trade_dates = pd.to_datetime(_series(metadata, "trade_date")).dropna().unique()
     if len(trade_dates) != 1:
         raise ValueError("DailyWatch20 OOS selection must share one feature date")
     trade_date = cast(pd.Timestamp, pd.Timestamp(trade_dates[0]))
@@ -111,7 +117,7 @@ def portfolio_daily_row(
     )
     turnover = turnover_from_trade_weights(trades, is_initial=previous_weights is None)
     execution_dates = (
-        pd.to_datetime(_series(selected, "forward_label_start_date")).dropna().unique()
+        pd.to_datetime(_series(metadata, "forward_label_start_date")).dropna().unique()
     )
     if len(execution_dates) != 1:
         raise ValueError("DailyWatch20 OOS rows must share one execution date")

@@ -110,6 +110,7 @@ def _incumbent_requalification_daily_rows(
         selected = result.positions.copy()
         receipt = result.receipt.to_dict()
         canonical = _canonical_selected(selected, config)
+        date_context = _canonical_selected(candidates, config)
         symbols = tuple(_series(canonical, "symbol").astype(str))
         target = pd.Series(
             _numeric_series(canonical, "target_weight").to_numpy(dtype=float),
@@ -124,6 +125,7 @@ def _incumbent_requalification_daily_rows(
             previous_weights=previous_weights,
             previous_symbols=previous_symbols,
             single_side_cost_bps=single_side_cost_bps,
+            date_context=date_context,
         )
         row.update(
             {

@@ -7,13 +7,14 @@ import json
 from collections import Counter
 from collections.abc import Collection, Mapping
 from dataclasses import asdict, dataclass
-from typing import Any, cast
+from typing import Any, Literal, cast
 
 import numpy as np
 import pandas as pd
 
 INCUMBENT_REQUALIFICATION_SCHEMA = "portfolio_backtester.incumbent_requalification.v1"
 _INTERNAL_COLUMNS = ("_score", "_hard_eligible", "_entry_eligible", "_full_rank")
+RankUniverse = Literal["hard_eligible", "entry_plus_incumbents"]
 
 
 @dataclass(frozen=True, slots=True)
@@ -27,6 +28,7 @@ class IncumbentRequalificationPolicy:
     industry_cap: int = 4
     min_score_improvement: float = 0.0
     allow_cash: bool = True
+    rank_universe: RankUniverse = "hard_eligible"
 
     def __post_init__(self) -> None:
         if self.portfolio_size <= 0:
@@ -41,6 +43,8 @@ class IncumbentRequalificationPolicy:
             raise ValueError("industry_cap must be positive")
         if not np.isfinite(self.min_score_improvement) or self.min_score_improvement < 0:
             raise ValueError("min_score_improvement must be finite and non-negative")
+        if self.rank_universe not in {"hard_eligible", "entry_plus_incumbents"}:
+            raise ValueError("rank_universe must be one of: hard_eligible, entry_plus_incumbents")
 
     @property
     def policy_id(self) -> str:
@@ -118,10 +122,23 @@ def _truthy(series: pd.Series) -> pd.Series:
     return normalized.isin({"1", "true", "yes", "y"})
 
 
+def _rank_eligibility(
+    hard: pd.Series,
+    entry: pd.Series,
+    symbol: pd.Series,
+    previous: frozenset[str],
+    policy: IncumbentRequalificationPolicy,
+) -> pd.Series:
+    if policy.rank_universe == "hard_eligible":
+        return hard
+    return hard & (entry | symbol.astype(str).isin(previous))
+
+
 def _prepare(
     candidates: pd.DataFrame,
     previous_symbols: Collection[str],
     config: IncumbentRequalificationConfig,
+    policy: IncumbentRequalificationPolicy,
 ) -> _Prepared:
     if candidates is None or candidates.empty:
         raise ValueError("candidates must be non-empty")
@@ -145,6 +162,7 @@ def _prepare(
     if bool(symbol.duplicated().any()):
         raise ValueError("candidates must contain one row per symbol")
     frame[config.symbol_col] = symbol
+    previous = frozenset(text for raw in previous_symbols if (text := str(raw).strip()))
 
     industry = frame[config.industry_col].astype("string").str.strip()
     if bool(industry.isna().any()) or bool(industry.eq("").any()):
@@ -162,13 +180,13 @@ def _prepare(
     frame["_score"] = score
     frame["_hard_eligible"] = hard
     frame["_entry_eligible"] = entry
-    eligible = frame.loc[hard].sort_values(
+    rank_eligible = _rank_eligibility(hard, entry, symbol, previous, policy)
+    eligible = frame.loc[rank_eligible].sort_values(
         ["_score", config.symbol_col], ascending=[False, True], kind="mergesort"
     )
     frame["_full_rank"] = pd.Series(pd.NA, index=frame.index, dtype="Int64")
     frame.loc[eligible.index, "_full_rank"] = range(1, len(eligible) + 1)
 
-    previous = frozenset(text for raw in previous_symbols if (text := str(raw).strip()))
     observable = previous & set(symbol.astype(str))
     return _Prepared(
         frame=frame,
@@ -178,6 +196,7 @@ def _prepare(
             "input_count": len(frame),
             "hard_eligible_count": int(hard.sum()),
             "entry_eligible_count": int(entry.sum()),
+            "rank_universe_count": int(rank_eligible.sum()),
             "previous_count": len(previous),
             "previous_observable_count": len(observable),
         },
@@ -325,8 +344,8 @@ def select_incumbent_requalified_portfolio(
 
     cfg = config or IncumbentRequalificationConfig()
     active = policy or IncumbentRequalificationPolicy()
-    prepared = _prepare(candidates, previous_symbols, cfg)
-    eligible = prepared.frame.loc[prepared.frame["_hard_eligible"]].copy()
+    prepared = _prepare(candidates, previous_symbols, cfg, active)
+    eligible = prepared.frame.loc[prepared.frame["_full_rank"].notna()].copy()
     selected, opened, diagnostics = _select_symbols(eligible, prepared, cfg, active)
     if len(selected) < active.portfolio_size and not active.allow_cash:
         raise ValueError("portfolio could not be filled without cash under the frozen policy")

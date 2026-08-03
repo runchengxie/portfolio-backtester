@@ -140,3 +140,27 @@ def test_bridge_supports_custom_selection_columns() -> None:
 
     assert len(result) == 2
     assert result.loc[1, "selected_symbols"] == "A|B|D"
+
+
+def test_stateful_bridge_can_liquidate_to_full_cash() -> None:
+    scored, frame = _inputs()
+    second_date = scored["trade_date"].eq(pd.Timestamp("2026-07-17"))
+    scored.loc[second_date, "hard_eligible"] = False
+    scored.loc[second_date, "entry_eligible"] = False
+
+    result = stateful_incumbent_requalification_daily_rows(
+        scored,
+        frame,
+        policy=_policy(),
+        single_side_cost_bps=10.0,
+    )
+
+    assert result.loc[1, "trade_date"] == pd.Timestamp("2026-07-17")
+    assert result.loc[1, "execution_date"] == pd.Timestamp("2026-07-20")
+    assert result.loc[1, "portfolio_size"] == 0
+    assert result.loc[1, "cash_weight"] == 1.0
+    assert result.loc[1, "gross_forward_return_proxy"] == 0.0
+    assert result.loc[1, "transaction_cost"] == pytest.approx(0.001)
+    assert result.loc[1, "net_forward_return_proxy"] == pytest.approx(-0.001)
+    assert result.loc[1, "one_way_turnover"] == pytest.approx(0.5)
+    assert result.loc[1, "selected_symbols"] == ""

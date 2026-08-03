@@ -48,6 +48,16 @@ receipt = result.receipt.to_dict()
 
 `C` 虽然不具备新仓准入资格，但它是退出缓冲区内的旧仓，因此可以继续持有。`entry_eligible=False` 的标的永远不能作为新仓进入组合。
 
+## 排名范围
+
+`rank_universe="hard_eligible"` 是兼容默认值，Top-N 排名覆盖全部当日硬资格标的。
+
+当调用方传入全市场分数、但新仓只能来自一个较小的严格候选池时，可以显式设置
+`rank_universe="entry_plus_incumbents"`。此时排名范围包括当日 `entry_eligible` 标的与昨日旧仓，
+并继续对两类标的应用 `hard_eligible`。新仓 Top20 因而表示可入场池中的强者。已经离开
+入场池的旧仓仍会进入当日排名，并可在 Top40 退出缓冲区内保留。全市场其他证券只用于证明输入
+分数和硬资格完整，不会挤占这组 Top-N 名额。回执中的 `rank_universe_count` 记录实际参与排名的数量。
+
 ## 现金语义
 
 每个入选标的占用一个固定组合槽位：
