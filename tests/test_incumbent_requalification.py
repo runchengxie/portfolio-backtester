@@ -33,6 +33,25 @@ def test_bootstrap_fills_the_portfolio_from_entry_eligible_names() -> None:
     assert result.receipt.summary["cash_weight"] == pytest.approx(0.0)
 
 
+def test_entry_plus_incumbents_ranks_the_actionable_union() -> None:
+    frame = _cross_section()
+    frame["entry_eligible"] = frame.index >= 40
+    full_market = select_incumbent_requalified_portfolio(frame)
+    actionable_union = select_incumbent_requalified_portfolio(
+        frame,
+        policy=IncumbentRequalificationPolicy(
+            rank_universe="entry_plus_incumbents",
+        ),
+    )
+
+    assert full_market.positions.empty
+    assert actionable_union.positions["symbol"].tolist() == [
+        f"S{index:03d}" for index in range(40, 60)
+    ]
+    assert actionable_union.positions["full_rank"].tolist() == list(range(1, 21))
+    assert actionable_union.receipt.summary["rank_universe_count"] == 20
+
+
 def test_incumbents_can_survive_outside_the_entry_pool_after_current_rescoring() -> None:
     frame = _cross_section()
     frame.loc[20:24, "entry_eligible"] = False
