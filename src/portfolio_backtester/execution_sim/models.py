@@ -9,6 +9,7 @@ import numpy as np
 import pandas as pd
 
 from ..execution import DetailedTradeFeeModel
+from ..types import CostBreakdown
 
 TradeFeeModel = DetailedTradeFeeModel
 
@@ -54,10 +55,38 @@ def _trade_fee(
     side: str,
     cost_rate: float,
     fee_model: TradeFeeModel | None,
-) -> float:
+) -> CostBreakdown:
+    """Per-fill transaction cost split into stage-3 sub-items.
+
+    With a :class:`DetailedTradeFeeModel` the commission/stamp/transfer/spread
+    sub-items are taken from ``notional_cost_breakdown``. Without a fee model
+    the legacy ``notional * cost_rate`` is treated as an implicit spread cost
+    (slippage-like), so ``total_cost`` stays identical to the old scalar path.
+    Impact/opportunity/financing sub-items are left at 0 (no model yet).
+    """
     if fee_model is None:
-        return max(float(notional), 0.0) * max(float(cost_rate), 0.0)
-    return fee_model.notional_cost(notional, side=side)
+        spread = max(float(notional), 0.0) * max(float(cost_rate), 0.0)
+        return CostBreakdown(fee_cost=0.0, slippage_cost=spread, spread_cost=spread)
+    breakdown = fee_model.notional_cost_breakdown(notional, side=side)
+    return CostBreakdown.from_components(
+        commission=breakdown["commission"],
+        stamp_tax=breakdown["stamp_tax"],
+        transfer_fee=breakdown["transfer_fee"],
+        spread_cost=breakdown["spread_cost"],
+    )
+
+
+def _add_breakdown(total: CostBreakdown, other: CostBreakdown) -> CostBreakdown:
+    return CostBreakdown.from_components(
+        commission=total.commission + other.commission,
+        stamp_tax=total.stamp_tax + other.stamp_tax,
+        transfer_fee=total.transfer_fee + other.transfer_fee,
+        spread_cost=total.spread_cost + other.spread_cost,
+        temporary_impact=total.temporary_impact + other.temporary_impact,
+        permanent_impact=total.permanent_impact + other.permanent_impact,
+        opportunity_cost=total.opportunity_cost + other.opportunity_cost,
+        financing_cost=total.financing_cost + other.financing_cost,
+    )
 
 
 @dataclass(frozen=True)

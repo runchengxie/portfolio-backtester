@@ -151,9 +151,7 @@ class DetailedTradeFeeModel:
             + breakdown["spread_cost"]
         )
 
-    def notional_cost_breakdown(
-        self, notional: float, *, side: str
-    ) -> dict[str, float]:
+    def notional_cost_breakdown(self, notional: float, *, side: str) -> dict[str, float]:
         """Split a notional's transaction cost into stage-3 sub-items.
 
         Returns a dict with keys ``commission``, ``stamp_tax``,

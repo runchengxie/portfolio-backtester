@@ -8,6 +8,7 @@ import numpy as np
 import pandas as pd
 
 from ..execution import DetailedTradeFeeModel
+from ..types import CostBreakdown
 from .capacity import (
     _positions_value,
     _refresh_last_prices,
@@ -376,7 +377,7 @@ def _append_adjusted_nav_daily_row(
     plan: _AdjustedNavPlan,
     trade_date: pd.Timestamp,
     traded_notional: float,
-    transaction_cost: float,
+    transaction_cost: CostBreakdown,
     config: ExecutionSimConfig,
 ) -> None:
     current_value = _positions_value(
@@ -410,7 +411,15 @@ def _append_adjusted_nav_daily_row(
             if nav_after_orders > 0
             else np.nan,
             "traded_notional": float(traded_notional),
-            "transaction_cost": float(transaction_cost),
+            "transaction_cost": float(transaction_cost.total_cost),
+            "cost_commission": float(transaction_cost.commission),
+            "cost_stamp_tax": float(transaction_cost.stamp_tax),
+            "cost_transfer_fee": float(transaction_cost.transfer_fee),
+            "cost_spread": float(transaction_cost.spread_cost),
+            "cost_temporary_impact": float(transaction_cost.temporary_impact),
+            "cost_permanent_impact": float(transaction_cost.permanent_impact),
+            "cost_opportunity": float(transaction_cost.opportunity_cost),
+            "cost_financing": float(transaction_cost.financing_cost),
             "open_orders": len(ledger.open_orders),
         }
     )
@@ -700,7 +709,7 @@ def _run_ideal_daily_nav_ledger(
             last_prices,
         )
         traded_notional = 0.0
-        transaction_cost = 0.0
+        transaction_cost = CostBreakdown()
 
         if trade_date in targets_by_entry:
             rebalance_date, target_weights = targets_by_entry[trade_date]
@@ -754,7 +763,7 @@ def _ideal_daily_nav_row(
     current_value: float,
     cash: float,
     traded_notional: float,
-    transaction_cost: float,
+    transaction_cost: CostBreakdown,
     portfolio_value: float,
 ) -> dict[str, Any]:
     cash_weight = float(cash / nav_after_orders) if nav_after_orders > 0 else np.nan
@@ -772,7 +781,15 @@ def _ideal_daily_nav_row(
         if nav_after_orders > 0
         else np.nan,
         "traded_notional": float(traded_notional),
-        "transaction_cost": float(transaction_cost),
+        "transaction_cost": float(transaction_cost.total_cost),
+        "cost_commission": float(transaction_cost.commission),
+        "cost_stamp_tax": float(transaction_cost.stamp_tax),
+        "cost_transfer_fee": float(transaction_cost.transfer_fee),
+        "cost_spread": float(transaction_cost.spread_cost),
+        "cost_temporary_impact": float(transaction_cost.temporary_impact),
+        "cost_permanent_impact": float(transaction_cost.permanent_impact),
+        "cost_opportunity": float(transaction_cost.opportunity_cost),
+        "cost_financing": float(transaction_cost.financing_cost),
         "open_orders": 0,
     }
 

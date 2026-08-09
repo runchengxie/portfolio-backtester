@@ -169,30 +169,90 @@ def _build_daily_series(daily: pd.DataFrame, value_col: str, out_col: str) -> pd
     )
 
 
-def _build_cost_breakdown(fills: pd.DataFrame, daily: pd.DataFrame) -> pd.DataFrame:
-    cost_by_side: dict[str, float] = {}
-    total_cost = 0.0
-    if not fills.empty and "transaction_cost" in fills.columns:
-        fills = fills.copy()
-        fills["transaction_cost"] = pd.to_numeric(
-            fills["transaction_cost"], errors="coerce"
-        ).fillna(0.0)
-        for side, sub in fills.groupby("side"):
-            cost_by_side[str(side)] = float(sub["transaction_cost"].sum())
-        total_cost = float(fills["transaction_cost"].sum())
-    elif not daily.empty and "transaction_cost" in daily.columns:
-        total_cost = float(
-            pd.to_numeric(daily["transaction_cost"], errors="coerce").fillna(0.0).sum()
+_COST_SUB_COLS = [
+    "cost_commission",
+    "cost_stamp_tax",
+    "cost_transfer_fee",
+    "cost_spread",
+    "cost_temporary_impact",
+    "cost_permanent_impact",
+    "cost_opportunity",
+    "cost_financing",
+]
+
+
+def _cost_row(sub: pd.DataFrame) -> dict[str, float]:
+    row: dict[str, float] = {}
+    for col in _COST_SUB_COLS:
+        if col in sub.columns:
+            row[col.replace("cost_", "")] = float(
+                pd.to_numeric(sub[col], errors="coerce").fillna(0.0).sum()
+            )
+    if "transaction_cost" in sub.columns and not row:
+        row["transaction_cost"] = float(
+            pd.to_numeric(sub["transaction_cost"], errors="coerce").fillna(0.0).sum()
         )
-    return pd.DataFrame(
-        {
-            "side": ["total", *sorted(cost_by_side)],
-            "transaction_cost": [
-                total_cost,
-                *[cost_by_side[s] for s in sorted(cost_by_side)],
-            ],
-        }
+    return row
+
+
+def _aggregate_cost_columns(frame: pd.DataFrame, *, by_side: bool) -> dict[str, dict[str, float]]:
+    groups: list[tuple[str, pd.DataFrame]] = (
+        [(str(s), sub) for s, sub in frame.groupby("side")] if by_side else [("total", frame)]
     )
+    out: dict[str, dict[str, float]] = {}
+    for label, sub in groups:
+        row = _cost_row(sub)
+        if row:
+            out[label] = row
+    return out
+
+
+def _build_cost_breakdown(fills: pd.DataFrame, daily: pd.DataFrame) -> pd.DataFrame:
+    """Aggregate stage-3 transaction-cost sub-items by side.
+
+    Prefers the per-fill side split when ``fills`` carries ``cost_commission``
+    etc.; otherwise falls back to the daily sub-item columns (summed across the
+    whole period). When no sub-item columns exist the legacy single
+    ``transaction_cost`` column is aggregated by side so the ledger contract is
+    preserved.
+    """
+    source: dict[str, dict[str, float]] | None = None
+    if not fills.empty and (
+        "cost_commission" in fills.columns or "transaction_cost" in fills.columns
+    ):
+        source = _aggregate_cost_columns(fills, by_side=True)
+    elif not daily.empty and (
+        "cost_commission" in daily.columns or "transaction_cost" in daily.columns
+    ):
+        source = _aggregate_cost_columns(daily, by_side=False)
+
+    if not source:
+        return pd.DataFrame(columns=["side", "transaction_cost"])
+
+    # The "total" row must aggregate every row, not just a single side.
+    total_row: dict[str, float] = {}
+    for row in source.values():
+        for k, v in row.items():
+            total_row[k] = total_row.get(k, 0.0) + v
+    source = {"total": total_row, **source}
+
+    all_keys: list[str] = []
+    for row in source.values():
+        for k in row:
+            if k not in all_keys:
+                all_keys.append(k)
+
+    labels = ["total", *sorted(s for s in source if s != "total")]
+    data: dict[str, list[float] | list[str]] = {"side": labels}
+    for key in all_keys:
+        data[key] = [float(source.get(label, {}).get(key, 0.0)) for label in labels]
+    # Legacy ``transaction_cost`` alias: aggregate of every sub-item so existing
+    # consumers (and conservation assertions) keep working.
+    if "transaction_cost" not in data:
+        data["transaction_cost"] = [
+            float(sum(source.get(label, {}).values())) for label in labels
+        ]
+    return pd.DataFrame(data)
 
 
 def _build_turnover_breakdown(orders: pd.DataFrame, fills: pd.DataFrame) -> pd.DataFrame:
