@@ -66,11 +66,7 @@ class CostBreakdown:
         """
         fee_cost = float(commission + stamp_tax + transfer_fee)
         slippage_cost = float(
-            spread_cost
-            + temporary_impact
-            + permanent_impact
-            + opportunity_cost
-            + financing_cost
+            spread_cost + temporary_impact + permanent_impact + opportunity_cost + financing_cost
         )
         return cls(
             fee_cost=fee_cost,

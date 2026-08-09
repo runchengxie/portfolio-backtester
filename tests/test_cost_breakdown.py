@@ -16,8 +16,44 @@ def test_cost_breakdown_reports_components_and_total() -> None:
     assert breakdown.to_dict() == {
         "fee_cost": pytest.approx(0.001),
         "slippage_cost": pytest.approx(0.002),
+        "commission": pytest.approx(0.0),
+        "stamp_tax": pytest.approx(0.0),
+        "transfer_fee": pytest.approx(0.0),
+        "spread_cost": pytest.approx(0.0),
+        "temporary_impact": pytest.approx(0.0),
+        "permanent_impact": pytest.approx(0.0),
+        "opportunity_cost": pytest.approx(0.0),
+        "financing_cost": pytest.approx(0.0),
         "total_cost": pytest.approx(0.003),
     }
+
+
+def test_cost_breakdown_from_components_aggregates_consistently() -> None:
+    breakdown = CostBreakdown.from_components(
+        commission=0.001,
+        stamp_tax=0.0005,
+        transfer_fee=0.0001,
+        spread_cost=0.002,
+        temporary_impact=0.0003,
+        permanent_impact=0.0002,
+        opportunity_cost=0.0001,
+        financing_cost=0.0004,
+    )
+
+    assert breakdown.fee_cost == pytest.approx(0.0016)
+    assert breakdown.slippage_cost == pytest.approx(0.003)
+    assert breakdown.total_cost == pytest.approx(0.0046)
+    assert breakdown.total_cost == pytest.approx(
+        breakdown.commission
+        + breakdown.stamp_tax
+        + breakdown.transfer_fee
+        + breakdown.spread_cost
+        + breakdown.temporary_impact
+        + breakdown.permanent_impact
+        + breakdown.opportunity_cost
+        + breakdown.financing_cost
+    )
+    assert breakdown.to_dict()["total_cost"] == pytest.approx(0.0046)
 
 
 def test_backtest_leg_result_exposes_net_cost_and_turnover_breakdown() -> None:

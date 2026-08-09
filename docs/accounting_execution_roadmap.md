@@ -73,15 +73,12 @@
 
 ## 第三阶段：成本拆分
 
-计划将费用模型拆成互不重复的项目：
+已完成（成本已拆分为 8 个互不重复子项，无模型的子项用 0 占位）。
 
-- 佣金
-- 印花税、交易费和过户费
-- 买卖价差或半价差成本
-- 临时市场冲击
-- 经校准的永久冲击
-- 延迟或放弃订单的机会成本
-- 融券和融资成本
+`CostBreakdown`（`src/portfolio_backtester/types.py`）现在包含 8 个互不重复的子项：佣金、印花税、过户费、价差成本、临时冲击、永久冲击、机会成本、融资成本。聚合关系保持为 `fee_cost = 佣金 + 印花税 + 过户费`，`slippage_cost = 价差成本 + 临时冲击 + 永久冲击 + 机会成本 + 融资成本`，`total_cost = fee_cost + slippage_cost`（即 8 个子项之和）。原有 `fee_cost`/`slippage_cost`/`total_cost` 语义与 `to_dict` 全部保留，旧调用方无需改动。新增 `from_components` 类方法用于在有分项数据时构造。`UnifiedLedger.to_unified_ledger()` 也已输出 8 个子项。
+
+- 佣金、印花税、过户费：沿用既有费用模型字段（A 股佣金/印花税/过户费口径），通过 `from_components` 接入。
+- 价差成本、临时冲击、永久冲击、机会成本、融资成本：当前执行引擎尚未提供对应模型，统一以 0 占位（注释标记 planned placeholder: no market-impact/shorting model yet）。
 
 最低佣金需要明确计费单位。默认建议按股票、买卖方向和交易日分别计费，同时允许券商专用规则覆盖。
 

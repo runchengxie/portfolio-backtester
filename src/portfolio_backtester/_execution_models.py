@@ -143,9 +143,34 @@ class DetailedTradeFeeModel:
     portfolio_value: float = 1_000_000.0
 
     def notional_cost(self, notional: float, *, side: str) -> float:
+        breakdown = self.notional_cost_breakdown(notional, side=side)
+        return float(
+            breakdown["commission"]
+            + breakdown["stamp_tax"]
+            + breakdown["transfer_fee"]
+            + breakdown["spread_cost"]
+        )
+
+    def notional_cost_breakdown(
+        self, notional: float, *, side: str
+    ) -> dict[str, float]:
+        """Split a notional's transaction cost into stage-3 sub-items.
+
+        Returns a dict with keys ``commission``, ``stamp_tax``,
+        ``transfer_fee`` and ``spread_cost``. The remaining impact/opportunity
+        /financing sub-items are intentionally absent (always 0 upstream) —
+        this model has no market-impact or financing component, so it does not
+        fabricate them. The four returned sub-items sum exactly to
+        :meth:`notional_cost`.
+        """
         amount = max(float(notional), 0.0)
         if amount <= 0:
-            return 0.0
+            return {
+                "commission": 0.0,
+                "stamp_tax": 0.0,
+                "transfer_fee": 0.0,
+                "spread_cost": 0.0,
+            }
         normalized_side = str(side).strip().lower()
         commission_bps = (
             float(self.sell_commission_bps)
@@ -155,15 +180,21 @@ class DetailedTradeFeeModel:
         commission = amount * max(commission_bps, 0.0) / 10_000.0
         if self.min_commission > 0:
             commission = max(commission, float(self.min_commission))
+        stamp_bps = float(self.sell_stamp_duty_bps) if normalized_side == "sell" else 0.0
+        stamp_tax = amount * max(stamp_bps, 0.0) / 10_000.0
+        transfer_fee = amount * max(float(self.transfer_fee_bps), 0.0) / 10_000.0
         slippage_bps = (
             float(self.sell_slippage_bps)
             if normalized_side == "sell"
             else float(self.buy_slippage_bps)
         )
-        stamp_bps = float(self.sell_stamp_duty_bps) if normalized_side == "sell" else 0.0
-        side_bps = max(slippage_bps, 0.0) + max(stamp_bps, 0.0)
-        side_bps += max(float(self.transfer_fee_bps), 0.0)
-        return float(commission + amount * side_bps / 10_000.0)
+        spread_cost = amount * max(slippage_bps, 0.0) / 10_000.0
+        return {
+            "commission": float(commission),
+            "stamp_tax": float(stamp_tax),
+            "transfer_fee": float(transfer_fee),
+            "spread_cost": float(spread_cost),
+        }
 
     def cost(
         self,
