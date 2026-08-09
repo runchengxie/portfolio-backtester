@@ -93,6 +93,8 @@ from pathlib import Path
 
 import pandas as pd
 
+_ts = pd.Timestamp
+
 import portfolio_backtester
 from portfolio_backtester import (
     PositionBacktestConfig,
