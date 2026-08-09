@@ -99,6 +99,9 @@ def _build_targets_by_rebalance(
             .to_dict()
         )
         grouped.append(
-            (pd.to_datetime(cast(pd.Timestamp, rebalance_date)), {"entry_date": entry_date, "weights": weights})
+            (
+                pd.to_datetime(cast(pd.Timestamp, rebalance_date)),
+                {"entry_date": entry_date, "weights": weights},
+            )
         )
     return grouped

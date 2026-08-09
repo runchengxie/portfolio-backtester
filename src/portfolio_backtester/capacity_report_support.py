@@ -8,12 +8,11 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any, cast
 
-from ._execution_models import ExitFallbackPolicy, ExitPricePolicy
-
 import numpy as np
 import pandas as pd
 import yaml
 
+from ._execution_models import ExitFallbackPolicy, ExitPricePolicy
 from .execution import DetailedTradeFeeModel, build_execution_model
 
 GRID_FIELDNAMES = [

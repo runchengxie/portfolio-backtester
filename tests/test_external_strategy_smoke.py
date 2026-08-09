@@ -4,9 +4,9 @@ import os
 import subprocess
 import sys
 from pathlib import Path
+from typing import cast
 
 import pandas as pd
-from typing import cast
 import pytest
 
 from portfolio_backtester import (

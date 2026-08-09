@@ -1,7 +1,8 @@
 from __future__ import annotations
 
-import pandas as pd
 from typing import cast
+
+import pandas as pd
 import pytest
 
 from portfolio_backtester.engine import backtest_topk

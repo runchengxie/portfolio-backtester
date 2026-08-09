@@ -3,10 +3,10 @@
 from __future__ import annotations
 
 from collections.abc import Mapping
+from typing import Any, cast
 
 import numpy as np
 import pandas as pd
-from typing import Any, cast
 
 from ._execution_models import (
     BpsCostModel,

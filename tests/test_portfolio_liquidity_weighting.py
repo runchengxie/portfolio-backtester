@@ -1,8 +1,9 @@
 from __future__ import annotations
 
+from typing import cast
+
 import numpy as np
 import pandas as pd
-from typing import cast
 import pytest
 
 from portfolio_backtester.portfolio import build_position_weights, build_positions_by_rebalance

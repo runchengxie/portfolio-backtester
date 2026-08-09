@@ -1,7 +1,8 @@
 from __future__ import annotations
 
-import pandas as pd
 from typing import cast
+
+import pandas as pd
 
 from portfolio_backtester.portfolio import build_positions_by_rebalance
 

@@ -1,6 +1,8 @@
+from collections.abc import Mapping
+from typing import Any, cast
+
 import numpy as np
 import pandas as pd
-from typing import Any, Mapping, cast
 
 from portfolio_backtester.engine import backtest_topk
 from portfolio_backtester.evaluation import _filter_positions_to_backtest_periods

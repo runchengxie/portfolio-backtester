@@ -2,9 +2,10 @@
 
 from __future__ import annotations
 
+from typing import Any, cast
+
 import numpy as np
 import pandas as pd
-from typing import Any, cast
 
 try:
     from scipy import stats as scipy_stats

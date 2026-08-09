@@ -17,9 +17,9 @@ from ._construction_grid_signal import (
     _build_base_context,
     _prepare_signal_column,
 )
+from ._execution_models import ExitFallbackPolicy, ExitPricePolicy
 from .benchmarking import build_benchmark_series
 from .execution import build_execution_model
-from ._execution_models import ExitFallbackPolicy, ExitPricePolicy
 from .metrics import (
     daily_ic_series,
     estimate_turnover,

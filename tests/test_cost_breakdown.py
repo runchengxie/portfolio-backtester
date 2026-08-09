@@ -1,8 +1,9 @@
 from __future__ import annotations
 
+from typing import cast
+
 import pandas as pd
 import pytest
-from typing import cast
 
 from portfolio_backtester.turnover import build_rebalance_turnover_report
 from portfolio_backtester.types import BacktestLegResult, CostBreakdown
