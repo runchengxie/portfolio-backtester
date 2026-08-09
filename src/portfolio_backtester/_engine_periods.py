@@ -12,6 +12,7 @@ from ._engine_leg import (
     _evaluate_long_only_period,
     _evaluate_long_short_period,
 )
+from .execution_sim import ExecutionSimConfig
 from .period_turnover import period_turnover_fields
 from .periods import resolve_backtest_period_plan
 from .topk_context import (
@@ -295,6 +296,14 @@ def _run_backtest_periods(
             slippage_costs=accumulator.slippage_costs,
             period_info=accumulator.period_info,
         )
+        accumulator.targets_by_rebalance.append(
+            {
+                "rebalance_date": evaluation.reb_date,
+                "entry_date": evaluation.entry_date,
+                "long_state": evaluation.long_state,
+                "short_state": evaluation.short_state,
+            }
+        )
         accumulator.long_state = evaluation.long_state
         accumulator.short_state = evaluation.short_state
         accumulator.prev_exit_idx = evaluation.period_result.exit_idx
@@ -305,6 +314,8 @@ def _run_backtest_config(
     data: pd.DataFrame,
     *,
     config: _BacktestTopKConfig,
+    ledger: bool = False,
+    ledger_config: object | None = None,
 ):
     run_context = _prepare_backtest_run_context(data, config=config)
     if run_context is None:
@@ -312,8 +323,92 @@ def _run_backtest_config(
     accumulator = _run_backtest_periods(config=config, run_context=run_context)
     if not accumulator.net_returns:
         return None
-    return _build_backtest_return_bundle(
+    bundle = _build_backtest_return_bundle(
         accumulator=accumulator,
         config=config,
         weighting_mode=run_context.weighting_mode,
     )
+    if not ledger:
+        return bundle
+    from .execution_sim import simulate_ideal_daily_nav
+
+    sim_config = _resolve_ledger_config(ledger_config)
+    positions = _build_ledger_positions(accumulator)
+    pricing = config.pricing_data
+    if positions is None or positions.empty or pricing is None:
+        return (*bundle, None)
+    ledger_result = simulate_ideal_daily_nav(
+        positions,
+        pricing,
+        price_col=config.price_col,
+        transaction_cost_bps=_effective_cost_bps(config),
+        trading_days_per_year=config.trading_days_per_year,
+        portfolio_value=float(sim_config.portfolio_value),
+    )
+    unified = ledger_result.to_unified_ledger(portfolio_value=float(sim_config.portfolio_value))
+    return (*bundle, unified)
+
+
+def _resolve_ledger_config(ledger_config: object | None) -> ExecutionSimConfig:
+    from .execution_sim import ExecutionSimConfig, build_execution_sim_config
+
+    if ledger_config is None:
+        return ExecutionSimConfig(enabled=True)
+    if isinstance(ledger_config, ExecutionSimConfig):
+        return ledger_config
+    return build_execution_sim_config(ledger_config)
+
+
+def _effective_cost_bps(config: _BacktestTopKConfig) -> float:
+    execution = config.execution
+    if execution is not None and execution.cost_model is not None:
+        cost_model = execution.cost_model
+        bps = getattr(cost_model, "bps", None)
+        if bps is not None:
+            return float(bps)
+    return 0.0
+
+
+def _build_ledger_positions(accumulator: object) -> pd.DataFrame | None:
+    from .types import BacktestPositionState
+
+    targets = getattr(accumulator, "targets_by_rebalance", None)
+    if not targets:
+        return None
+    rows = []
+    for item in targets:
+        rebalance_date = item["rebalance_date"]
+        entry_date = item["entry_date"]
+        long_state = item["long_state"]
+        short_state = item["short_state"]
+        long_weights = (
+            long_state.target_weights if isinstance(long_state, BacktestPositionState) else None
+        )
+        if long_weights is not None and len(long_weights) > 0:
+            for symbol, weight in long_weights.items():
+                rows.append(
+                    {
+                        "rebalance_date": rebalance_date,
+                        "entry_date": entry_date,
+                        "symbol": str(symbol),
+                        "weight": float(weight),
+                        "side": "long",
+                    }
+                )
+        short_weights = (
+            short_state.target_weights if isinstance(short_state, BacktestPositionState) else None
+        )
+        if short_weights is not None and len(short_weights) > 0:
+            for symbol, weight in short_weights.items():
+                rows.append(
+                    {
+                        "rebalance_date": rebalance_date,
+                        "entry_date": entry_date,
+                        "symbol": str(symbol),
+                        "weight": float(-abs(weight)),
+                        "side": "short",
+                    }
+                )
+    if not rows:
+        return None
+    return pd.DataFrame(rows)
