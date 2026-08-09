@@ -21,6 +21,8 @@ from .models import (
 from .results import (
     ExecutionAdjustedNavResult as ExecutionAdjustedNavResult,
     ExecutionSimResult as ExecutionSimResult,
+    UnifiedLedger as UnifiedLedger,
+    to_unified_ledger as to_unified_ledger,
 )
 
 __all__ = [
@@ -29,6 +31,7 @@ __all__ = [
     "ExecutionSimConfig",
     "ExecutionSimResult",
     "TradeFeeModel",
+    "UnifiedLedger",
     "build_execution_sim_config",
     "describe_execution_sim_config",
     "describe_trade_fee_model",
@@ -36,4 +39,5 @@ __all__ = [
     "simulate_capacity_execution",
     "simulate_execution_adjusted_nav",
     "simulate_ideal_daily_nav",
+    "to_unified_ledger",
 ]

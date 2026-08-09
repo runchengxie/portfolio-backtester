@@ -89,6 +89,7 @@ class _BacktestResultAccumulator:
     long_state: BacktestPositionState = field(default_factory=BacktestPositionState)
     short_state: BacktestPositionState = field(default_factory=BacktestPositionState)
     prev_exit_idx: int | None = None
+    targets_by_rebalance: list[dict] = field(default_factory=list)
 
 
 @dataclass(frozen=True)

@@ -10,12 +10,16 @@ from portfolio_backtester.execution_sim import (
     simulate_capacity_execution,
     simulate_execution_adjusted_nav,
     simulate_ideal_daily_nav,
+    to_unified_ledger,
+    UnifiedLedger,
 )
 ```
 
 - `simulate_capacity_execution` 输出订单、成交和汇总
 - `simulate_execution_adjusted_nav` 输出每日净值、订单、成交和汇总
 - `simulate_ideal_daily_nav` 假设目标仓位立即完成，用作充分流动性对照
+- `to_unified_ledger` 把模拟结果适配为路线图定义的八个统一账本字段，也可通过 `ExecutionSimResult.to_unified_ledger` 与 `ExecutionAdjustedNavResult.to_unified_ledger` 方法调用
+- `UnifiedLedger` 是统一账本的数据容器，包含 `targets`、`orders`、`fills`、`daily_positions`、`daily_cash`、`daily_nav`、`cost_breakdown` 和 `turnover_breakdown`
 
 ## 配置
 
