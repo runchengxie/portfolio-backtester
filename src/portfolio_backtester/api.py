@@ -159,7 +159,7 @@ def _assemble_topk_spec(
     rebalance_dates: list[pd.Timestamp],
     shift_days: int,
     trading_days_per_year: int,
-    exit_mode: str,
+    exit_mode: Literal["rebalance", "label_horizon"],
     exit_horizon_days: int | None,
     tradable_col: str | None,
     liquidity_floor_col: str | None,
@@ -174,11 +174,11 @@ def _assemble_topk_spec(
     selection_score_margin_rank_limit: int | None,
     selection_min_score: float | None,
     max_new_names_per_rebalance: int | None,
-    max_new_names_shortfall_policy: object,
+    max_new_names_shortfall_policy: MaxNewNamesShortfallPolicy,
     max_positive_names: int | None,
     entry_rank_cutoff: int | None,
-    selection_price_policy: object,
-    target_weight_policy: object,
+    selection_price_policy: SelectionPricePolicy,
+    target_weight_policy: TargetWeightPolicy,
 ) -> BacktestSpec:
     """Compose the BacktestSpec used by :func:`backtest_topk`."""
     group_cap = None

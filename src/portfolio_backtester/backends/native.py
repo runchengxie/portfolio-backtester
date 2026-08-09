@@ -7,6 +7,7 @@ from typing import ClassVar, Literal
 
 import pandas as pd
 
+from .._position_backtest_config import PositionBacktestResult
 from ..execution_sim import ExecutionSimConfig, simulate_execution_adjusted_nav
 from ..position_backtest import PositionBacktestConfig, run_position_backtest
 from .base import (
@@ -57,7 +58,7 @@ class NativePositionReplayBackend:
 
     def run(self, request: NativePositionReplayRequest) -> CanonicalBacktestResult:
         _validate_request(request)
-        result = run_position_backtest(
+        result: PositionBacktestResult = run_position_backtest(
             positions=request.positions,
             pricing=request.pricing,
             periods=request.periods,
@@ -91,7 +92,7 @@ class NativePositionReplayBackend:
     def _run_with_ledger(
         self,
         request: NativePositionReplayRequest,
-        result: object,
+        result: PositionBacktestResult,
         performance: pd.DataFrame,
     ) -> CanonicalBacktestResult:
         from ..position_backtest import normalize_position_backtest_positions
