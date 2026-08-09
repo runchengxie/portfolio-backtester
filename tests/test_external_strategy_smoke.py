@@ -4,9 +4,9 @@ import os
 import subprocess
 import sys
 from pathlib import Path
+from typing import cast
 
 import pandas as pd
-from typing import cast
 import pytest
 
 from portfolio_backtester import (
@@ -92,6 +92,8 @@ import sys
 from pathlib import Path
 
 import pandas as pd
+
+_ts = pd.Timestamp
 
 import portfolio_backtester
 from portfolio_backtester import (

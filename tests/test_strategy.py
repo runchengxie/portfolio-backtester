@@ -1,7 +1,8 @@
 from __future__ import annotations
 
-import pandas as pd
 from typing import cast
+
+import pandas as pd
 
 from portfolio_backtester.strategy import construct_positions_from_strategy, strategy_from_config
 

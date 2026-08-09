@@ -1,6 +1,6 @@
 # 会计与执行路线图
 
-本页记录信号回测、持仓回放和容量分析逐步共用一套可审计账本的计划。当前已完成框架中立的执行契约、后端结果边界以及术语与结果契约。共享每日账本和后续阶段仍属于路线图，不能当作现有能力使用。
+本页记录信号回测、持仓回放和容量分析逐步共用一套可审计账本的计划。当前已完成框架中立的执行契约、后端结果边界、术语与结果契约，以及订单级共享账本引擎的初步接入。第三阶段及之后的成本拆分、市场规则、容量校准与复现元数据仍属于路线图，不能当作现有能力使用。
 
 ## 长期约束
 
@@ -42,7 +42,12 @@
 
 ## 第二阶段：共享每日账本
 
-计划让 `backtest_topk`、`run_position_backtest`、理想净值和容量调整净值共用以下账本链路：
+状态：部分完成（截至 2026-08-09 代码核查）。已落地独立的订单级账本引擎 `execution_sim/`：`core.py` 真实产出 `orders` 与 `fills`，并已接入 `run_position_backtest`（`_evaluation_positions.py` 把 `sim_result.orders/fills/daily` 写入 `execution_sim_*` 字段，`simulate_ideal_daily_nav` 也已实现）。但以下仍属于规划、尚未完成。
+
+- 旧 `native` 周期回放后端仍按契约声明 `orders/fills/daily_ledger` 为 `not_available`，未切换到统一账本。
+- `backtest_topk`（api.py）仍走独立的 `ExecutionModel` facade，未产出本路线图定义的统一账本字段（`targets/orders/fills/daily_positions/daily_cash/daily_nav/cost_breakdown/turnover_breakdown`）。
+
+原规划让 `backtest_topk`、`run_position_backtest`、理想净值和容量调整净值共用以下账本链路：
 
 ```text
 目标持仓 -> 订单 -> 成交 -> 持股与现金 -> 每日净值 -> 报告

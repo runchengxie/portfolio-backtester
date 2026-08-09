@@ -1,6 +1,7 @@
+from typing import Any, cast
+
 import pandas as pd
 import pytest
-from typing import Any, cast
 
 from portfolio_backtester.execution import build_execution_model
 from portfolio_backtester.position_postprocess import (

@@ -7,6 +7,7 @@ from typing import Any, cast
 
 import pandas as pd
 
+from ._execution_models import ExitPricePolicy
 from ._position_backtest_config import (
     PositionBacktestConfig,
     PositionBacktestResult,
@@ -18,7 +19,6 @@ from ._position_backtest_config import (
 )
 from .engine import _compute_trade_summary
 from .execution import BpsCostModel, ExitPolicy
-from ._execution_models import ExitFallbackPolicy, ExitPricePolicy
 from .metrics import summarize_period_returns
 from .portfolio_weights import normalize_position_weights
 
@@ -207,7 +207,9 @@ def _resolve_exit_policy_prices(
         )
 
     trade_dates = list(price_table.index)
-    date_to_idx = {cast(pd.Timestamp, pd.Timestamp(date)): idx for idx, date in enumerate(trade_dates)}
+    date_to_idx = {
+        cast(pd.Timestamp, pd.Timestamp(date)): idx for idx, date in enumerate(trade_dates)
+    }
     exit_policy = ExitPolicy(
         cast(ExitPricePolicy, config.exit_price_policy),
         config.exit_fallback_policy,
