@@ -1,6 +1,6 @@
 # 会计与执行路线图
 
-本页记录信号回测、持仓回放和容量分析逐步共用一套可审计账本的计划。当前已完成框架中立的执行契约、后端结果边界、术语与结果契约，以及订单级共享账本引擎的初步接入。第三阶段及之后的成本拆分、市场规则、容量校准与复现元数据仍属于路线图，不能当作现有能力使用。
+本页记录信号回测、持仓回放和容量分析逐步共用一套可审计账本的计划。当前已完成框架中立的执行契约、后端结果边界、术语与结果契约，订单级共享账本引擎的初步接入，以及第三阶段的成本子项拆分（佣金/印花税/过户费/价差真实拆分，冲击/机会/融资为占位 0）。第四阶段及之后的市场规则、容量校准与复现元数据仍属于路线图，不能当作现有能力使用。
 
 ## 长期约束
 
@@ -73,12 +73,20 @@
 
 ## 第三阶段：成本拆分
 
-已完成（成本已拆分为 8 个互不重复子项，无模型的子项用 0 占位）。
+已完成（执行路径已真实拆分，8 个互不重复子项全部接入。无模型的子项用 0 占位）。
 
-`CostBreakdown`（`src/portfolio_backtester/types.py`）现在包含 8 个互不重复的子项：佣金、印花税、过户费、价差成本、临时冲击、永久冲击、机会成本、融资成本。聚合关系保持为 `fee_cost = 佣金 + 印花税 + 过户费`，`slippage_cost = 价差成本 + 临时冲击 + 永久冲击 + 机会成本 + 融资成本`，`total_cost = fee_cost + slippage_cost`（即 8 个子项之和）。原有 `fee_cost`/`slippage_cost`/`total_cost` 语义与 `to_dict` 全部保留，旧调用方无需改动。新增 `from_components` 类方法用于在有分项数据时构造。`UnifiedLedger.to_unified_ledger()` 也已输出 8 个子项。
+`CostBreakdown`（`src/portfolio_backtester/types.py`）包含 8 个互不重复的子项：佣金、印花税、过户费、价差成本、临时冲击、永久冲击、机会成本、融资成本。聚合关系保持为 `fee_cost = 佣金 + 印花税 + 过户费`，`slippage_cost = 价差成本 + 临时冲击 + 永久冲击 + 机会成本 + 融资成本`，`total_cost = fee_cost + slippage_cost`（即 8 个子项之和）。原有 `fee_cost`/`slippage_cost`/`total_cost` 语义与 `to_dict` 全部保留。`from_components` 在有分项数据时构造，`to_unified_ledger()` 的 `cost_breakdown` 现在输出各子项，并额外给出 `fee_cost`/`slippage_cost`/`transaction_cost` 聚合列。
 
-- 佣金、印花税、过户费：沿用既有费用模型字段（A 股佣金/印花税/过户费口径），通过 `from_components` 接入。
-- 价差成本、临时冲击、永久冲击、机会成本、融资成本：当前执行引擎尚未提供对应模型，统一以 0 占位（注释标记 planned placeholder: no market-impact/shorting model yet）。
+### 执行路径真实接入（本阶段落地）
+
+- `DetailedTradeFeeModel`（`src/portfolio_backtester/_execution_models.py`）新增 `notional_cost_breakdown(notional, side)`，按 A 股口径返回 `commission`/`stamp_tax`/`transfer_fee`/`spread_cost` 四项，且四项之和恒等于 `notional_cost`（守恒）。
+- 执行引擎的每笔成交成本由单值 `_trade_fee` 改为返回 `CostBreakdown`：`orders_ideal.py`、`orders_nav.py` 的 ideal/adjusted-nav 路径均按子项累加，并通过 `_record_nav_fill` 把子项写入 `fills` 的 `cost_*` 列。每日 `daily` 行也带 `cost_*` 子项。
+- `UnifiedLedger.to_unified_ledger()`（`execution_sim/results.py`）的 `cost_breakdown` 改为按买卖方向聚合并填入子项，再派生 `fee_cost`/`slippage_cost`/`transaction_cost`，保证 8 子项之和 == 旧 `fee_cost + slippage_cost` == 旧 `transaction_cost`。
+
+### 子项现状
+
+- 佣金、印花税、过户费、价差成本：已真实拆分（带 `DetailedTradeFeeModel` 时非零。无费率模型时按 `notional * cost_rate` 整体归入 `spread_cost`，保持总现金扣减不变）。
+- 临时冲击、永久冲击、机会成本、融资成本：执行引擎尚无对应模型，统一以 0 占位（诚实占位，不编造数值）。
 
 最低佣金需要明确计费单位。默认建议按股票、买卖方向和交易日分别计费，同时允许券商专用规则覆盖。
 

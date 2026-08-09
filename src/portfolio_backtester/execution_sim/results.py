@@ -169,6 +169,8 @@ def _build_daily_series(daily: pd.DataFrame, value_col: str, out_col: str) -> pd
     )
 
 
+# Maps the daily/fill ``cost_*`` columns onto the exact CostBreakdown field
+# names used by the ledger contract.
 _COST_SUB_COLS = [
     "cost_commission",
     "cost_stamp_tax",
@@ -179,13 +181,23 @@ _COST_SUB_COLS = [
     "cost_opportunity",
     "cost_financing",
 ]
+_COST_FIELD_BY_COL = {
+    "cost_commission": "commission",
+    "cost_stamp_tax": "stamp_tax",
+    "cost_transfer_fee": "transfer_fee",
+    "cost_spread": "spread_cost",
+    "cost_temporary_impact": "temporary_impact",
+    "cost_permanent_impact": "permanent_impact",
+    "cost_opportunity": "opportunity_cost",
+    "cost_financing": "financing_cost",
+}
 
 
 def _cost_row(sub: pd.DataFrame) -> dict[str, float]:
     row: dict[str, float] = {}
     for col in _COST_SUB_COLS:
         if col in sub.columns:
-            row[col.replace("cost_", "")] = float(
+            row[_COST_FIELD_BY_COL[col]] = float(
                 pd.to_numeric(sub[col], errors="coerce").fillna(0.0).sum()
             )
     if "transaction_cost" in sub.columns and not row:
@@ -246,12 +258,29 @@ def _build_cost_breakdown(fills: pd.DataFrame, daily: pd.DataFrame) -> pd.DataFr
     data: dict[str, list[float] | list[str]] = {"side": labels}
     for key in all_keys:
         data[key] = [float(source.get(label, {}).get(key, 0.0)) for label in labels]
+    # Derived aggregate columns (CostBreakdown contract): fee_cost / slippage_cost.
+    fee_cols = [c for c in ("commission", "stamp_tax", "transfer_fee") if c in data]
+    slip_cols = [
+        c
+        for c in (
+            "spread_cost",
+            "temporary_impact",
+            "permanent_impact",
+            "opportunity_cost",
+            "financing_cost",
+        )
+        if c in data
+    ]
+    if fee_cols:
+        data["fee_cost"] = [float(sum(data[c][i] for c in fee_cols)) for i in range(len(labels))]
+    if slip_cols:
+        data["slippage_cost"] = [
+            float(sum(data[c][i] for c in slip_cols)) for i in range(len(labels))
+        ]
     # Legacy ``transaction_cost`` alias: aggregate of every sub-item so existing
     # consumers (and conservation assertions) keep working.
     if "transaction_cost" not in data:
-        data["transaction_cost"] = [
-            float(sum(source.get(label, {}).values())) for label in labels
-        ]
+        data["transaction_cost"] = [float(sum(source.get(label, {}).values())) for label in labels]
     return pd.DataFrame(data)
 
 

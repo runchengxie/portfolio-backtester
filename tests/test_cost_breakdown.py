@@ -5,6 +5,8 @@ from typing import cast
 import pandas as pd
 import pytest
 
+from portfolio_backtester.execution import DetailedTradeFeeModel
+from portfolio_backtester.execution_sim import simulate_ideal_daily_nav
 from portfolio_backtester.turnover import build_rebalance_turnover_report
 from portfolio_backtester.types import BacktestLegResult, CostBreakdown
 
@@ -170,3 +172,131 @@ def test_rebalance_turnover_report_rejects_cost_without_execution() -> None:
             pretrade_trade_weights=pd.Series({"NEW": 1.0}),
             executed_cost=0.001,
         )
+
+
+# --------------------------------------------------------------------------- #
+# Stage 3: execution path really splits cost into sub-items
+# --------------------------------------------------------------------------- #
+
+
+def _stage3_sim() -> pd.DataFrame:
+    dates = pd.date_range("2020-01-02", periods=4, freq="B")
+    # Two entry dates with swapped targets force a sell (AAA) then a buy (BBB),
+    # so stamp duty is exercised alongside buy-side costs.
+    positions = pd.DataFrame(
+        {
+            "rebalance_date": ["20200102", "20200102", "20200103", "20200103"],
+            "entry_date": ["20200102", "20200102", "20200103", "20200103"],
+            "symbol": ["AAA", "BBB", "AAA", "BBB"],
+            "weight": [1.0, 0.0, 0.0, 1.0],
+            "side": ["long", "long", "long", "long"],
+        }
+    )
+    pricing = pd.DataFrame(
+        [
+            {
+                "trade_date": date,
+                "symbol": symbol,
+                "open": 10.0 + i,
+                "amount": 500_000.0,
+                "medadv20_amount": 500_000.0,
+                "is_tradable": True,
+            }
+            for i, date in enumerate(dates)
+            for symbol in ["AAA", "BBB"]
+        ]
+    )
+    fee_model = DetailedTradeFeeModel(
+        buy_commission_bps=2.5,
+        sell_commission_bps=2.5,
+        sell_stamp_duty_bps=5.0,
+        transfer_fee_bps=0.1,
+        min_commission=0.0,
+        buy_slippage_bps=6.0,
+        sell_slippage_bps=8.0,
+    )
+    result = simulate_ideal_daily_nav(
+        positions,
+        pricing,
+        price_col="open",
+        transaction_cost_bps=0.0,
+        portfolio_value=1_000_000.0,
+        trade_fee_model=fee_model,
+    )
+    return result.to_unified_ledger(portfolio_value=1_000_000.0).cost_breakdown
+
+
+def test_stage3_cost_breakdown_subitems_nonzero_and_conserved() -> None:
+    cb = _stage3_sim()
+    total = cb.loc[cb["side"].eq("total")].iloc[0]
+
+    # Real split: fee sub-items and spread must be non-zero.
+    assert float(total["commission"]) > 0.0
+    assert float(total["stamp_tax"]) > 0.0
+    assert float(total["transfer_fee"]) > 0.0
+    assert float(total["spread_cost"]) > 0.0
+
+    # Impact/opportunity/financing are honest placeholders (no model yet).
+    assert float(total["temporary_impact"]) == 0.0
+    assert float(total["permanent_impact"]) == 0.0
+    assert float(total["opportunity_cost"]) == 0.0
+    assert float(total["financing_cost"]) == 0.0
+
+    # Conservation: eight sub-items sum to fee_cost + slippage_cost and to
+    # the legacy transaction_cost column.
+    subitem_sum = (
+        total["commission"]
+        + total["stamp_tax"]
+        + total["transfer_fee"]
+        + total["spread_cost"]
+        + total["temporary_impact"]
+        + total["permanent_impact"]
+        + total["opportunity_cost"]
+        + total["financing_cost"]
+    )
+    assert subitem_sum == pytest.approx(float(total["transaction_cost"]), rel=1e-9)
+    assert float(total["fee_cost"]) == pytest.approx(
+        float(total["commission"] + total["stamp_tax"] + total["transfer_fee"]), rel=1e-9
+    )
+    assert float(total["slippage_cost"]) == pytest.approx(float(total["spread_cost"]), rel=1e-9)
+
+
+def test_stage3_no_fee_model_keeps_single_cost_in_spread() -> None:
+    dates = pd.date_range("2020-01-02", periods=3, freq="B")
+    positions = pd.DataFrame(
+        {
+            "rebalance_date": ["20200102", "20200102"],
+            "entry_date": ["20200102", "20200102"],
+            "symbol": ["AAA", "BBB"],
+            "weight": [0.5, 0.5],
+            "side": ["long", "long"],
+        }
+    )
+    pricing = pd.DataFrame(
+        [
+            {
+                "trade_date": date,
+                "symbol": symbol,
+                "open": 10.0,
+                "amount": 500_000.0,
+                "medadv20_amount": 500_000.0,
+                "is_tradable": True,
+            }
+            for date in dates
+            for symbol in ["AAA", "BBB"]
+        ]
+    )
+    result = simulate_ideal_daily_nav(
+        positions,
+        pricing,
+        price_col="open",
+        transaction_cost_bps=10.0,
+        portfolio_value=1_000_000.0,
+    )
+    cb = result.to_unified_ledger(portfolio_value=1_000_000.0).cost_breakdown
+    total = cb.loc[cb["side"].eq("total")].iloc[0]
+    # Legacy single cost_rate path: everything lands in spread_cost, sub-items 0.
+    assert float(total["spread_cost"]) == pytest.approx(float(total["transaction_cost"]), rel=1e-9)
+    assert float(total["commission"]) == 0.0
+    assert float(total["stamp_tax"]) == 0.0
+    assert float(total["transfer_fee"]) == 0.0

@@ -323,6 +323,7 @@ def _execute_nav_sell_orders_for_day(
             capacity_notional=capacity,
             filled_notional=fill,
             transaction_cost=cost.total_cost,
+            cost_breakdown=cost,
             remaining_before_notional=remaining_before_notional,
         )
         traded_notional += fill
@@ -397,6 +398,7 @@ def _execute_nav_buy_orders_for_day(
             capacity_notional=capacity,
             filled_notional=fill,
             transaction_cost=cost.total_cost,
+            cost_breakdown=cost,
         )
         traded_notional += fill
         transaction_cost = _add_breakdown(transaction_cost, cost)

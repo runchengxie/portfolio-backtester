@@ -7,6 +7,7 @@ from typing import Any
 import numpy as np
 import pandas as pd
 
+from ..types import CostBreakdown
 from .config import ExecutionSimConfig
 from .models import _NavOrder
 from .reporting import _format_date
@@ -63,6 +64,7 @@ def _record_nav_fill(
     filled_notional: float,
     transaction_cost: float,
     remaining_before_notional: float | None = None,
+    cost_breakdown: CostBreakdown | None = None,
 ) -> None:
     fill_rows.append(
         {
@@ -80,6 +82,14 @@ def _record_nav_fill(
             "capacity_notional": float(capacity_notional),
             "filled_notional": float(filled_notional),
             "transaction_cost": float(transaction_cost),
+            "cost_commission": float(getattr(cost_breakdown, "commission", 0.0)),
+            "cost_stamp_tax": float(getattr(cost_breakdown, "stamp_tax", 0.0)),
+            "cost_transfer_fee": float(getattr(cost_breakdown, "transfer_fee", 0.0)),
+            "cost_spread": float(getattr(cost_breakdown, "spread_cost", 0.0)),
+            "cost_temporary_impact": float(getattr(cost_breakdown, "temporary_impact", 0.0)),
+            "cost_permanent_impact": float(getattr(cost_breakdown, "permanent_impact", 0.0)),
+            "cost_opportunity": float(getattr(cost_breakdown, "opportunity_cost", 0.0)),
+            "cost_financing": float(getattr(cost_breakdown, "financing_cost", 0.0)),
         }
     )
 

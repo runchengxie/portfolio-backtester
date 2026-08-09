@@ -326,6 +326,7 @@ def _apply_ideal_sell_fill(
         capacity_notional=float(order.requested_notional),
         filled_notional=fill,
         transaction_cost=cost.total_cost,
+        cost_breakdown=cost,
     )
     return cost
 
@@ -433,6 +434,7 @@ def _apply_ideal_buy_fill(
         capacity_notional=float(order.requested_notional),
         filled_notional=fill,
         transaction_cost=cost.total_cost,
+        cost_breakdown=cost,
     )
     return cost
 
