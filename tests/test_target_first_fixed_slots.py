@@ -187,9 +187,7 @@ def _backtest_spec() -> BacktestSpec:
         default_exit_fallback_policy="ffill",
         default_price_col="close",
     )
-    rebalance_dates = cast(
-        "tuple[pd.Timestamp, ...]", (pd.Timestamp("2024-01-02"),)
-    )
+    rebalance_dates = cast("tuple[pd.Timestamp, ...]", (pd.Timestamp("2024-01-02"),))
     return BacktestSpec(
         strategy=StrategySpec(
             name="fixed-slot",

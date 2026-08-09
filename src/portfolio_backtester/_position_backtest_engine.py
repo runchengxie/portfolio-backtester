@@ -208,8 +208,7 @@ def _resolve_exit_policy_prices(
 
     trade_dates = list(price_table.index)
     date_to_idx = {
-        cast(pd.Timestamp, pd.Timestamp(date)): idx
-        for idx, date in enumerate(trade_dates)
+        cast(pd.Timestamp, pd.Timestamp(date)): idx for idx, date in enumerate(trade_dates)
     }
     exit_policy = ExitPolicy(
         cast(ExitPricePolicy, config.exit_price_policy),

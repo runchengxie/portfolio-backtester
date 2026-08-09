@@ -98,9 +98,7 @@ def prepare_backtest_pricing_context(
         tradable_col=tradable_col,
     )
 
-    pricing_source = pricing_source.drop_duplicates(
-        subset=["trade_date", "symbol"]
-    ).copy()
+    pricing_source = pricing_source.drop_duplicates(subset=["trade_date", "symbol"]).copy()
     trade_dates = [
         cast(pd.Timestamp, date).normalize()
         for date in sorted(pricing_source["trade_date"].unique())

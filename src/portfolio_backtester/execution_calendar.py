@@ -81,9 +81,7 @@ def execution_calendar_from_config(cfg: Mapping[str, Any] | None) -> dict[str, A
 def _normalize_dates(values: Iterable[object] | None) -> list[pd.Timestamp]:
     if values is None:
         return []
-    dates = [
-        cast(pd.Timestamp, value).normalize() for value in pd.to_datetime(list(values))
-    ]
+    dates = [cast(pd.Timestamp, value).normalize() for value in pd.to_datetime(list(values))]
     return sorted(set(dates))
 
 
