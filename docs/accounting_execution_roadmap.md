@@ -42,7 +42,7 @@
 
 ## 第二阶段：共享每日账本
 
-**状态：部分完成（截至 2026-08-09 代码核查）。** 已落地独立的订单级账本引擎 `execution_sim/`：`core.py` 真实产出 `orders` 与 `fills`，并已接入 `run_position_backtest`（`_evaluation_positions.py` 把 `sim_result.orders/fills/daily` 写入 `execution_sim_*` 字段；`simulate_ideal_daily_nav` 也已实现）。但以下仍属于规划、尚未完成：
+状态：部分完成（截至 2026-08-09 代码核查）。已落地独立的订单级账本引擎 `execution_sim/`：`core.py` 真实产出 `orders` 与 `fills`，并已接入 `run_position_backtest`（`_evaluation_positions.py` 把 `sim_result.orders/fills/daily` 写入 `execution_sim_*` 字段；`simulate_ideal_daily_nav` 也已实现）。但以下仍属于规划、尚未完成。
 
 - 旧 `native` 周期回放后端仍按契约声明 `orders/fills/daily_ledger` 为 `not_available`，未切换到统一账本。
 - `backtest_topk`（api.py）仍走独立的 `ExecutionModel` facade，未产出本路线图定义的统一账本字段（`targets/orders/fills/daily_positions/daily_cash/daily_nav/cost_breakdown/turnover_breakdown`）。
