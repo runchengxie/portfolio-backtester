@@ -325,6 +325,14 @@ def _executed_daily_columns() -> list[str]:
         "gross_exposure",
         "traded_notional",
         "transaction_cost",
+        "cost_commission",
+        "cost_stamp_tax",
+        "cost_transfer_fee",
+        "cost_spread",
+        "cost_temporary_impact",
+        "cost_permanent_impact",
+        "cost_opportunity",
+        "cost_financing",
         "open_orders",
     ]
 
@@ -362,4 +370,12 @@ def _nav_fill_columns() -> list[str]:
         "capacity_notional",
         "filled_notional",
         "transaction_cost",
+        "cost_commission",
+        "cost_stamp_tax",
+        "cost_transfer_fee",
+        "cost_spread",
+        "cost_temporary_impact",
+        "cost_permanent_impact",
+        "cost_opportunity",
+        "cost_financing",
     ]

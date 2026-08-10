@@ -10,10 +10,76 @@ from .turnover import TurnoverBreakdown
 
 @dataclass(frozen=True)
 class CostBreakdown:
-    """Explicit fee and implicit slippage components for a backtest result."""
+    """Explicit fee and implicit slippage components for a backtest result.
+
+    Stage 3 of the accounting/execution roadmap splits transaction cost into
+    eight mutually non-overlapping sub-items. To keep every existing caller
+    working without modification, ``fee_cost`` and ``slippage_cost`` remain the
+    primary constructor inputs (and ``total_cost`` is always ``fee_cost +
+    slippage_cost``). The eight sub-items are optional and default to 0.0, so a
+    caller that only knows the aggregate fee/slippage still builds a valid
+    breakdown. Use :meth:`from_components` when the eight sub-items are known;
+    it derives ``fee_cost``/``slippage_cost`` as aggregates so all three sums
+    stay consistent.
+
+    Aggregation rules::
+
+        fee_cost = commission + stamp_tax + transfer_fee
+        slippage_cost = spread_cost + temporary_impact + permanent_impact
+                        + opportunity_cost + financing_cost
+        total_cost = fee_cost + slippage_cost  (== sum of all eight)
+    """
 
     fee_cost: float = 0.0
     slippage_cost: float = 0.0
+
+    # Fee sub-items (sum to fee_cost).
+    commission: float = 0.0
+    stamp_tax: float = 0.0
+    transfer_fee: float = 0.0
+
+    # Slippage / implicit-cost sub-items (sum to slippage_cost).
+    spread_cost: float = 0.0
+    temporary_impact: float = 0.0
+    permanent_impact: float = 0.0
+    opportunity_cost: float = 0.0
+    financing_cost: float = 0.0
+
+    @classmethod
+    def from_components(
+        cls,
+        *,
+        commission: float = 0.0,
+        stamp_tax: float = 0.0,
+        transfer_fee: float = 0.0,
+        spread_cost: float = 0.0,
+        temporary_impact: float = 0.0,
+        permanent_impact: float = 0.0,
+        opportunity_cost: float = 0.0,
+        financing_cost: float = 0.0,
+    ) -> CostBreakdown:
+        """Build from the eight sub-items, deriving the aggregate sums.
+
+        Use this when the underlying engine knows the individual cost
+        components. The derived ``fee_cost``/``slippage_cost`` keep
+        ``total_cost`` equal to the sum of all eight sub-items.
+        """
+        fee_cost = float(commission + stamp_tax + transfer_fee)
+        slippage_cost = float(
+            spread_cost + temporary_impact + permanent_impact + opportunity_cost + financing_cost
+        )
+        return cls(
+            fee_cost=fee_cost,
+            slippage_cost=slippage_cost,
+            commission=float(commission),
+            stamp_tax=float(stamp_tax),
+            transfer_fee=float(transfer_fee),
+            spread_cost=float(spread_cost),
+            temporary_impact=float(temporary_impact),
+            permanent_impact=float(permanent_impact),
+            opportunity_cost=float(opportunity_cost),
+            financing_cost=float(financing_cost),
+        )
 
     @property
     def total_cost(self) -> float:
@@ -23,6 +89,14 @@ class CostBreakdown:
         return {
             "fee_cost": float(self.fee_cost),
             "slippage_cost": float(self.slippage_cost),
+            "commission": float(self.commission),
+            "stamp_tax": float(self.stamp_tax),
+            "transfer_fee": float(self.transfer_fee),
+            "spread_cost": float(self.spread_cost),
+            "temporary_impact": float(self.temporary_impact),
+            "permanent_impact": float(self.permanent_impact),
+            "opportunity_cost": float(self.opportunity_cost),
+            "financing_cost": float(self.financing_cost),
             "total_cost": self.total_cost,
         }
 

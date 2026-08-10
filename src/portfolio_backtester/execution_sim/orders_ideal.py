@@ -9,6 +9,7 @@ import numpy as np
 import pandas as pd
 
 from ..execution import DetailedTradeFeeModel
+from ..types import CostBreakdown
 from .capacity import (
     _position_values_by_symbol,
     _price_at,
@@ -18,6 +19,7 @@ from .config import (
     ExecutionSimConfig,
 )
 from .models import (
+    _add_breakdown,
     _ExecutionTables,
     _NavOrder,
     _trade_fee,
@@ -50,7 +52,7 @@ def _rebalance_ideal_target(
     trade_fee_model: TradeFeeModel | None,
     order_rows: list[dict[str, Any]],
     fill_rows: list[dict[str, Any]],
-) -> tuple[float, float]:
+) -> tuple[float, CostBreakdown]:
     current_values = _position_values_by_symbol(
         shares,
         entry_date,
@@ -98,7 +100,7 @@ def _rebalance_ideal_target(
         order_rows=order_rows,
         fill_rows=fill_rows,
     )
-    return float(sell_traded + buy_traded), float(sell_cost + buy_cost)
+    return float(sell_traded + buy_traded), _add_breakdown(sell_cost, buy_cost)
 
 
 def _build_ideal_rebalance_orders(
@@ -260,9 +262,9 @@ def _execute_ideal_sell_orders(
     trade_fee_model: TradeFeeModel | None,
     order_rows: list[dict[str, Any]],
     fill_rows: list[dict[str, Any]],
-) -> tuple[float, float]:
+) -> tuple[float, CostBreakdown]:
     traded_notional = 0.0
-    transaction_cost = 0.0
+    transaction_cost = CostBreakdown()
     for order in sell_orders:
         price = _price_at(order.symbol, entry_date, tables.price_table)
         held_quantity = max(float(shares.get(order.symbol, 0.0)), 0.0)
@@ -283,7 +285,7 @@ def _execute_ideal_sell_orders(
                 fill_rows=fill_rows,
             )
             traded_notional += fill
-            transaction_cost += cost
+            transaction_cost = _add_breakdown(transaction_cost, cost)
         order.status = _ideal_sell_status(order, price)
         _append_nav_order_row(
             order_rows,
@@ -291,7 +293,7 @@ def _execute_ideal_sell_orders(
             trade_date=entry_date,
             participation_rate=config.participation_rate,
         )
-    return float(traded_notional), float(transaction_cost)
+    return float(traded_notional), transaction_cost
 
 
 def _apply_ideal_sell_fill(
@@ -307,13 +309,13 @@ def _apply_ideal_sell_fill(
     entry_date: pd.Timestamp,
     trade_idx: int,
     fill_rows: list[dict[str, Any]],
-) -> float:
+) -> CostBreakdown:
     held_quantity = max(float(shares.get(order.symbol, 0.0)), 0.0)
     shares[order.symbol] = max(held_quantity - fill / price, 0.0)
     if shares[order.symbol] <= 1e-10:
         shares.pop(order.symbol, None)
     cost = _trade_fee(fill, side="sell", cost_rate=cost_rate, fee_model=trade_fee_model)
-    cash_ref["cash"] = float(cash_ref.get("cash", 0.0)) + fill - cost
+    cash_ref["cash"] = float(cash_ref.get("cash", 0.0)) + fill - cost.total_cost
     last_prices[order.symbol] = float(price)
     _update_nav_order(order, entry_date, fill)
     _record_nav_fill(
@@ -323,9 +325,10 @@ def _apply_ideal_sell_fill(
         trade_idx=trade_idx,
         capacity_notional=float(order.requested_notional),
         filled_notional=fill,
-        transaction_cost=cost,
+        transaction_cost=cost.total_cost,
+        cost_breakdown=cost,
     )
-    return float(cost)
+    return cost
 
 
 def _ideal_sell_status(order: _NavOrder, price: float) -> str:
@@ -348,7 +351,7 @@ def _execute_ideal_buy_orders(
     trade_fee_model: TradeFeeModel | None,
     order_rows: list[dict[str, Any]],
     fill_rows: list[dict[str, Any]],
-) -> tuple[float, float]:
+) -> tuple[float, CostBreakdown]:
     valid_buy_orders: list[tuple[_NavOrder, float]] = []
     for order in buy_orders:
         price = _price_at(order.symbol, entry_date, tables.price_table)
@@ -361,7 +364,7 @@ def _execute_ideal_buy_orders(
             side="buy",
             cost_rate=cost_rate,
             fee_model=trade_fee_model,
-        )
+        ).total_cost
         for order, _ in valid_buy_orders
     )
     cash = max(float(cash_ref.get("cash", 0.0)), 0.0)
@@ -373,7 +376,7 @@ def _execute_ideal_buy_orders(
         scale = min(1.0, cash / total_cash_required)
 
     traded_notional = 0.0
-    transaction_cost = 0.0
+    transaction_cost = CostBreakdown()
     for order in buy_orders:
         price = _price_at(order.symbol, entry_date, tables.price_table)
         fill = float(order.remaining_notional) * scale if np.isfinite(price) else 0.0
@@ -392,7 +395,7 @@ def _execute_ideal_buy_orders(
                 fill_rows=fill_rows,
             )
             traded_notional += fill
-            transaction_cost += cost
+            transaction_cost = _add_breakdown(transaction_cost, cost)
         order.status = _ideal_buy_status(order, price)
         _append_nav_order_row(
             order_rows,
@@ -401,7 +404,7 @@ def _execute_ideal_buy_orders(
             participation_rate=config.participation_rate,
         )
 
-    return float(traded_notional), float(transaction_cost)
+    return float(traded_notional), transaction_cost
 
 
 def _apply_ideal_buy_fill(
@@ -417,10 +420,10 @@ def _apply_ideal_buy_fill(
     entry_date: pd.Timestamp,
     trade_idx: int,
     fill_rows: list[dict[str, Any]],
-) -> float:
+) -> CostBreakdown:
     cost = _trade_fee(fill, side="buy", cost_rate=cost_rate, fee_model=trade_fee_model)
     shares[order.symbol] = float(shares.get(order.symbol, 0.0)) + fill / price
-    cash_ref["cash"] = float(cash_ref.get("cash", 0.0)) - fill - cost
+    cash_ref["cash"] = float(cash_ref.get("cash", 0.0)) - fill - cost.total_cost
     last_prices[order.symbol] = float(price)
     _update_nav_order(order, entry_date, fill)
     _record_nav_fill(
@@ -430,9 +433,10 @@ def _apply_ideal_buy_fill(
         trade_idx=trade_idx,
         capacity_notional=float(order.requested_notional),
         filled_notional=fill,
-        transaction_cost=cost,
+        transaction_cost=cost.total_cost,
+        cost_breakdown=cost,
     )
-    return float(cost)
+    return cost
 
 
 def _ideal_buy_status(order: _NavOrder, price: float) -> str:

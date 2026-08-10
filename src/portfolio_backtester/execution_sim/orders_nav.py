@@ -8,6 +8,7 @@ import numpy as np
 import pandas as pd
 
 from ..execution import DetailedTradeFeeModel
+from ..types import CostBreakdown
 from .capacity import (
     _capacity_notional,
     _capacity_weight,
@@ -18,6 +19,7 @@ from .config import (
     ExecutionSimConfig,
 )
 from .models import (
+    _add_breakdown,
     _ExecutionTables,
     _NavOrder,
     _OrderSink,
@@ -222,9 +224,9 @@ def _execute_nav_orders_for_day(
     cost_rate: float,
     trade_fee_model: TradeFeeModel | None,
     fill_rows: list[dict[str, Any]],
-) -> tuple[float, float]:
+) -> tuple[float, CostBreakdown]:
     traded_notional = 0.0
-    transaction_cost = 0.0
+    transaction_cost = CostBreakdown()
     sell_traded, sell_cost = _execute_nav_sell_orders_for_day(
         open_orders=open_orders,
         shares=shares,
@@ -238,7 +240,7 @@ def _execute_nav_orders_for_day(
         fill_rows=fill_rows,
     )
     traded_notional += sell_traded
-    transaction_cost += sell_cost
+    transaction_cost = _add_breakdown(transaction_cost, sell_cost)
 
     buy_traded, buy_cost = _execute_nav_buy_orders_for_day(
         open_orders=open_orders,
@@ -253,8 +255,8 @@ def _execute_nav_orders_for_day(
         fill_rows=fill_rows,
     )
     traded_notional += buy_traded
-    transaction_cost += buy_cost
-    return float(traded_notional), float(transaction_cost)
+    transaction_cost = _add_breakdown(transaction_cost, buy_cost)
+    return float(traded_notional), transaction_cost
 
 
 def _execute_nav_sell_orders_for_day(
@@ -269,9 +271,9 @@ def _execute_nav_sell_orders_for_day(
     cost_rate: float,
     trade_fee_model: TradeFeeModel | None,
     fill_rows: list[dict[str, Any]],
-) -> tuple[float, float]:
+) -> tuple[float, CostBreakdown]:
     traded_notional = 0.0
-    transaction_cost = 0.0
+    transaction_cost = CostBreakdown()
     for order in sorted(
         [item for item in open_orders if item.side == "sell" and not _nav_order_is_complete(item)],
         key=lambda item: item.symbol,
@@ -306,7 +308,7 @@ def _execute_nav_sell_orders_for_day(
         if shares[order.symbol] <= 1e-10:
             shares.pop(order.symbol, None)
         cost = _trade_fee(fill, side="sell", cost_rate=cost_rate, fee_model=trade_fee_model)
-        cash_ref["cash"] = float(cash_ref.get("cash", 0.0)) + fill - cost
+        cash_ref["cash"] = float(cash_ref.get("cash", 0.0)) + fill - cost.total_cost
         _update_nav_order(
             order,
             trade_date,
@@ -320,12 +322,13 @@ def _execute_nav_sell_orders_for_day(
             trade_idx=trade_idx,
             capacity_notional=capacity,
             filled_notional=fill,
-            transaction_cost=cost,
+            transaction_cost=cost.total_cost,
+            cost_breakdown=cost,
             remaining_before_notional=remaining_before_notional,
         )
         traded_notional += fill
-        transaction_cost += cost
-    return float(traded_notional), float(transaction_cost)
+        transaction_cost = _add_breakdown(transaction_cost, cost)
+    return float(traded_notional), transaction_cost
 
 
 def _execute_nav_buy_orders_for_day(
@@ -340,7 +343,7 @@ def _execute_nav_buy_orders_for_day(
     cost_rate: float,
     trade_fee_model: TradeFeeModel | None,
     fill_rows: list[dict[str, Any]],
-) -> tuple[float, float]:
+) -> tuple[float, CostBreakdown]:
     candidates = [
         item for item in open_orders if item.side == "buy" and item.remaining_notional > 1e-8
     ]
@@ -364,18 +367,18 @@ def _execute_nav_buy_orders_for_day(
 
     total_raw_fill = sum(item[3] for item in raw_fills.values())
     if total_raw_fill <= 1e-8:
-        return 0.0, 0.0
+        return 0.0, CostBreakdown()
     cash = max(float(cash_ref.get("cash", 0.0)), 0.0)
     total_cash_required = total_raw_fill + sum(
-        _trade_fee(item[3], side="buy", cost_rate=cost_rate, fee_model=trade_fee_model)
+        _trade_fee(item[3], side="buy", cost_rate=cost_rate, fee_model=trade_fee_model).total_cost
         for item in raw_fills.values()
     )
     scale = min(1.0, cash / total_cash_required) if total_cash_required > 0 else 0.0
     if scale <= 1e-12:
-        return 0.0, 0.0
+        return 0.0, CostBreakdown()
 
     traded_notional = 0.0
-    transaction_cost = 0.0
+    transaction_cost = CostBreakdown()
     for symbol, (order, price, capacity, raw_fill) in sorted(raw_fills.items()):
         del symbol
         fill = raw_fill * scale
@@ -384,7 +387,7 @@ def _execute_nav_buy_orders_for_day(
         cost = _trade_fee(fill, side="buy", cost_rate=cost_rate, fee_model=trade_fee_model)
         quantity = fill / float(price)
         shares[order.symbol] = float(shares.get(order.symbol, 0.0)) + quantity
-        cash_ref["cash"] = float(cash_ref.get("cash", 0.0)) - fill - cost
+        cash_ref["cash"] = float(cash_ref.get("cash", 0.0)) - fill - cost.total_cost
         _update_nav_order(order, trade_date, fill)
         order.zero_fill_days = 0
         _record_nav_fill(
@@ -394,8 +397,9 @@ def _execute_nav_buy_orders_for_day(
             trade_idx=trade_idx,
             capacity_notional=capacity,
             filled_notional=fill,
-            transaction_cost=cost,
+            transaction_cost=cost.total_cost,
+            cost_breakdown=cost,
         )
         traded_notional += fill
-        transaction_cost += cost
-    return float(traded_notional), float(transaction_cost)
+        transaction_cost = _add_breakdown(transaction_cost, cost)
+    return float(traded_notional), transaction_cost
