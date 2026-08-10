@@ -17,6 +17,9 @@ __all__ = [
     "_capacity_notional",
     "_capacity_weight",
     "_execution_window_dates",
+    "_limit_down_at",
+    "_limit_up_at",
+    "_listing_status_at",
     "_position_values_by_symbol",
     "_positions_value",
     "_price_at",
@@ -131,6 +134,60 @@ def _table_bool_at(table: pd.DataFrame, trade_date: pd.Timestamp, symbol: str) -
         return bool(table.at[trade_date, symbol])
     except (KeyError, ValueError):
         return False
+
+
+def _limit_up_at(
+    symbol: str,
+    trade_date: pd.Timestamp,
+    limit_up_table: pd.DataFrame | None,
+) -> bool:
+    """True when ``symbol`` is at the price-up limit on ``trade_date``.
+
+    A missing table is treated as "not at limit" so callers that do not enable
+    price-limit enforcement never consult this helper.
+    """
+    if limit_up_table is None:
+        return False
+    return _table_bool_at(limit_up_table, trade_date, symbol)
+
+
+def _limit_down_at(
+    symbol: str,
+    trade_date: pd.Timestamp,
+    limit_down_table: pd.DataFrame | None,
+) -> bool:
+    """True when ``symbol`` is at the price-down limit on ``trade_date``."""
+    if limit_down_table is None:
+        return False
+    return _table_bool_at(limit_down_table, trade_date, symbol)
+
+
+def _listing_status_at(
+    symbol: str,
+    trade_date: pd.Timestamp,
+    listing_status_table: pd.DataFrame | None,
+) -> str:
+    """Return the listing status string for ``symbol`` on ``trade_date``.
+
+    Returns ``"listed"`` when the table is missing or the cell is NaN/empty so
+    that unconfigured runs default to a tradable state.
+    """
+    if listing_status_table is None:
+        return "listed"
+    if (
+        listing_status_table.empty
+        or trade_date not in listing_status_table.index
+        or symbol not in listing_status_table.columns
+    ):
+        return "listed"
+    try:
+        value = listing_status_table.at[trade_date, symbol]
+    except (KeyError, ValueError):
+        return "listed"
+    if value is None or (isinstance(value, float) and np.isnan(value)):
+        return "listed"
+    text = str(value).strip().lower()
+    return text or "listed"
 
 
 def _valuation_price(

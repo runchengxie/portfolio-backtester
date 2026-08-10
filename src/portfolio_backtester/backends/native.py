@@ -107,6 +107,9 @@ class NativePositionReplayBackend:
             sim_config,
             price_col=price_col,
             tradable_col=tradable_col if tradable_col in request.pricing.columns else None,
+            limit_up_col=_optional_rule_col(request.pricing, "limit_up"),
+            limit_down_col=_optional_rule_col(request.pricing, "limit_down"),
+            listing_status_col=_optional_rule_col(request.pricing, "listing_status"),
             transaction_cost_bps=float(getattr(request.config, "transaction_cost_bps", 0.0) or 0.0),
             trading_days_per_year=int(getattr(request.config, "trading_days_per_year", 252) or 252),
         )
@@ -235,3 +238,8 @@ __all__ = [
     "NativePositionReplayBackend",
     "NativePositionReplayRequest",
 ]
+
+
+def _optional_rule_col(pricing: pd.DataFrame, default_name: str) -> str | None:
+    """Phase 4: resolve an optional market-rule column name from ``pricing``."""
+    return default_name if default_name in pricing.columns else None

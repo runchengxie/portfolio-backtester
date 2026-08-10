@@ -21,6 +21,7 @@ from .models import (
     _AdjustedNavLedger,
     _AdjustedNavPlan,
     _ExecutionTables,
+    _MarketRules,
     _NavOrder,
     _OrderSink,
 )
@@ -67,6 +68,9 @@ def simulate_capacity_execution(
     tradable_col: str | None = None,
     buy_tradable_col: str | None = None,
     sell_tradable_col: str | None = None,
+    limit_up_col: str | None = None,
+    limit_down_col: str | None = None,
+    listing_status_col: str | None = None,
 ) -> ExecutionSimResult:
     if not config.enabled:
         return _empty_result(config, status="disabled")
@@ -86,6 +90,9 @@ def simulate_capacity_execution(
         tradable_col=tradable_col,
         buy_tradable_col=buy_tradable_col,
         sell_tradable_col=sell_tradable_col,
+        limit_up_col=limit_up_col,
+        limit_down_col=limit_down_col,
+        listing_status_col=listing_status_col,
     )
     if status is not None or execution_tables is None:
         return _empty_result(config, status=status or "no_trade_dates", extra=extra)
@@ -226,6 +233,9 @@ def _prepare_execution_tables(
     tradable_col: str | None,
     buy_tradable_col: str | None,
     sell_tradable_col: str | None,
+    limit_up_col: str | None = None,
+    limit_down_col: str | None = None,
+    listing_status_col: str | None = None,
 ) -> tuple[_ExecutionTables | None, str | None, dict[str, Any] | None]:
     pricing = pricing_data.drop_duplicates(subset=["trade_date", "symbol"]).copy()
     pricing["trade_date"] = pd.to_datetime(pricing["trade_date"], errors="coerce")
@@ -235,6 +245,16 @@ def _prepare_execution_tables(
         price_col=price_col,
         tradable_col=tradable_col if tradable_col in pricing.columns else None,
     )
+    # Phase 4: 市场规则依赖列缺失时, 若规则已开启则终止 (约束 #7).
+    market_rule_cols = {
+        col
+        for col in (limit_up_col, limit_down_col, listing_status_col)
+        if col and col not in pricing.columns
+    }
+    if (config.enforce_price_limits or config.enforce_listing_status) and market_rule_cols:
+        return None, "missing_pricing_columns", {
+            "missing_pricing_columns": sorted(market_rule_cols)
+        }
     missing_cols = sorted(col for col in required_cols if col not in pricing.columns)
     if missing_cols:
         return None, "missing_pricing_columns", {"missing_pricing_columns": missing_cols}
@@ -246,6 +266,9 @@ def _prepare_execution_tables(
         tradable_col=tradable_col,
         buy_tradable_col=buy_tradable_col,
         sell_tradable_col=sell_tradable_col,
+        limit_up_col=limit_up_col,
+        limit_down_col=limit_down_col,
+        listing_status_col=listing_status_col,
     )
     if not tables.trade_dates:
         return None, "no_trade_dates", None
@@ -452,6 +475,17 @@ def _process_adjusted_nav_trade_day(
         )
 
     cash_box = {"cash": ledger.cash}
+    # Phase 4 T+1: 当日可卖数量 = 当日开盘前持仓快照 (排除当日新买).
+    if config.enforce_t1:
+        ledger.t1_available = {symbol: float(q) for symbol, q in ledger.shares.items()}
+    else:
+        ledger.t1_available = None
+    market_rules = _MarketRules.from_config(
+        config,
+        limit_up_table=plan.tables.limit_up_table,
+        limit_down_table=plan.tables.limit_down_table,
+        listing_status_table=plan.tables.listing_status_table,
+    )
     traded_notional, transaction_cost = _execute_nav_orders_for_day(
         open_orders=ledger.open_orders,
         shares=ledger.shares,
@@ -463,6 +497,8 @@ def _process_adjusted_nav_trade_day(
         cost_rate=plan.cost_rate,
         trade_fee_model=trade_fee_model,
         fill_rows=ledger.fill_rows,
+        market_rules=market_rules,
+        t1_available=ledger.t1_available,
     )
     ledger.cash = float(cash_box["cash"])
     _retain_open_adjusted_nav_orders(
@@ -522,6 +558,9 @@ def simulate_execution_adjusted_nav(
     tradable_col: str | None = None,
     buy_tradable_col: str | None = None,
     sell_tradable_col: str | None = None,
+    limit_up_col: str | None = None,
+    limit_down_col: str | None = None,
+    listing_status_col: str | None = None,
     transaction_cost_bps: float = 0.0,
     trading_days_per_year: int = 252,
     trade_fee_model: TradeFeeModel | None = None,
@@ -544,6 +583,9 @@ def simulate_execution_adjusted_nav(
         tradable_col=tradable_col,
         buy_tradable_col=buy_tradable_col,
         sell_tradable_col=sell_tradable_col,
+        limit_up_col=limit_up_col,
+        limit_down_col=limit_down_col,
+        listing_status_col=listing_status_col,
     )
     if status is not None or tables is None:
         return _empty_adjusted_nav_result(config, status=status or "no_trade_dates", extra=extra)
@@ -578,12 +620,20 @@ def simulate_ideal_daily_nav(
     pricing_data: pd.DataFrame | None,
     *,
     price_col: str,
+    limit_up_col: str | None = None,
+    limit_down_col: str | None = None,
+    listing_status_col: str | None = None,
     transaction_cost_bps: float = 0.0,
     trading_days_per_year: int = 252,
     portfolio_value: float = 1_000_000.0,
     trade_fee_model: TradeFeeModel | None = None,
 ) -> ExecutionAdjustedNavResult:
-    """Daily NAV for immediate, fully liquid rebalances to target weights."""
+    """Daily NAV for immediate, fully liquid rebalances to target weights.
+
+    Phase 4 market-rule columns are accepted but the ideal path keeps rules
+    disabled (it models a frictionless rebalance), so only the audit
+    timestamps are populated when the caller supplies the columns.
+    """
     config = ExecutionSimConfig(
         enabled=True,
         portfolio_value=float(portfolio_value),
@@ -606,6 +656,9 @@ def simulate_ideal_daily_nav(
         pricing_data,
         config=config,
         price_col=price_col,
+        limit_up_col=limit_up_col,
+        limit_down_col=limit_down_col,
+        listing_status_col=listing_status_col,
     )
     if status is not None:
         return _empty_adjusted_nav_result(config, status=status, extra=extra)
@@ -636,6 +689,9 @@ def _prepare_ideal_nav_targets(
     *,
     config: ExecutionSimConfig,
     price_col: str,
+    limit_up_col: str | None = None,
+    limit_down_col: str | None = None,
+    listing_status_col: str | None = None,
 ) -> tuple[
     _ExecutionTables | None,
     dict[pd.Timestamp, tuple[pd.Timestamp, dict[str, float]]],
@@ -659,6 +715,9 @@ def _prepare_ideal_nav_targets(
         tradable_col=None,
         buy_tradable_col=None,
         sell_tradable_col=None,
+        limit_up_col=limit_up_col,
+        limit_down_col=limit_down_col,
+        listing_status_col=listing_status_col,
     )
     if not tables.trade_dates:
         return None, {}, "no_trade_dates", None
@@ -802,6 +861,9 @@ def _build_execution_tables(
     tradable_col: str | None,
     buy_tradable_col: str | None,
     sell_tradable_col: str | None,
+    limit_up_col: str | None = None,
+    limit_down_col: str | None = None,
+    listing_status_col: str | None = None,
 ) -> _ExecutionTables:
     trade_dates = sorted(pd.to_datetime(pricing["trade_date"].unique()))
     date_to_idx = {date: idx for idx, date in enumerate(trade_dates)}
@@ -817,6 +879,14 @@ def _build_execution_tables(
         col: pricing.pivot(index="trade_date", columns="symbol", values=col)
         for col in config.liquidity_cols
     }
+    # Phase 4 market-rule tables (None when the column is absent).
+    limit_up_table = _build_tradable_table(pricing, limit_up_col)
+    limit_down_table = _build_tradable_table(pricing, limit_down_col)
+    listing_status_table = (
+        pricing.pivot(index="trade_date", columns="symbol", values=listing_status_col)
+        if listing_status_col and listing_status_col in pricing.columns
+        else None
+    )
     return _ExecutionTables(
         trade_dates=trade_dates,
         date_to_idx=date_to_idx,
@@ -824,6 +894,9 @@ def _build_execution_tables(
         buy_tradable_table=buy_tradable_table,
         sell_tradable_table=sell_tradable_table,
         liquidity_tables=liquidity_tables,
+        limit_up_table=limit_up_table,
+        limit_down_table=limit_down_table,
+        listing_status_table=listing_status_table,
     )
 
 

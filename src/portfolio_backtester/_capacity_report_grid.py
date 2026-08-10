@@ -74,6 +74,9 @@ def _build_grid_row(
         positions,
         pricing_for_sim,
         price_col=str(execution_context["price_col"]),
+        limit_up_col=_optional_rule_col(pricing_for_sim, "limit_up"),
+        limit_down_col=_optional_rule_col(pricing_for_sim, "limit_down"),
+        listing_status_col=_optional_rule_col(pricing_for_sim, "listing_status"),
         transaction_cost_bps=float(execution_context["transaction_cost_bps"]),
         trading_days_per_year=int(execution_context["trading_days_per_year"]),
         portfolio_value=float(portfolio_value),
@@ -93,6 +96,9 @@ def _build_grid_row(
         sell_tradable_col=(
             "is_sell_tradable" if "is_sell_tradable" in pricing_for_sim.columns else None
         ),
+        limit_up_col=_optional_rule_col(pricing_for_sim, "limit_up"),
+        limit_down_col=_optional_rule_col(pricing_for_sim, "limit_down"),
+        listing_status_col=_optional_rule_col(pricing_for_sim, "listing_status"),
         transaction_cost_bps=float(execution_context["transaction_cost_bps"]),
         trading_days_per_year=int(execution_context["trading_days_per_year"]),
         trade_fee_model=execution_context.get("trade_fee_model"),
@@ -119,6 +125,11 @@ def _build_grid_row(
     row["passed"] = not failed
     row["binding_constraints"] = ",".join(failed)
     return row, _top_unfilled_orders(executed.orders)
+
+
+def _optional_rule_col(pricing: pd.DataFrame, default_name: str) -> str | None:
+    """Phase 4: resolve an optional market-rule column name from ``pricing``."""
+    return default_name if default_name in pricing.columns else None
 
 
 def build_capacity_report(

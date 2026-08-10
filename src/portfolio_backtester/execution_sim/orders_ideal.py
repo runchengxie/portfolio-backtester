@@ -26,7 +26,7 @@ from .models import (
 )
 from .orders_nav import (
     _append_nav_order_row,
-    _record_nav_fill,
+    _record_nav_fill_audit,
     _update_nav_order,
 )
 from .orders_targets import (
@@ -318,7 +318,7 @@ def _apply_ideal_sell_fill(
     cash_ref["cash"] = float(cash_ref.get("cash", 0.0)) + fill - cost.total_cost
     last_prices[order.symbol] = float(price)
     _update_nav_order(order, entry_date, fill)
-    _record_nav_fill(
+    _record_nav_fill_audit(
         fill_rows,
         order=order,
         trade_date=entry_date,
@@ -327,6 +327,7 @@ def _apply_ideal_sell_fill(
         filled_notional=fill,
         transaction_cost=cost.total_cost,
         cost_breakdown=cost,
+        valuation_time=entry_date,
     )
     return cost
 
@@ -426,7 +427,7 @@ def _apply_ideal_buy_fill(
     cash_ref["cash"] = float(cash_ref.get("cash", 0.0)) - fill - cost.total_cost
     last_prices[order.symbol] = float(price)
     _update_nav_order(order, entry_date, fill)
-    _record_nav_fill(
+    _record_nav_fill_audit(
         fill_rows,
         order=order,
         trade_date=entry_date,
@@ -435,6 +436,7 @@ def _apply_ideal_buy_fill(
         filled_notional=fill,
         transaction_cost=cost.total_cost,
         cost_breakdown=cost,
+        valuation_time=entry_date,
     )
     return cost
 
