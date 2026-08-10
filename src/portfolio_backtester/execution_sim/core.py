@@ -252,9 +252,11 @@ def _prepare_execution_tables(
         if col and col not in pricing.columns
     }
     if (config.enforce_price_limits or config.enforce_listing_status) and market_rule_cols:
-        return None, "missing_pricing_columns", {
-            "missing_pricing_columns": sorted(market_rule_cols)
-        }
+        return (
+            None,
+            "missing_pricing_columns",
+            {"missing_pricing_columns": sorted(market_rule_cols)},
+        )
     missing_cols = sorted(col for col in required_cols if col not in pricing.columns)
     if missing_cols:
         return None, "missing_pricing_columns", {"missing_pricing_columns": missing_cols}

@@ -140,9 +140,7 @@ class _MarketRules:
         limit_down_table: pd.DataFrame | None,
         listing_status_table: pd.DataFrame | None,
     ) -> _MarketRules:
-        if config.enforce_price_limits and (
-            limit_up_table is None or limit_down_table is None
-        ):
+        if config.enforce_price_limits and (limit_up_table is None or limit_down_table is None):
             raise ValueError(
                 "execution_sim.enforce_price_limits requires both limit_up_col and "
                 "limit_down_col in the pricing data."

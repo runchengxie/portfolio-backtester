@@ -292,9 +292,7 @@ def _market_rule_warnings(config: ExecutionSimConfig) -> list[str]:
     )
     if any_rule:
         return []
-    return [
-        "market_rules_inactive: A-share lot/T+1/limit/listing rules not enforced"
-    ]
+    return ["market_rules_inactive: A-share lot/T+1/limit/listing rules not enforced"]
 
 
 def _order_columns() -> list[str]:

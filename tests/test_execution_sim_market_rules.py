@@ -196,9 +196,7 @@ def test_limit_up_blocks_buy():
         limit_down_col="limit_up",  # 复用同一列; limit_down 在买入路径不使用
     )
     day0 = dates[0].strftime("%Y%m%d")
-    day0_buys = result.fills[
-        (result.fills["side"] == "buy") & (result.fills["trade_date"] == day0)
-    ]
+    day0_buys = result.fills[(result.fills["side"] == "buy") & (result.fills["trade_date"] == day0)]
     assert day0_buys.empty or (day0_buys["filled_notional"] <= 1e-6).all()
     # 涨停次日可买.
     later_buys = result.fills[

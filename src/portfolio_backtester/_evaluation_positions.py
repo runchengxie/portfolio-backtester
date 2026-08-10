@@ -95,9 +95,7 @@ def _record_period_execution_sim(
     execution_model = context["execution_model"]
     tradable_col = context["backtest_tradable_col"]
     limit_up_col = _optional_market_rule_col(backtest_pricing_df, "limit_up_col", "limit_up")
-    limit_down_col = _optional_market_rule_col(
-        backtest_pricing_df, "limit_down_col", "limit_down"
-    )
+    limit_down_col = _optional_market_rule_col(backtest_pricing_df, "limit_down_col", "limit_down")
     listing_status_col = _optional_market_rule_col(
         backtest_pricing_df, "listing_status_col", "listing_status"
     )
@@ -184,9 +182,7 @@ def _record_period_ideal_daily_nav(
         getattr(context["execution_sim_config"], "portfolio_value", 1_000_000.0)
     )
     limit_up_col = _optional_market_rule_col(backtest_pricing_df, "limit_up_col", "limit_up")
-    limit_down_col = _optional_market_rule_col(
-        backtest_pricing_df, "limit_down_col", "limit_down"
-    )
+    limit_down_col = _optional_market_rule_col(backtest_pricing_df, "limit_down_col", "limit_down")
     listing_status_col = _optional_market_rule_col(
         backtest_pricing_df, "listing_status_col", "listing_status"
     )

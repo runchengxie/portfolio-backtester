@@ -285,28 +285,23 @@ def _execute_nav_sell_orders_for_day(
 ) -> tuple[float, CostBreakdown]:
     traded_notional = 0.0
     transaction_cost = CostBreakdown()
-    rules = market_rules or _MarketRules(
-        round_lot=None,
-        enforce_t1=False,
-        enforce_price_limits=False,
-        enforce_listing_status=False,
-        limit_up_table=None,
-        limit_down_table=None,
-        listing_status_table=None,
-        lot_tolerance=float(config.lot_tolerance),
-    )
     for order in sorted(
         [item for item in open_orders if item.side == "sell" and not _nav_order_is_complete(item)],
         key=lambda item: item.symbol,
     ):
         # Phase 4: 上市/停牌/退市 — 非 listed 状态当日不可卖.
-        if rules.enforce_listing_status and _listing_status_at(
-            order.symbol, trade_date, tables.listing_status_table
-        ) != "listed":
+        if (
+            market_rules is not None
+            and market_rules.enforce_listing_status
+            and _listing_status_at(order.symbol, trade_date, tables.listing_status_table)
+            != "listed"
+        ):
             continue
         # Phase 4: 跌停 — 价格向下触板当日不可卖.
-        if rules.enforce_price_limits and _limit_down_at(
-            order.symbol, trade_date, tables.limit_down_table
+        if (
+            market_rules is not None
+            and market_rules.enforce_price_limits
+            and _limit_down_at(order.symbol, trade_date, tables.limit_down_table)
         ):
             continue
         price = _price_at(order.symbol, trade_date, tables.price_table)
@@ -328,7 +323,7 @@ def _execute_nav_sell_orders_for_day(
         )
         # Phase 4: T+1 — 当日可卖数量以 T+1 账本为上限 (排除当日新买).
         sellable_quantity = held_quantity
-        if rules.enforce_t1 and t1_available is not None:
+        if market_rules is not None and market_rules.enforce_t1 and t1_available is not None:
             sellable_quantity = min(
                 held_quantity, max(float(t1_available.get(order.symbol, 0.0)), 0.0)
             )
@@ -384,24 +379,16 @@ def _execute_nav_buy_orders_for_day(
     fill_rows: list[dict[str, Any]],
     market_rules: _MarketRules | None = None,
 ) -> tuple[float, CostBreakdown]:
-    rules = market_rules or _MarketRules(
-        round_lot=None,
-        enforce_t1=False,
-        enforce_price_limits=False,
-        enforce_listing_status=False,
-        limit_up_table=None,
-        limit_down_table=None,
-        listing_status_table=None,
-        lot_tolerance=float(config.lot_tolerance),
-    )
     candidates = [
         item for item in open_orders if item.side == "buy" and item.remaining_notional > 1e-8
     ]
     raw_fills: dict[str, tuple[_NavOrder, float, float, float]] = {}
     for order in sorted(candidates, key=lambda item: item.symbol):
         # Phase 4: 涨停 — 价格向上触板当日不可买 (计入 zero_fill, 不放弃).
-        if rules.enforce_price_limits and _limit_up_at(
-            order.symbol, trade_date, tables.limit_up_table
+        if (
+            market_rules is not None
+            and market_rules.enforce_price_limits
+            and _limit_up_at(order.symbol, trade_date, tables.limit_up_table)
         ):
             order.zero_fill_days += 1
             continue
@@ -441,11 +428,13 @@ def _execute_nav_buy_orders_for_day(
         if fill <= 1e-8:
             continue
         # Phase 4: 整手买入 — 成交数量向下取整到整手股数, 不足一手则当日不买.
-        if rules.round_lot is not None and rules.round_lot > 0 and price > 0:
-            lot = float(rules.round_lot)
+        round_lot = market_rules.round_lot if market_rules is not None else None
+        lot_tolerance = market_rules.lot_tolerance if market_rules is not None else 0.0
+        if round_lot is not None and round_lot > 0 and price > 0:
+            lot = float(round_lot)
             raw_quantity = fill / float(price)
             lot_quantity = (raw_quantity // lot) * lot
-            if lot_quantity < lot - rules.lot_tolerance:
+            if lot_quantity < lot - lot_tolerance:
                 order.zero_fill_days += 1
                 continue
             fill = lot_quantity * float(price)
