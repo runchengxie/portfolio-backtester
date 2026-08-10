@@ -131,21 +131,26 @@ concentration 默认计入报告（无开关），满足按默认计入的可见
 
 策略只在较窄时段交易时，应优先使用对应执行窗口的流动性，避免直接使用全日成交额。本阶段流动性分桶仅依赖定价表既有流动性列，未假设全天成交额。
 
-## 第六阶段：指标与复现
+## 第六阶段：指标与复现（已完成）
 
 收益和风险指标应统一从每日净值推导。自然周期汇总需要先在周期内复利，并保留年份维度。
 
-每次运行计划保存：
+指标归一化：现有 `summarize_period_returns` 已统一由 period 收益复利为 NAV 再推导 total_return/max_drawdown/sharpe 等指标，调用方传入的收益源自 `simulate_ideal_daily_nav` 的每日净值，满足统一从每日净值推导的契约。本阶段新增 `yearly_compounded_returns` 与 `summarize_period_returns` 的年份维度字段（`yearly_returns`/`years_count`/`best_year`/`worst_year`），按日历年 resample 并在年内复利，保留年份维度，不改动既有 NAV 推导逻辑。
 
-- 仓库提交号
-- 后端名称和 capability 快照
-- 配置哈希
-- 输入数据哈希
-- 股票池和交易日历版本
-- 费率表与滑点校准版本
-- 依赖包版本
-- 随机种子
-- 运行时间
+每次运行计划保存（复现元数据，统一由 `collect_reproducibility` 采集并写入 `run_metadata.json`）：
+
+- 仓库提交号（git rev-parse HEAD，不可得时回退 unknown）
+- 后端名称和 capability 快照（调用方传入）
+- 配置哈希（sha256_file）
+- 输入数据哈希（positions 与 pricing 合并哈希）
+- 股票池指纹（由 positions 文件哈希派生，不伪造版本号）
+- 交易日历窗口（由 pricing 数据起止日期代理，仓库未跟踪命名日历版本）
+- 费率表与滑点校准版本（从配置键提取，缺失时记 unversioned，不编造）
+- 依赖包版本（importlib.metadata，含 portfolio-backtester/pandas/numpy）
+- 随机种子（实际传入值，未使用则 None）
+- 运行时间（ISO 8601 带时区）
+
+复现元数据作为顶层 `reproducibility` 字段注入容量报告与 `run_backtest` 返回的 stats bundle，且不改变既有报告契约键名，确保前序锁定的固定对照场景零回归。
 
 ## 外部后端评审原则
 

@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import contextlib
 from collections.abc import Mapping
 from dataclasses import dataclass
 from datetime import datetime
@@ -11,6 +12,7 @@ from typing import Any
 import numpy as np
 import pandas as pd
 
+from ._run_metadata import collect_reproducibility, write_run_metadata
 from .capacity_report_support import mapping
 
 DEFAULT_PORTFOLIO_VALUES = (
@@ -460,6 +462,46 @@ def _date_text(value: Any) -> str | None:
     return pd.Timestamp(value).strftime("%Y-%m-%d")
 
 
+def _attach_reproducibility(
+    *,
+    config_path: Path,
+    positions_path: Path,
+    pricing_path: Path,
+    run_dir: Path,
+    market: str,
+    config: Mapping[str, Any] | None,
+    pricing: pd.DataFrame,
+) -> dict[str, Any]:
+    """Collect and persist a reproducibility snapshot for the capacity report.
+
+    The calendar window is derived from the pricing panel's trade_date span, used
+    as a proxy for the trading-calendar version (the repo does not track a named
+    calendar version). The snapshot is also written to ``run_dir/run_metadata.json``.
+    """
+
+    calendar_window = None
+    if pricing is not None and "trade_date" in pricing.columns and not pricing.empty:
+        calendar_window = {
+            "start": _date_text(pricing["trade_date"].min()),
+            "end": _date_text(pricing["trade_date"].max()),
+        }
+    snapshot = collect_reproducibility(
+        config_path=config_path,
+        positions_path=positions_path,
+        pricing_path=pricing_path,
+        run_dir=run_dir,
+        market=market,
+        backend_name="native",
+        config=config,
+        calendar_window=calendar_window,
+    )
+    with contextlib.suppress(OSError):
+        # Persistence is best-effort; the in-memory snapshot still travels with
+        # the report payload.
+        write_run_metadata(snapshot, run_dir)
+    return snapshot
+
+
 def _build_report_payload(
     *,
     rows: list[dict[str, Any]],
@@ -476,6 +518,7 @@ def _build_report_payload(
     output_csv: Path | None,
     market: str,
     concentration: dict[str, Any] | None = None,
+    config: Mapping[str, Any] | None = None,
 ) -> dict[str, Any]:
     limits = _capacity_limits(rows, primary_participation_rate=primary_participation_rate)
     calibration = {
@@ -534,6 +577,15 @@ def _build_report_payload(
         "metrics_by_grid": rows,
         "capacity_calibration": calibration,
         "concentration": concentration,
+        "reproducibility": _attach_reproducibility(
+            config_path=config_path,
+            positions_path=positions_path,
+            pricing_path=pricing_path,
+            run_dir=run_dir,
+            market=market,
+            config=config,
+            pricing=pricing,
+        ),
         "limitations": [
             "Daily ADV capacity report; does not model intraday queue priority, VWAP/TWAP timing, "
             "auction mechanics, or broker fills.",

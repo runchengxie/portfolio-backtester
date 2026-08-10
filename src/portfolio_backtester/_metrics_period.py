@@ -238,6 +238,7 @@ def summarize_period_returns(
         "periods_with_delayed_exit": delayed_periods,
         "delayed_exit_ratio": delayed_ratio,
         **_calendar_half_year_split(returns),
+        **_calendar_year_split(returns),
     }
 
 
@@ -257,3 +258,45 @@ def _calendar_half_year_split(returns: pd.Series) -> dict:
     h2_ret = float(returns.loc[h2_mask].sum()) if h2_mask.any() else None
     gap = (h1_ret - h2_ret) if (h1_ret is not None and h2_ret is not None) else None
     return {"h1_return": h1_ret, "h2_return": h2_ret, "h1h2_gap": gap}
+
+
+def yearly_compounded_returns(returns: pd.Series) -> dict[int, float]:
+    """Compound period returns within each calendar year, preserving the year.
+
+    The roadmap requires natural-period aggregation to compound inside the
+    period first (not simply sum) and to retain the year dimension. This is the
+    structured, reusable form of the same resample logic used by the tearsheet
+    yearly table.
+
+    Returns ``{year: compounded_return}``; an empty input yields ``{}``.
+    """
+
+    if returns is None or returns.empty:
+        return {}
+    yearly = returns.resample("YE").apply(lambda values: float((1.0 + values).prod() - 1.0))
+    return {int(pd.Timestamp(year).year): float(value) for year, value in yearly.items()}
+
+
+def _calendar_year_split(returns: pd.Series) -> dict:
+    """Attach per-year compounded returns to the period summary.
+
+    Keys: ``yearly_returns`` (ordered ``{year: return}`` dict), ``years_count``,
+    and ``best_year`` / ``worst_year`` (year with max/min return, or None).
+    """
+
+    yearly = yearly_compounded_returns(returns)
+    if not yearly:
+        return {
+            "yearly_returns": {},
+            "years_count": 0,
+            "best_year": None,
+            "worst_year": None,
+        }
+    best_year = max(yearly, key=lambda y: yearly[y])
+    worst_year = min(yearly, key=lambda y: yearly[y])
+    return {
+        "yearly_returns": yearly,
+        "years_count": len(yearly),
+        "best_year": best_year,
+        "worst_year": worst_year,
+    }

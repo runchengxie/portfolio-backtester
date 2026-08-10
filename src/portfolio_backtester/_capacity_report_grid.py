@@ -220,4 +220,5 @@ def build_capacity_report(
         output_csv=output_csv,
         market=market,
         concentration=concentration,
+        config=config,
     )

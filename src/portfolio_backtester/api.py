@@ -2,10 +2,12 @@
 
 from __future__ import annotations
 
-from typing import Literal
+import contextlib
+from typing import Any, Literal
 
 import pandas as pd
 
+from ._run_metadata import collect_reproducibility, write_run_metadata
 from .backtest_spec import BacktestSpec
 from .contracts import GroupCap, StrategySpec
 from .execution import (
@@ -30,6 +32,12 @@ def run_backtest(
     pricing_data: pd.DataFrame | None = None,
     ledger: bool = False,
     ledger_config: object | None = None,
+    run_dir: object | None = None,
+    config_path: object | None = None,
+    positions_path: object | None = None,
+    pricing_path: object | None = None,
+    random_seed: int | None = None,
+    market: str | None = None,
 ):
     """Run a score-driven backtest from a composable specification.
 
@@ -38,13 +46,70 @@ def run_backtest(
     returned bundle gains a trailing ``UnifiedLedger`` element produced by the
     shared execution-sim engine; the default ``ledger=False`` preserves the
     historical five-element return contract.
+
+    When ``config_path``/``positions_path``/``pricing_path`` are supplied, a
+    ``reproducibility`` snapshot is attached to the returned stats bundle (and,
+    if ``run_dir`` is given, persisted to ``run_dir/run_metadata.json``). These
+    arguments are optional and additive: omitting them leaves the historical
+    return contract untouched.
     """
 
     from .engine import _run_backtest_config
     from .topk_context import _build_backtest_spec_config
 
     config = _build_backtest_spec_config(spec, pricing_data=pricing_data)
-    return _run_backtest_config(data, config=config, ledger=ledger, ledger_config=ledger_config)
+    result = _run_backtest_config(data, config=config, ledger=ledger, ledger_config=ledger_config)
+    if result is None:
+        return None
+    if config_path is not None and positions_path is not None and pricing_path is not None:
+        result = _attach_reproducibility_to_bundle(
+            result,
+            config_path=config_path,
+            positions_path=positions_path,
+            pricing_path=pricing_path,
+            run_dir=run_dir,
+            market=market,
+            random_seed=random_seed,
+        )
+    return result
+
+
+def _attach_reproducibility_to_bundle(
+    result: Any,
+    *,
+    config_path: object,
+    positions_path: object,
+    pricing_path: object,
+    run_dir: object | None,
+    market: str | None,
+    random_seed: int | None,
+) -> Any:
+    """Attach a reproducibility snapshot to the stats dict inside a backtest bundle.
+
+    The bundle is either a plain stats dict (``ledger=False``) or a tuple whose
+    first element is the stats dict (``ledger=True`` adds a trailing ledger).
+    Returns the same shape with the snapshot merged into the stats dict.
+    """
+
+    from pathlib import Path
+
+    stats = dict(result[0]) if isinstance(result, tuple) else dict(result)
+    snapshot = collect_reproducibility(
+        config_path=Path(str(config_path)),
+        positions_path=Path(str(positions_path)),
+        pricing_path=Path(str(pricing_path)),
+        run_dir=Path(str(run_dir)) if run_dir is not None else Path.cwd(),
+        market=market or "unknown",
+        backend_name="native",
+        random_seed=random_seed,
+    )
+    if run_dir is not None:
+        with contextlib.suppress(OSError):
+            write_run_metadata(snapshot, Path(str(run_dir)))
+    stats = {**stats, "reproducibility": snapshot}
+    if isinstance(result, tuple):
+        return (stats, *result[1:])
+    return stats
 
 
 def backtest_topk(
@@ -140,7 +205,11 @@ def backtest_topk(
         target_weight_policy=target_weight_policy,
     )
     return run_backtest(
-        data, spec, pricing_data=pricing_data, ledger=ledger, ledger_config=ledger_config
+        data,
+        spec,
+        pricing_data=pricing_data,
+        ledger=ledger,
+        ledger_config=ledger_config,
     )
 
 
