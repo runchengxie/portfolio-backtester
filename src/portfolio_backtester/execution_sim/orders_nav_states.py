@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from typing import Any
+from typing import Any, cast
 
 import numpy as np
 import pandas as pd
@@ -11,6 +11,46 @@ from ..types import CostBreakdown
 from .config import ExecutionSimConfig
 from .models import _NavOrder
 from .reporting import _format_date
+
+# Phase 4 审计时间戳统一时区 (A 股交易时段归属上海时区).
+_AUDIT_TZ = "Asia/Shanghai"
+
+
+def _audit_timestamps(
+    order: _NavOrder,
+    trade_date: pd.Timestamp,
+    *,
+    valuation_time: pd.Timestamp | None = None,
+) -> dict[str, str | None]:
+    """Phase 4 审计时间戳.
+
+    分别记录信号时间 (rebalance_date)、决策时间 (entry_date)、下单时间
+    (rebalance_date)、成交时间 (trade_date) 与估值时间, 均带 Asia/Shanghai 时区.
+    引擎按日粒度建模, 故信号/决策/下单取各自日期的盘前时刻, 成交/估值取该交易日
+    收盘后时刻; 仅用于审计, 不改变数值结果.
+    """
+
+    def _tz(value: pd.Timestamp | str) -> pd.Timestamp | None:
+        ts = pd.Timestamp(str(value))
+        if ts is pd.NaT:
+            return None
+        return cast("pd.Timestamp", ts).tz_localize(_AUDIT_TZ).normalize()
+
+    signal = _tz(order.rebalance_date)
+    decision = _tz(order.entry_date)
+    fill = _tz(trade_date)
+    valuation = _tz(valuation_time) if valuation_time is not None else fill
+
+    def _iso(ts: pd.Timestamp | None) -> str | None:
+        return None if ts is None else ts.isoformat()
+
+    return {
+        "signal_time": _iso(signal),
+        "decision_time": _iso(decision),
+        "order_time": _iso(signal),
+        "fill_time": _iso(fill),
+        "valuation_time": _iso(valuation),
+    }
 
 
 def _nav_order_is_complete(order: _NavOrder) -> bool:
@@ -65,6 +105,11 @@ def _record_nav_fill(
     transaction_cost: float,
     remaining_before_notional: float | None = None,
     cost_breakdown: CostBreakdown | None = None,
+    signal_time: str | None = None,
+    decision_time: str | None = None,
+    order_time: str | None = None,
+    fill_time: str | None = None,
+    valuation_time: str | None = None,
 ) -> None:
     fill_rows.append(
         {
@@ -90,7 +135,49 @@ def _record_nav_fill(
             "cost_permanent_impact": float(getattr(cost_breakdown, "permanent_impact", 0.0)),
             "cost_opportunity": float(getattr(cost_breakdown, "opportunity_cost", 0.0)),
             "cost_financing": float(getattr(cost_breakdown, "financing_cost", 0.0)),
+            "signal_time": signal_time,
+            "decision_time": decision_time,
+            "order_time": order_time,
+            "fill_time": fill_time,
+            "valuation_time": valuation_time,
         }
+    )
+
+
+def _record_nav_fill_audit(
+    fill_rows: list[dict[str, Any]],
+    *,
+    order: _NavOrder,
+    trade_date: pd.Timestamp,
+    trade_idx: int,
+    capacity_notional: float,
+    filled_notional: float,
+    transaction_cost: float,
+    cost_breakdown: CostBreakdown | None = None,
+    remaining_before_notional: float | None = None,
+    valuation_time: pd.Timestamp | None = None,
+) -> None:
+    """Phase 4: record a nav fill and attach audit timestamps explicitly.
+
+    Avoids dict-splat so static type checkers resolve the time columns to
+    their ``str | None`` types.
+    """
+    ts = _audit_timestamps(order, trade_date, valuation_time=valuation_time)
+    _record_nav_fill(
+        fill_rows,
+        order=order,
+        trade_date=trade_date,
+        trade_idx=trade_idx,
+        capacity_notional=capacity_notional,
+        filled_notional=filled_notional,
+        transaction_cost=transaction_cost,
+        cost_breakdown=cost_breakdown,
+        remaining_before_notional=remaining_before_notional,
+        signal_time=ts["signal_time"],
+        decision_time=ts["decision_time"],
+        order_time=ts["order_time"],
+        fill_time=ts["fill_time"],
+        valuation_time=ts["valuation_time"],
     )
 
 
@@ -245,6 +332,11 @@ def _record_fill(
     capacity: float,
     fill: float,
     config: ExecutionSimConfig,
+    signal_time: str | None = None,
+    decision_time: str | None = None,
+    order_time: str | None = None,
+    fill_time: str | None = None,
+    valuation_time: str | None = None,
 ) -> None:
     fill_rows.append(
         {
@@ -259,5 +351,10 @@ def _record_fill(
             "filled_weight": float(fill),
             "capacity_notional": float(capacity) * config.portfolio_value,
             "filled_notional": float(fill) * config.portfolio_value,
+            "signal_time": signal_time,
+            "decision_time": decision_time,
+            "order_time": order_time,
+            "fill_time": fill_time,
+            "valuation_time": valuation_time,
         }
     )

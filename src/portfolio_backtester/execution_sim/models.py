@@ -10,6 +10,7 @@ import pandas as pd
 
 from ..execution import DetailedTradeFeeModel
 from ..types import CostBreakdown
+from .config import ExecutionSimConfig
 
 TradeFeeModel = DetailedTradeFeeModel
 
@@ -17,6 +18,7 @@ __all__ = [
     "_AdjustedNavLedger",
     "_AdjustedNavPlan",
     "_ExecutionTables",
+    "_MarketRules",
     "_NavOrder",
     "_OrderSink",
     "_trade_fee",
@@ -97,6 +99,69 @@ class _ExecutionTables:
     buy_tradable_table: pd.DataFrame | None
     sell_tradable_table: pd.DataFrame | None
     liquidity_tables: dict[str, pd.DataFrame]
+    # Phase 4 market-rule tables (None when the corresponding column is absent).
+    limit_up_table: pd.DataFrame | None = None
+    limit_down_table: pd.DataFrame | None = None
+    listing_status_table: pd.DataFrame | None = None
+
+
+@dataclass(frozen=True)
+class _MarketRules:
+    """Resolved phase-4 market-rule contract for a single simulation run.
+
+    Honors roadmap long-term constraint #7: if a rule is switched on but the
+    input it depends on is missing, the run must terminate (``raise``) rather
+    than silently downgrade the constraint.
+    """
+
+    round_lot: int | None
+    enforce_t1: bool
+    enforce_price_limits: bool
+    enforce_listing_status: bool
+    limit_up_table: pd.DataFrame | None
+    limit_down_table: pd.DataFrame | None
+    listing_status_table: pd.DataFrame | None
+    lot_tolerance: float
+
+    def any_active(self) -> bool:
+        return (
+            self.round_lot is not None
+            or self.enforce_t1
+            or self.enforce_price_limits
+            or self.enforce_listing_status
+        )
+
+    @classmethod
+    def from_config(
+        cls,
+        config: ExecutionSimConfig,
+        *,
+        limit_up_table: pd.DataFrame | None,
+        limit_down_table: pd.DataFrame | None,
+        listing_status_table: pd.DataFrame | None,
+    ) -> _MarketRules:
+        if config.enforce_price_limits and (
+            limit_up_table is None or limit_down_table is None
+        ):
+            raise ValueError(
+                "execution_sim.enforce_price_limits requires both limit_up_col and "
+                "limit_down_col in the pricing data."
+            )
+        if config.enforce_listing_status and listing_status_table is None:
+            raise ValueError(
+                "execution_sim.enforce_listing_status requires listing_status_col in the "
+                "pricing data."
+            )
+        return cls(
+            round_lot=config.round_lot,
+            enforce_t1=bool(config.enforce_t1),
+            enforce_price_limits=bool(config.enforce_price_limits),
+            enforce_listing_status=bool(config.enforce_listing_status),
+            limit_up_table=limit_up_table,
+            limit_down_table=limit_down_table,
+            listing_status_table=listing_status_table,
+            lot_tolerance=float(config.lot_tolerance),
+        )
 
 
 @dataclass(frozen=True)
@@ -146,3 +211,7 @@ class _AdjustedNavLedger:
     order_rows: list[dict[str, Any]]
     fill_rows: list[dict[str, Any]]
     daily_rows: list[dict[str, Any]]
+    # Phase 4 T+1 ledger: shares available to sell on the current trade date
+    # (previous close position; same-day buys are excluded). Refreshed at the
+    # start of each trade day before orders execute.
+    t1_available: dict[str, float] | None = None

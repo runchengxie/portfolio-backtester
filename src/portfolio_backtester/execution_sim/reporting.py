@@ -58,6 +58,7 @@ def _summarize_orders(
         "orders": int(orders.shape[0]),
         "final_cash_weight": float(final_cash_weight),
         "final_invested_weight": float(final_invested_weight),
+        "warnings": _market_rule_warnings(config),
     }
     if orders.empty:
         summary.update(
@@ -140,6 +141,7 @@ def _empty_adjusted_nav_result(
         "enabled": bool(config.enabled),
         "status": status,
         "config": describe_execution_sim_config(config),
+        "warnings": _market_rule_warnings(config),
         "daily_rows": 0,
         "first_trade_date": None,
         "last_trade_date": None,
@@ -198,6 +200,7 @@ def _summarize_adjusted_nav(
         "enabled": bool(config.enabled),
         "status": status,
         "config": describe_execution_sim_config(config),
+        "warnings": _market_rule_warnings(config),
         "daily_rows": int(daily.shape[0]),
         "first_trade_date": None if daily.empty else str(daily["trade_date"].iloc[0]),
         "last_trade_date": None if daily.empty else str(daily["trade_date"].iloc[-1]),
@@ -272,6 +275,28 @@ def _format_date(value: object) -> str | None:
     return pd.to_datetime(cast(str, value)).strftime("%Y%m%d")
 
 
+def _market_rule_warnings(config: ExecutionSimConfig) -> list[str]:
+    """Phase 4 visibility: surface when A-share market rules are opted out.
+
+    Honors roadmap long-term constraint #7 (do not silently disable a
+    configured constraint) by recording a warning when the engine is enabled
+    but no market-rule contract is active.
+    """
+    if not config.enabled:
+        return []
+    any_rule = (
+        config.round_lot is not None
+        or config.enforce_t1
+        or config.enforce_price_limits
+        or config.enforce_listing_status
+    )
+    if any_rule:
+        return []
+    return [
+        "market_rules_inactive: A-share lot/T+1/limit/listing rules not enforced"
+    ]
+
+
 def _order_columns() -> list[str]:
     return [
         "rebalance_date",
@@ -308,6 +333,11 @@ def _fill_columns() -> list[str]:
         "filled_weight",
         "capacity_notional",
         "filled_notional",
+        "signal_time",
+        "decision_time",
+        "order_time",
+        "fill_time",
+        "valuation_time",
     ]
 
 
@@ -378,4 +408,9 @@ def _nav_fill_columns() -> list[str]:
         "cost_permanent_impact",
         "cost_opportunity",
         "cost_financing",
+        "signal_time",
+        "decision_time",
+        "order_time",
+        "fill_time",
+        "valuation_time",
     ]

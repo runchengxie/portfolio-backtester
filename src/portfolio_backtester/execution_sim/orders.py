@@ -31,9 +31,11 @@ from .orders_nav import (
     _nav_order_is_complete,
     _nav_order_should_abort_buy,
     _record_fill,
-    _record_nav_fill,
     _update_nav_order,
     _update_state,
+)
+from .orders_nav_states import (
+    _record_nav_fill,
 )
 from .orders_targets import (
     _build_targets_by_rebalance,
