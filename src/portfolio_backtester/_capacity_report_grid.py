@@ -8,6 +8,7 @@ from typing import Any
 
 import pandas as pd
 
+from ._capacity_concentration import concentration_by_group
 from ._capacity_report_config import (
     THRESHOLD_PROFILES,
     CapacityThresholds,
@@ -30,6 +31,7 @@ from .capacity_report_support import (
     write_csv,
 )
 from .execution_sim import (
+    ExecutionAdjustedNavResult,
     build_execution_sim_config,
     required_execution_sim_columns,
     simulate_execution_adjusted_nav,
@@ -48,7 +50,7 @@ def _build_grid_row(
     liquidity_cols: list[str] | None,
     execution_context: Mapping[str, Any],
     thresholds: CapacityThresholds,
-) -> tuple[dict[str, Any], list[dict[str, Any]]]:
+) -> tuple[dict[str, Any], list[dict[str, Any]], ExecutionAdjustedNavResult]:
     grid_raw = _prepare_grid_config(
         sim_raw=sim_raw,
         portfolio_value=portfolio_value,
@@ -124,7 +126,7 @@ def _build_grid_row(
     failed = _evaluate_row(row, thresholds)
     row["passed"] = not failed
     row["binding_constraints"] = ",".join(failed)
-    return row, _top_unfilled_orders(executed.orders)
+    return row, _top_unfilled_orders(executed.orders), executed
 
 
 def _optional_rule_col(pricing: pd.DataFrame, default_name: str) -> str | None:
@@ -145,6 +147,7 @@ def build_capacity_report(
     primary_participation_rate: float | None,
     output_csv: Path | None,
     market_override: str | None = None,
+    industry_col: str | None = None,
 ) -> dict[str, Any]:
     config = read_yaml_mapping(config_path)
     thresholds = THRESHOLD_PROFILES[threshold_profile]
@@ -154,9 +157,11 @@ def build_capacity_report(
     sim_raw = execution_sim_raw(config)
     rows: list[dict[str, Any]] = []
     examples_by_key: dict[tuple[float, float], list[dict[str, Any]]] = {}
+    executed_by_key: dict[tuple[float, float], Any] = {}
+    resolved_industry_col = industry_col or execution_context.get("industry_col")
     for portfolio_value in portfolio_values:
         for participation_rate in participation_rates:
-            row, examples = _build_grid_row(
+            row, examples, executed = _build_grid_row(
                 positions=positions,
                 pricing=pricing,
                 sim_raw=sim_raw,
@@ -167,7 +172,9 @@ def build_capacity_report(
                 thresholds=thresholds,
             )
             rows.append(row)
-            examples_by_key[(float(portfolio_value), float(participation_rate))] = examples
+            key = (float(portfolio_value), float(participation_rate))
+            examples_by_key[key] = examples
+            executed_by_key[key] = executed
     primary = _primary_participation_rate(
         configured=primary_participation_rate,
         grid=participation_rates,
@@ -180,6 +187,21 @@ def build_capacity_report(
             float(first_failing["participation_rate"]),
         )
         binding_examples = examples_by_key.get(key, [])
+    # Phase 5: concentration of executed notional, computed on the primary-rate grid.
+    primary_executed = None
+    for (_pv, pr), executed in executed_by_key.items():
+        if abs(pr - primary) < 1e-12:
+            primary_executed = executed
+            break
+    concentration = None
+    if primary_executed is not None:
+        concentration = concentration_by_group(
+            positions=positions,
+            pricing=pricing,
+            executed=primary_executed,
+            liquidity_col=execution_context.get("default_liquidity_col"),
+            industry_col=resolved_industry_col,
+        )
     if output_csv is not None:
         write_csv(rows, output_csv)
     market = market_override or str(config.get("market", "unknown")).strip() or "unknown"
@@ -197,4 +219,5 @@ def build_capacity_report(
         pricing_path=pricing_path,
         output_csv=output_csv,
         market=market,
+        concentration=concentration,
     )

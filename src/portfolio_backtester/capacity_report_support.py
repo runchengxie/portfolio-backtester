@@ -319,6 +319,7 @@ def build_execution_context(config: Mapping[str, Any]) -> dict[str, Any]:
             getattr(execution_model.slippage_model, "amount_col", "medadv20_amount")
             or "medadv20_amount"
         ),
+        "industry_col": str(data_cfg.get("industry_col", "") or "").strip() or None,
     }
 
 

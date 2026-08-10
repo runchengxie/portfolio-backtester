@@ -108,19 +108,28 @@
 
 信号时间、决策时间、下单时间、成交时间和估值时间已分别记录在每笔 fill 行（`signal_time`/`decision_time`/`order_time`/`fill_time`/`valuation_time`），统一带 `Asia/Shanghai` 时区。前视偏差检查与成交价/估值价区分作为后续细化项保留。带生效日期的费用表（date-effective fee schedule）随企业行动契约一并预留。
 
-## 第五阶段：容量与冲击校准
+## 第五阶段：容量与冲击校准（已完成）
 
 容量约束应直接限制成交量。超过参与率上限的部分需要形成未成交订单，或明确标记为外推结果。
 
-容量报告计划补充：
+本阶段在既有容量网格（portfolio_value 乘以 participation_rate 的二维扫描）之上增加校准与集中度两层输出，复用已有网格行，不引入任何额外仿真成本。
 
-- 盈亏平衡资金规模
-- 成交率达到 95% 时的资金规模
-- 达到指定 alpha 保留率时的资金规模
-- 每增加一单位资金的边际冲击
-- 按股票、行业和流动性分组统计的容量占用集中度
+容量报告新增 capacity_calibration 字段（primary participation_rate 取网格中由调用方指定的一档）：
 
-策略只在较窄时段交易时，应优先使用对应执行窗口的流动性，避免直接使用全日成交额。
+- 盈亏平衡资金规模（break_even_capacity）：exec_total_return 首次由负转非负的 portfolio_value，单段线性插值。
+- 成交率达到 95% 时的资金规模（fill_rate_95_capacity）：fill_ratio 达到 0.95 的 portfolio_value，单段线性插值。
+- 达到指定 alpha 保留率时的资金规模（alpha_retention_90_capacity）：return_retention 达到 0.90 的 portfolio_value，单段线性插值（sharpe_retention_90_capacity 同法，阈值 0.90）。
+- 每增加一单位资金的边际冲击（marginal_impact）：取网格中相邻最大区间的斜率，输出 marginal_return_per_unit_capital 与 marginal_sharpe_retention_per_unit_capital，用于刻画资金规模扩张对收益与夏普保留率的边际侵蚀。
+
+集中度统计由 concentration_by_group 产出，按成交名义额聚合，无外部数据源依赖：
+
+- 按股票（by_symbol）：恒有输出，返回各标的成交名义额占比与 HHI 集中度。
+- 按流动性（by_liquidity）：当定价表存在流动性列时输出，按低/中/高三档分组统计占比与 HHI。
+- 按行业（by_industry）：当且仅当 positions 数据含行业列时输出，否则为 None，不引入新依赖（沿用用户在晨报 dailywatch20 中已有的行业占比思路，但容量报告本身不依赖外部行业源）。
+
+concentration 默认计入报告（无开关），满足按默认计入的可见性要求。容量网格每行仍保留 order 状态、参与率分位等原始诊断字段，便于回溯源。
+
+策略只在较窄时段交易时，应优先使用对应执行窗口的流动性，避免直接使用全日成交额。本阶段流动性分桶仅依赖定价表既有流动性列，未假设全天成交额。
 
 ## 第六阶段：指标与复现
 
