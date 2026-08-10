@@ -316,6 +316,144 @@ def _capacity_limits(
     }
 
 
+def _primary_rows_sorted(
+    rows: list[dict[str, Any]], *, primary_participation_rate: float
+) -> list[dict[str, Any]]:
+    """Phase 5: rows at the primary participation rate, sorted by portfolio_value ascending."""
+    selected = [
+        row
+        for row in rows
+        if abs(float(row["participation_rate"]) - float(primary_participation_rate)) < 1e-12
+    ]
+    return sorted(selected, key=lambda row: float(row["portfolio_value"]))
+
+
+def _max_satisfying_capacity(
+    *,
+    primary_rows: list[dict[str, Any]],
+    metric_key: str,
+    threshold: float,
+    higher_is_better: bool = True,
+) -> float | None:
+    """Phase 5: largest portfolio_value whose ``metric_key`` satisfies the threshold.
+
+    Returns ``None`` when no row satisfies it. Uses a single linear interpolation step
+    between the last satisfying grid point and the next larger one to refine the estimate
+    without running additional simulations.
+    """
+    satisfying: list[tuple[float, float]] = []
+    for row in primary_rows:
+        value = _finite(row.get(metric_key))
+        if value is None:
+            continue
+        ok = value >= threshold if higher_is_better else value <= threshold
+        if ok:
+            satisfying.append((float(row["portfolio_value"]), value))
+    if not satisfying:
+        return None
+    satisfying.sort(key=lambda item: item[0])
+    best_value, best_metric = satisfying[-1]
+    if len(satisfying) == len(primary_rows):
+        # Every grid point satisfies: capacity is at or beyond the largest scanned value.
+        return best_value
+    # Refine between best_value and the next larger grid point using linear interpolation.
+    for row in primary_rows:
+        pv = float(row["portfolio_value"])
+        if pv <= best_value:
+            continue
+        metric = _finite(row.get(metric_key))
+        if metric is None:
+            continue
+        if best_metric == metric:
+            return best_value
+        frac = (threshold - best_metric) / (metric - best_metric)
+        frac = max(0.0, min(1.0, frac))
+        return best_value + frac * (pv - best_value)
+    return best_value
+
+
+def _break_even_capacity(
+    rows: list[dict[str, Any]], *, primary_participation_rate: float
+) -> float | None:
+    """Phase 5: largest portfolio_value with non-negative executed total return."""
+    primary_rows = _primary_rows_sorted(rows, primary_participation_rate=primary_participation_rate)
+    return _max_satisfying_capacity(
+        primary_rows=primary_rows,
+        metric_key="exec_total_return",
+        threshold=0.0,
+        higher_is_better=True,
+    )
+
+
+def _fill_rate_capacity(
+    rows: list[dict[str, Any]], *, primary_participation_rate: float, target: float = 0.95
+) -> float | None:
+    """Phase 5: largest portfolio_value with fill_ratio >= target."""
+    primary_rows = _primary_rows_sorted(rows, primary_participation_rate=primary_participation_rate)
+    return _max_satisfying_capacity(
+        primary_rows=primary_rows,
+        metric_key="fill_ratio",
+        threshold=float(target),
+        higher_is_better=True,
+    )
+
+
+def _alpha_retention_capacity(
+    rows: list[dict[str, Any]],
+    *,
+    primary_participation_rate: float,
+    target: float = 0.90,
+    metric_key: str = "return_retention",
+) -> float | None:
+    """Phase 5: largest portfolio_value retaining at least ``target`` of ideal metric."""
+    primary_rows = _primary_rows_sorted(rows, primary_participation_rate=primary_participation_rate)
+    return _max_satisfying_capacity(
+        primary_rows=primary_rows,
+        metric_key=metric_key,
+        threshold=float(target),
+        higher_is_better=True,
+    )
+
+
+def _marginal_impact(
+    rows: list[dict[str, Any]], *, primary_participation_rate: float
+) -> dict[str, float | None]:
+    """Phase 5: marginal impact of one extra unit of capital on return/sharpe retention.
+
+    Estimates the slope of ``exec_total_return`` and ``sharpe_retention`` against
+    ``portfolio_value`` over the largest adjacent grid interval (where capacity stress is
+    highest). Negative slope means adding capital erodes performance.
+    """
+    primary_rows = _primary_rows_sorted(rows, primary_participation_rate=primary_participation_rate)
+    _none_marginal = {
+        "marginal_return_per_unit_capital": None,
+        "marginal_sharpe_retention_per_unit_capital": None,
+    }
+    if len(primary_rows) < 2:
+        return _none_marginal
+    last = primary_rows[-1]
+    prev = primary_rows[-2]
+    dpv = float(last["portfolio_value"]) - float(prev["portfolio_value"])
+    if dpv <= 0:
+        return _none_marginal
+    ret_last = _finite(last.get("exec_total_return"))
+    ret_prev = _finite(prev.get("exec_total_return"))
+    sharpe_last = _finite(last.get("sharpe_retention"))
+    sharpe_prev = _finite(prev.get("sharpe_retention"))
+    marginal_return = (
+        (ret_last - ret_prev) / dpv if ret_last is not None and ret_prev is not None else None
+    )
+    marginal_sharpe = (
+        (sharpe_last - sharpe_prev) / dpv
+        if sharpe_last is not None and sharpe_prev is not None
+        else None
+    )
+    return {
+        "marginal_return_per_unit_capital": marginal_return,
+        "marginal_sharpe_retention_per_unit_capital": marginal_sharpe,
+    }
+
+
 def _date_text(value: Any) -> str | None:
     if value is None or pd.isna(value):
         return None
@@ -337,8 +475,30 @@ def _build_report_payload(
     pricing_path: Path,
     output_csv: Path | None,
     market: str,
+    concentration: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     limits = _capacity_limits(rows, primary_participation_rate=primary_participation_rate)
+    calibration = {
+        "break_even_capacity": _break_even_capacity(
+            rows, primary_participation_rate=primary_participation_rate
+        ),
+        "fill_rate_95_capacity": _fill_rate_capacity(
+            rows, primary_participation_rate=primary_participation_rate, target=0.95
+        ),
+        "alpha_retention_90_capacity": _alpha_retention_capacity(
+            rows,
+            primary_participation_rate=primary_participation_rate,
+            target=0.90,
+            metric_key="return_retention",
+        ),
+        "sharpe_retention_90_capacity": _alpha_retention_capacity(
+            rows,
+            primary_participation_rate=primary_participation_rate,
+            target=0.90,
+            metric_key="sharpe_retention",
+        ),
+        **_marginal_impact(rows, primary_participation_rate=primary_participation_rate),
+    }
     return {
         "schema": "a_share.capacity.v1" if market == "a_share" else "capacity.v1",
         "status": "passed" if limits["recommended_capacity"] is not None else "failed",
@@ -372,6 +532,8 @@ def _build_report_payload(
         "first_failing_grid": limits["first_failing_grid"],
         "binding_examples": binding_examples,
         "metrics_by_grid": rows,
+        "capacity_calibration": calibration,
+        "concentration": concentration,
         "limitations": [
             "Daily ADV capacity report; does not model intraday queue priority, VWAP/TWAP timing, "
             "auction mechanics, or broker fills.",
