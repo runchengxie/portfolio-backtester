@@ -46,7 +46,7 @@ from .incumbent_requalification import (
     IncumbentRequalificationResult,
     select_incumbent_requalified_portfolio,
 )
-from .metrics import summarize_period_returns
+from .metrics import leg_attribution_frame, summarize_leg_attribution, summarize_period_returns
 from .position_backtest import (
     PositionBacktestConfig,
     PositionBacktestResult,
@@ -139,6 +139,7 @@ __all__ = [
     "hierarchical_risk_parity",
     "implementation_shortfall_metrics",
     "l2_price_tiered_slippage",
+    "leg_attribution_frame",
     "name_turnover",
     "probabilistic_sharpe_ratio",
     "probabilistic_sharpe_ratio_from_stats",
@@ -155,6 +156,7 @@ __all__ = [
     "simulate_staggered_cohort_execution",
     "strategy_failure_probability",
     "strategy_from_config",
+    "summarize_leg_attribution",
     "summarize_period_returns",
     "summarize_staggered_execution",
     "summarize_strategy_risk",

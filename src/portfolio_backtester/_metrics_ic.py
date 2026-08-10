@@ -113,3 +113,106 @@ def quantile_returns(
     q_ret = data.groupby(["trade_date", "quantile"])[target_col].mean().unstack()
     q_ret.index = pd.to_datetime(q_ret.index)
     return q_ret
+
+
+def leg_attribution_frame(
+    data: pd.DataFrame,
+    pred_col: str,
+    target_col: str,
+    *,
+    top_quantile: float = 0.10,
+    bottom_quantile: float = 0.10,
+) -> pd.DataFrame:
+    """Per-date top and bottom leg returns, spread and excess decomposition.
+
+    Each row is one cross-section. The top leg keeps the highest
+    ``top_quantile`` fraction of the signal, the bottom leg keeps the lowest
+    ``bottom_quantile`` fraction. ``top_excess`` is the top leg return minus
+    the cross-sectional mean return, ``bottom_drag`` is the mean return minus
+    the bottom leg return, and ``spread`` is their sum.
+
+    Returns columns: top_ret, bottom_ret, cross_mean, spread, top_excess,
+    bottom_drag.
+    """
+    records: list[dict[str, float | pd.Timestamp]] = []
+    for raw_date, group in data.groupby("trade_date"):
+        values = group[[pred_col, target_col]].replace([np.inf, -np.inf], np.nan).dropna()
+        if len(values) < 2:
+            continue
+        ranked = values.sort_values(pred_col, ascending=False)
+        n_high = max(int(np.ceil(len(ranked) * top_quantile)), 1)
+        n_low = max(int(np.ceil(len(ranked) * bottom_quantile)), 1)
+        top = ranked.head(n_high)
+        bottom = ranked.tail(n_low)
+        cross_mean = float(values[target_col].mean())
+        top_ret = float(top[target_col].mean())
+        bottom_ret = float(bottom[target_col].mean())
+        records.append(
+            {
+                "trade_date": pd.to_datetime(cast(Any, raw_date)),
+                "top_ret": top_ret,
+                "bottom_ret": bottom_ret,
+                "cross_mean": cross_mean,
+                "spread": top_ret - bottom_ret,
+                "top_excess": top_ret - cross_mean,
+                "bottom_drag": cross_mean - bottom_ret,
+            }
+        )
+    if not records:
+        return pd.DataFrame(
+            columns=["top_ret", "bottom_ret", "cross_mean", "spread", "top_excess", "bottom_drag"]
+        )
+    frame = pd.DataFrame(records).set_index("trade_date")
+    frame.index = pd.to_datetime(frame.index)
+    frame.index.name = "trade_date"
+    return frame
+
+
+def summarize_leg_attribution(
+    frame: pd.DataFrame,
+    *,
+    period: str = "M",
+) -> pd.DataFrame:
+    """Aggregate leg attribution over a period.
+
+    ``period`` is passed to pandas ``to_period``, for example "M" for month,
+    "Q" for quarter, "Y" for year. Returns top_excess, bottom_drag and the
+    bottom share of the spread.
+
+    Returns columns: period, n_dates, top_ret, bottom_ret, cross_mean,
+    spread, top_excess, bottom_drag, bottom_share.
+    """
+    if frame is None or frame.empty:
+        return pd.DataFrame(
+            columns=[
+                "period",
+                "n_dates",
+                "top_ret",
+                "bottom_ret",
+                "cross_mean",
+                "spread",
+                "top_excess",
+                "bottom_drag",
+                "bottom_share",
+            ]
+        )
+    index = pd.DatetimeIndex(frame.index)
+    per = index.to_period(period)
+    grouped = frame.copy()
+    grouped["period"] = per
+    agg = (
+        grouped.groupby("period")
+        .agg(
+            n_dates=("top_ret", "size"),
+            top_ret=("top_ret", "mean"),
+            bottom_ret=("bottom_ret", "mean"),
+            cross_mean=("cross_mean", "mean"),
+            spread=("spread", "mean"),
+            top_excess=("top_excess", "mean"),
+            bottom_drag=("bottom_drag", "mean"),
+        )
+        .reset_index()
+    )
+    spread = agg["spread"].replace(0.0, np.nan)
+    agg["bottom_share"] = agg["bottom_drag"] / spread
+    return agg
