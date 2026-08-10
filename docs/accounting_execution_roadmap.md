@@ -100,11 +100,11 @@
 
 - 买入整手（`round_lot`，非 None 时买入数量向下取整到整手，不足一手当日不买）、零股卖出（卖出路径不受整手约束）。
 - T+1 可卖数量（`enforce_t1`，当日可卖数量取自当日开盘前持仓快照 `t1_available`，排除当日新买）。
-- 涨跌停与方向相关可交易状态（`enforce_price_limits` + `limit_up_col`/`limit_down_col` 布尔列；涨停跳过买入、跌停跳过卖出）。
-- 上市、停牌、退市（`enforce_listing_status` + `listing_status_col`；非 `listed` 状态当日跳过成交）。
+- 涨跌停与方向相关可交易状态（`enforce_price_limits` + `limit_up_col`/`limit_down_col` 布尔列，涨停跳过买入、跌停跳过卖出）。
+- 上市、停牌、退市（`enforce_listing_status` + `listing_status_col`，非 `listed` 状态当日跳过成交）。
 - 企业行动（分红、拆股、送转）：已预留输入契约与占位钩子，真实数值调整待数据源就绪后接入（与阶段三冲击/机会成本 0 占位风格一致，不编造数值）。
 
-约束遵守严格按路线图长期约束 #7：任何市场规则若开启但所需输入列缺失，运行**终止**（`ValueError`）而非静默降级。同时运行 summary 增加 `warnings` 字段，当引擎启用但全部市场规则关闭时记录 `market_rules_inactive`，满足“不静默关闭约束”的可见性要求。
+约束遵守严格按路线图长期约束 #7：任何市场规则若开启但所需输入列缺失，运行终止（`ValueError`）而非静默降级。同时运行 summary 增加 `warnings` 字段，当引擎启用但全部市场规则关闭时记录 `market_rules_inactive`，满足'不静默关闭约束'的可见性要求。
 
 信号时间、决策时间、下单时间、成交时间和估值时间已分别记录在每笔 fill 行（`signal_time`/`decision_time`/`order_time`/`fill_time`/`valuation_time`），统一带 `Asia/Shanghai` 时区。前视偏差检查与成交价/估值价区分作为后续细化项保留。带生效日期的费用表（date-effective fee schedule）随企业行动契约一并预留。
 
