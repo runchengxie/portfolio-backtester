@@ -22,6 +22,7 @@
 | 夏普推断 | `probabilistic_sharpe_ratio`、`probabilistic_sharpe_ratio_from_stats`、`deflated_sharpe_ratio`、`expected_max_sharpe`、`sharpe_standard_error`、`annualized_sharpe_to_periodic`、`annualized_variance_to_periodic` |
 | 仓位缩放 | `SizingConfig`、`average_active_bets`、`build_sized_weights`、`build_sizing_receipt`、`discretize_weights`、`probability_to_size` |
 | 分层风险平价 | `HrpConfig`、`HrpResult`、`hierarchical_risk_parity`、`rolling_hrp_weights` |
+| 行业平衡袖套 | `SelectionSpec`、`select_industry_balanced`、`build_targets`、`combine_targets`、`attach_entry_dates`、`target_turnover`、`validate_targets` |
 | 策略风险 | `StrategyRiskReport`、`implementation_shortfall_metrics`、`return_concentration`、`strategy_failure_probability`、`summarize_strategy_risk` |
 | 证据回执 | `build_portfolio_sizing_receipt`、`series_sha256`、`sha256_file`、`write_receipt` |
 

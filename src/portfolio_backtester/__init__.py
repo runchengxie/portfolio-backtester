@@ -46,6 +46,15 @@ from .incumbent_requalification import (
     IncumbentRequalificationResult,
     select_incumbent_requalified_portfolio,
 )
+from .industry_sleeves import (
+    SelectionSpec,
+    attach_entry_dates,
+    build_targets,
+    combine_targets,
+    select_industry_balanced,
+    target_turnover,
+    validate_targets,
+)
 from .metrics import leg_attribution_frame, summarize_leg_attribution, summarize_period_returns
 from .position_backtest import (
     PositionBacktestConfig,
@@ -112,6 +121,7 @@ __all__ = [
     "PositionBacktestResult",
     "PositionsByRebalanceFrameContract",
     "RebalanceTurnoverReport",
+    "SelectionSpec",
     "SessionRebalanceSchedule",
     "SizingConfig",
     "StaggeredCohortExecutionConfig",
@@ -123,12 +133,15 @@ __all__ = [
     "annualized_sharpe_to_periodic",
     "annualized_variance_to_periodic",
     "assert_positions_by_rebalance_frame",
+    "attach_entry_dates",
     "average_active_bets",
     "backtest_topk",
     "build_portfolio_sizing_receipt",
     "build_rebalance_turnover_report",
     "build_sized_weights",
     "build_sizing_receipt",
+    "build_targets",
+    "combine_targets",
     "construct_positions_from_strategy",
     "deflated_sharpe_ratio",
     "discretize_weights",
@@ -150,6 +163,7 @@ __all__ = [
     "run_position_backtest",
     "select_daily_watch20",
     "select_incumbent_requalified_portfolio",
+    "select_industry_balanced",
     "series_sha256",
     "sha256_file",
     "sharpe_standard_error",
@@ -160,7 +174,9 @@ __all__ = [
     "summarize_period_returns",
     "summarize_staggered_execution",
     "summarize_strategy_risk",
+    "target_turnover",
     "turnover_from_trade_weights",
     "validate_positions_by_rebalance_frame",
+    "validate_targets",
     "write_receipt",
 ]
