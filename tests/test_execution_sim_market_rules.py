@@ -9,6 +9,7 @@ OFF, so the locked fixed-comparison scenarios are unaffected.
 from __future__ import annotations
 
 import math
+from dataclasses import replace
 
 import pandas as pd
 import pytest
@@ -47,16 +48,17 @@ def _single_buy_position(rebalance="20200101", entry="20200102", symbol="AAA", w
     )
 
 
-def _config(**overrides):
-    base = {
-        "enabled": True,
-        "portfolio_value": 1_000_000.0,
-        "participation_rate": 0.50,
-        "liquidity_cols": ("amount",),
-        "buy_max_days": 5,
-    }
-    base.update(overrides)
-    return ExecutionSimConfig(**base)
+def _config(**overrides: object) -> ExecutionSimConfig:
+    config = ExecutionSimConfig(
+        enabled=True,
+        portfolio_value=1_000_000.0,
+        participation_rate=0.50,
+        liquidity_cols=("amount",),
+        buy_max_days=5,
+    )
+    if overrides:
+        return replace(config, **overrides)
+    return config
 
 
 def test_warnings_recorded_when_market_rules_inactive():
