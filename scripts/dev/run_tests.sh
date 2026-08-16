@@ -3,11 +3,12 @@ set -euo pipefail
 
 usage() {
   cat <<'EOF'
-Usage: scripts/dev/run_tests.sh [all|fast|unit|lint|typecheck|typecheck-release|format|format-all|maintainability] [args...]
+Usage: scripts/dev/run_tests.sh [all|fast|unit|coverage|lint|typecheck|typecheck-release|format|format-all|maintainability] [args...]
 
 Modes:
   all          Run the pytest suite.
   fast, unit   Run the pytest suite; aliases kept for shared CI ergonomics.
+  coverage     Run the pytest suite with coverage reporting.
   lint         Run Ruff lint across the repository.
   typecheck, typecheck-release
                Run ty over the configured typed surface.
@@ -42,6 +43,9 @@ fi
 case "$mode" in
   all | fast | unit)
     exec uv run python -m pytest "$@"
+    ;;
+  coverage)
+    exec uv run python -m pytest --cov=portfolio_backtester --cov-report=term-missing "$@"
     ;;
   lint)
     run_ruff check . "$@"
