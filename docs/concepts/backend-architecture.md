@@ -115,7 +115,7 @@ vn.py 属于本仓库范围外。本仓库不维护 Gateway、实时订单传输
 目标持仓 -> 订单 -> 成交 -> 持股与现金 -> 每日净值 -> 报告
 ```
 
-当前 `NativePositionReplayBackend` 仍是周期级回放。它的 `orders`、`fills` 和 `daily_ledger` 为空，能力声明会如实反映这一限制。共享每日账本属于后续路线图，详见 [会计与执行路线图](../accounting_execution_roadmap.md)。
+当前 `NativePositionReplayBackend` 默认仍是周期级回放，它的 `orders`、`fills` 和 `daily_ledger` 为空，能力声明会如实反映这一限制。启用可选 ledger 模式后会调用已落地的订单级执行引擎并填充统一账本，详见 [会计与执行路线图](../accounting_execution_roadmap.md)。
 
 ## 范围约束
 
