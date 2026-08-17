@@ -1,6 +1,6 @@
 # 会计与执行路线图
 
-本页记录信号回测、持仓回放和容量分析逐步共用一套可审计账本的计划。当前已完成框架中立的执行契约、后端结果边界、术语与结果契约，订单级共享账本引擎的初步接入，以及第三阶段的成本子项拆分（佣金/印花税/过户费/价差真实拆分，冲击/机会/融资为占位 0）。第四阶段及之后的市场规则、容量校准与复现元数据仍属于路线图，不能当作现有能力使用。
+本页记录信号回测、持仓回放和容量分析共用可审计账本的实施过程。第零至第六阶段的核心契约已经完成，其中共享账本和市场规则采用可选开关以保持旧契约。企业行动真实数值、冲击与机会成本模型、动态费率表、前视偏差细化和最低佣金非线性校准仍是后续增强项。
 
 ## 长期约束
 
@@ -47,13 +47,13 @@
 - 旧 `native` 周期回放后端保留历史契约（默认 `orders/fills/daily_ledger` 仍声明为 `not_available`）。新增可选 `ledger` 开关（`NativePositionReplayRequest.ledger`），开启时调用 `execution_sim` 的 `simulate_execution_adjusted_nav`，把 `orders/fills/daily_ledger` 填入 `CanonicalBacktestResult` 并翻转对应 `capabilities`（含 `order_id`、`fill_id`，满足框架中立账本契约）。默认关闭，固定对照测试不受影响。
 - `backtest_topk`（api.py）保留原有的 `ExecutionModel` facade 与五元素返回契约。新增可选 `ledger` 开关，开启时复用引擎累积的每期目标权重（`target_weights`），通过 `simulate_ideal_daily_nav` 产出统一账本，并在返回包末尾追加 `UnifiedLedger` 元素。默认关闭，旧签名与固定场景差分不受影响。
 
-原规划让 `backtest_topk`、`run_position_backtest`、理想净值和容量调整净值共用以下账本链路：
+`backtest_topk`、`run_position_backtest`、理想净值和容量调整净值通过可选 ledger 模式共用以下账本链路：
 
 ```text
 目标持仓 -> 订单 -> 成交 -> 持股与现金 -> 每日净值 -> 报告
 ```
 
-信号回测届时只负责构造目标持仓，会计计算交给与外部持仓回放相同的引擎。计划统一输出：
+信号回测负责构造目标持仓，会计计算交给与外部持仓回放相同的引擎。统一输出包括：
 
 - `targets`
 - `orders`
@@ -64,7 +64,7 @@
 - `cost_breakdown`
 - `turnover_breakdown`
 
-实施顺序：
+实施顺序记录：
 
 1. 先迁移 `simulate_ideal_daily_nav`，建立现金和持仓守恒基准。
 2. 再迁移 `run_position_backtest`，保留旧周期结果作为兼容视图。
@@ -137,7 +137,7 @@ concentration 默认计入报告（无开关），满足按默认计入的可见
 
 指标归一化：现有 `summarize_period_returns` 已统一由 period 收益复利为 NAV 再推导 total_return/max_drawdown/sharpe 等指标，调用方传入的收益源自 `simulate_ideal_daily_nav` 的每日净值，满足统一从每日净值推导的契约。本阶段新增 `yearly_compounded_returns` 与 `summarize_period_returns` 的年份维度字段（`yearly_returns`/`years_count`/`best_year`/`worst_year`），按日历年 resample 并在年内复利，保留年份维度，不改动既有 NAV 推导逻辑。
 
-每次运行计划保存（复现元数据，统一由 `collect_reproducibility` 采集并写入 `run_metadata.json`）：
+每次运行保存以下复现元数据，由 `collect_reproducibility` 统一采集并写入 `run_metadata.json`：
 
 - 仓库提交号（git rev-parse HEAD，不可得时回退 unknown）
 - 后端名称和 capability 快照（调用方传入）
@@ -151,6 +151,14 @@ concentration 默认计入报告（无开关），满足按默认计入的可见
 - 运行时间（ISO 8601 带时区）
 
 复现元数据作为顶层 `reproducibility` 字段注入容量报告与 `run_backtest` 返回的 stats bundle，且不改变既有报告契约键名，确保前序锁定的固定对照场景零回归。
+
+## 后续增强项
+
+- 企业行动接入真实数值和带生效日期的费用表。
+- 为临时冲击、永久冲击、机会成本和融资成本提供经校准的模型。
+- 细化成交价、估值价和时间戳的前视偏差检查。
+- 验证现金缩放与最低佣金组合下的非线性行为。
+- 按具体需求评审 Backtrader 差分后端，不替换权威 native 路径。
 
 ## 外部后端评审原则
 
@@ -168,7 +176,7 @@ concentration 默认计入报告（无开关），满足按默认计入的可见
 
 ## 验证要求
 
-统一账本落地时至少需要以下测试：
+统一账本的持续回归至少覆盖以下测试：
 
 - 现金与持仓市值守恒
 - 零收益、零成本下的净值恒等关系
