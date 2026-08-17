@@ -28,6 +28,9 @@ from ._evaluation_positions import (
     _record_period_ideal_daily_nav as _record_period_ideal_daily_nav,
 )
 
+# Public owner API: cross-repo callers must import the non-underscore name.
+evaluate_walk_forward_backtest = _evaluate_walk_forward_backtest
+
 __all__ = [
     "_build_period_positions",
     "_evaluate_walk_forward_backtest",
@@ -43,4 +46,5 @@ __all__ = [
     "_run_walk_forward_backtest_topk",
     "_score_walk_forward_backtest_frame",
     "_summarize_walk_forward_benchmark",
+    "evaluate_walk_forward_backtest",
 ]

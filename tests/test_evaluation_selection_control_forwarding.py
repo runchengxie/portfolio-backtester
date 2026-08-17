@@ -8,6 +8,10 @@ import pytest
 from portfolio_backtester import evaluation
 
 
+def test_evaluate_walk_forward_backtest_public_alias() -> None:
+    assert evaluation.evaluate_walk_forward_backtest is evaluation._evaluate_walk_forward_backtest
+
+
 def _ts(value: str) -> pd.Timestamp:
     return cast(pd.Timestamp, pd.Timestamp(value))
 
