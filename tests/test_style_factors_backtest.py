@@ -50,9 +50,7 @@ def _synthetic_frames(
         z = (latent - latent.mean()) / (latent.std() + 1e-9)
         ret = -0.004 * latent + rng.normal(0.0, 0.01, size=symbols)
         for sym, zi, ri in zip(syms, z, ret, strict=True):
-            daily_rows.append(
-                {"trade_date": d, "symbol": sym, "pct_chg": ri * 100.0}
-            )
+            daily_rows.append({"trade_date": d, "symbol": sym, "pct_chg": ri * 100.0})
             factor_rows.append(
                 {
                     "trade_date": d,
