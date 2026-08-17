@@ -18,6 +18,7 @@
 | 交易会话调仓 | `SessionRebalanceSchedule`、`get_session_interval_rebalance_dates` |
 | 换手与成本 | `TurnoverBreakdown`、`RebalanceTurnoverReport`、`CostBreakdown`、`name_turnover`、`annualize_turnover`、`turnover_from_trade_weights`、`build_rebalance_turnover_report` |
 | 收益汇总 | `summarize_period_returns` |
+| A 股风格因子回测 | `available_factor_names`、`get_rebalance_dates`、`build_factor_returns`、`build_quantile_portfolio_returns`、`compute_summary`、`compute_factor_correlations`、`compute_yearly_breakdown` |
 | 信号腿归因 | `leg_attribution_frame`、`summarize_leg_attribution` |
 | 夏普推断 | `probabilistic_sharpe_ratio`、`probabilistic_sharpe_ratio_from_stats`、`deflated_sharpe_ratio`、`expected_max_sharpe`、`sharpe_standard_error`、`annualized_sharpe_to_periodic`、`annualized_variance_to_periodic` |
 | 仓位缩放 | `SizingConfig`、`average_active_bets`、`build_sized_weights`、`build_sizing_receipt`、`discretize_weights`、`probability_to_size` |

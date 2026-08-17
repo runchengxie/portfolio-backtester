@@ -1,10 +1,11 @@
 """Equivalence / contract tests for the migrated A-share style-factor backtest kernel.
 
-The module ``portfolio_backtester.style_factors_backtest`` was relocated from
-``src/style_factors/factor_backtest.py`` (ADR-0006 R4 slice 7, PR②).  These
-tests pin the external behaviour so the migration cannot silently regress the
-quantile long-short construction, monthly rebalance scheduling, summary
-statistics, and factor-name discovery.
+The module ``portfolio_backtester.style_factors_backtest`` holds the
+quantile long-short backtest kernel relocated from ``src/style_factors/
+factor_backtest.py`` (ADR-0006 R4 slice 7, PR②).  These tests pin the
+external behaviour so the migration cannot silently regress the quantile
+long-short construction, monthly rebalance scheduling, summary statistics,
+and factor-name discovery.
 """
 
 from __future__ import annotations
