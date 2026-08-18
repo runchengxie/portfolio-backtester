@@ -131,7 +131,7 @@ scripts/dev/run_tests.sh maintainability
 
 `fast` 和 `unit` 是 `all` 的兼容别名，都会运行完整测试集。`typecheck-release` 与 `typecheck` 都运行 `ty`，检查范围相同。
 
-仓库保留 `.github/workflows/ci.yml` 作为轻量检查模板，仓库级 GitHub Actions 当前关闭，因此不会产生远程运行记录。本地命令和工作区 `pre-push` 是当前质量事实来源。
+仓库保留 `.github/workflows/ci.yml.disabled` 作为轻量检查模板，仓库级 GitHub Actions 当前关闭，因此不会产生远程运行记录。本地命令和工作区 `pre-push` 是当前质量事实来源。
 
 详细范围见 [docs/testing.md](docs/testing.md)。
 
@@ -141,7 +141,7 @@ scripts/dev/run_tests.sh maintainability
 
 数据采集、特征工程、模型训练、具体策略规则、任务编排和券商执行由调用方或其他仓库负责。Gateway 和实时传输不在本仓库职责内。第三方框架对象不得进入本仓库公开结果或跨仓库产物。
 
-`DailyWatch20` 是现有调用方使用的兼容例外。本仓库只保留其组合选择、组合策略、错位持有执行与回执接口，研究假设、特征和晋升证据由 `alpha-research`、`research-apps` 与 `strategy-pipeline` 维护。新增策略专用规则不应继续扩展这一例外。
+`DailyWatch20` 是现有调用方使用的兼容例外。本仓库只保留其组合选择、组合策略、错位持有执行与回执接口，研究假设、特征和晋升证据由 `alpha-research`、`strategy-app` 与 `strategy-pipeline` 维护。新增策略专用规则不应继续扩展这一例外。
 
 工作区 2.0 已删除旧共享命名空间（namespace）和门面（facade）。新代码只使用 `portfolio_backtester`。
 
