@@ -62,6 +62,11 @@ from .position_backtest import (
     run_position_backtest,
 )
 from .position_evaluation import PositionBacktestEvaluation, evaluate_position_backtest
+from .positions_artifact import (
+    CANONICAL_POSITIONS_BY_REBALANCE_META_FILE,
+    build_positions_envelope_v2,
+    write_positions_by_rebalance_artifact,
+)
 from .rebalance import SessionRebalanceSchedule, get_session_interval_rebalance_dates
 from .sharpe_inference import (
     annualized_sharpe_to_periodic,
@@ -105,6 +110,7 @@ from .turnover import (
 from .types import CostBreakdown
 
 __all__ = [
+    "CANONICAL_POSITIONS_BY_REBALANCE_META_FILE",
     "EXECUTION_SUMMARY_SCHEMA",
     "INCUMBENT_REQUALIFICATION_SCHEMA",
     "PORTFOLIO_POLICY_SCHEMA",
@@ -148,6 +154,7 @@ __all__ = [
     "backtest_topk",
     "build_factor_returns",
     "build_portfolio_sizing_receipt",
+    "build_positions_envelope_v2",
     "build_quantile_portfolio_returns",
     "build_rebalance_turnover_report",
     "build_sized_weights",
@@ -194,5 +201,6 @@ __all__ = [
     "turnover_from_trade_weights",
     "validate_positions_by_rebalance_frame",
     "validate_targets",
+    "write_positions_by_rebalance_artifact",
     "write_receipt",
 ]

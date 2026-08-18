@@ -76,6 +76,28 @@ assert_positions_by_rebalance_frame(positions)
 
 `validate_positions_by_rebalance_frame` 返回问题列表。`assert_positions_by_rebalance_frame` 在发现问题时抛出 `ValueError`。
 
+## 写入与 artifact envelope v2
+
+`write_positions_by_rebalance_artifact` 一次写出 `positions_by_rebalance.csv` 和 companion
+`positions_by_rebalance.meta.json`。meta JSON 在 `artifact_envelope` 键下携带
+`research.artifact-envelope.v2`，envelope 的 `content_sha256` 是写出 CSV 文件的 SHA-256。
+
+```python
+from portfolio_backtester import write_positions_by_rebalance_artifact
+
+csv_path, meta_path = write_positions_by_rebalance_artifact(
+    positions,
+    output_dir,
+    run_id="run-20260818",
+    configuration={"top_k": 20, "weighting": "equal"},
+    lineage=[("signals.parquet", signals_sha256)],
+)
+```
+
+`run_id` 为必填。`configuration` 和 `lineage` 为可选，分别进入
+`configuration_sha256` 与 envelope 的 lineage 字段。envelope 只作为附加键写入，读取方可以
+继续用兼容 reader 读取不携带 envelope 的 v1 metadata。
+
 ## 持仓回放时的处理
 
 `run_position_backtest` 会先应用基础契约校验，然后执行以下处理：

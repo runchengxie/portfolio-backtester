@@ -652,6 +652,7 @@ dependencies = [
     { name = "pandas" },
     { name = "pyarrow" },
     { name = "pyyaml" },
+    { name = "research-contracts" },
     { name = "research-dev-metrics" },
     { name = "scikit-learn" },
     { name = "xgboost" },
@@ -675,6 +676,7 @@ requires-dist = [
     { name = "pytest", marker = "extra == 'dev'", specifier = ">=9.0.3" },
     { name = "pytest-cov", marker = "extra == 'dev'", specifier = ">=5" },
     { name = "pyyaml", specifier = ">=6.0" },
+    { name = "research-contracts", git = "https://github.com/runchengxie/research-workspace.git?subdirectory=src%2Fresearch_contracts&rev=f28e97008b7c540730720aac82e63a2944a89b58" },
     { name = "research-dev-metrics", git = "https://github.com/runchengxie/research-dev-metrics.git?rev=e1d6e278b0645a23adb523ada9fa8d4743c2e3bf" },
     { name = "ruff", marker = "extra == 'dev'", specifier = ">=0.8" },
     { name = "scikit-learn", specifier = ">=1.2" },
@@ -858,6 +860,11 @@ sdist = { url = "https://files.pythonhosted.org/packages/ac/c3/e2a2b89f2d3e2179a
 wheels = [
     { url = "https://files.pythonhosted.org/packages/a0/f4/c67b0b3f1b9245e8d266f0f112c500d50e5b4e83cb6f3b71b6528104182a/requests-2.34.2-py3-none-any.whl", hash = "sha256:2a0d60c172f83ac6ab31e4554906c0f3b3588d37b5cb939b1c061f4907e278e0", size = 73075, upload-time = "2026-05-14T19:25:26.443Z" },
 ]
+
+[[package]]
+name = "research-contracts"
+version = "0.1.0"
+source = { git = "https://github.com/runchengxie/research-workspace.git?subdirectory=src%2Fresearch_contracts&rev=f28e97008b7c540730720aac82e63a2944a89b58#f28e97008b7c540730720aac82e63a2944a89b58" }
 
 [[package]]
 name = "research-dev-metrics"
