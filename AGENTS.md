@@ -114,7 +114,39 @@ uv run --extra dev pytest tests/test_execution.py -k participation
 
 ## Git 工作流
 
-本仓采用 `main` 单分支约定。受管工作区和独立检出目录都只向远端 `main` 推送分支引用。本地质量门禁通过后再提交和推送。
+本仓可能由多个 agent 并行开发。每个改动都必须使用独立 worktree 与功能分支，避免
+多个 agent 在同一检出目录竞争同一组文件。
+
+远端常驻分支只有 `main`。功能分支（`feat/*`、`fix/*`、`hotfix/*`、`release/*`）
+只用于拉取请求流程、临时存在。每个改动遵循以下顺序：
+
+1. 从 `origin/main` 新建 worktree 与功能分支：
+
+   ```bash
+   git fetch origin
+   git worktree add <path> -b feat/<主题> origin/main
+   ```
+
+2. 在独立 worktree 内完成改动，本地质量门禁通过后再提交。
+3. 提交并推送功能分支：
+
+   ```bash
+   git push -u origin feat/<主题>
+   ```
+
+4. 用 `gh pr create` 开拉取请求，合并到 `main`。
+5. 合并完成后删除功能分支并移除 worktree：
+
+   ```bash
+   git push origin --delete feat/<主题>
+   git branch -d feat/<主题>
+   git worktree remove <path>
+   ```
+
+作为 `research-workspace` 子模块时，本仓提交推送合并完成后，再回到顶层更新 gitlink。
+同一仓库的多个 worktree 共享主工作树的 `core.hooksPath` 配置，不要在独立 worktree
+内重装或改写 hook。新的并行任务必须新建 worktree，不要直接在主检出目录的 `main`
+上提交改动。
 
 提交说明至少应包含：
 
