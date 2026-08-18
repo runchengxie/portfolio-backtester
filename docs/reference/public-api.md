@@ -14,6 +14,7 @@
 | 持仓回放 | `PositionBacktestConfig`、`PositionBacktestResult`、`run_position_backtest` |
 | 持仓基准评估 | `PositionBacktestEvaluation`、`evaluate_position_backtest` |
 | 持仓契约 | `POSITIONS_BY_REBALANCE_CONTRACT`、`PositionsByRebalanceFrameContract`、`validate_positions_by_rebalance_frame`、`assert_positions_by_rebalance_frame` |
+| 持仓产物写入 | `CANONICAL_POSITIONS_BY_REBALANCE_META_FILE`、`write_positions_by_rebalance_artifact`、`build_positions_envelope_v2` |
 | 成本与滑点 | `DetailedTradeFeeModel`、`l2_price_tiered_slippage` |
 | 交易会话调仓 | `SessionRebalanceSchedule`、`get_session_interval_rebalance_dates` |
 | 换手与成本 | `TurnoverBreakdown`、`RebalanceTurnoverReport`、`CostBreakdown`、`name_turnover`、`annualize_turnover`、`turnover_from_trade_weights`、`build_rebalance_turnover_report` |

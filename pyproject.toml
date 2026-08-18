@@ -16,6 +16,7 @@ dependencies = [
   "scikit-learn>=1.2",
   "xgboost>=1.7",
   "research-dev-metrics",
+  "research-contracts",
 ]
 
 [project.optional-dependencies]
@@ -28,6 +29,7 @@ dev = [
 ]
 
 [tool.uv.sources]
+research-contracts = { git = "https://github.com/runchengxie/research-workspace.git", subdirectory = "src/research_contracts", rev = "f28e97008b7c540730720aac82e63a2944a89b58" }
 research-dev-metrics = { git = "https://github.com/runchengxie/research-dev-metrics.git", rev = "e1d6e278b0645a23adb523ada9fa8d4743c2e3bf" }
 
 [tool.setuptools]

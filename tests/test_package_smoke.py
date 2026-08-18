@@ -37,6 +37,7 @@ OWNED_MODULES = (
     "portfolio_backtester.rebalance",
     "portfolio_backtester.position_backtest",
     "portfolio_backtester.position_evaluation",
+    "portfolio_backtester.positions_artifact",
     "portfolio_backtester.post_buffer_exposure_repair",
     "portfolio_backtester.sharpe_inference",
     "portfolio_backtester.strategy",
@@ -64,6 +65,7 @@ def test_owned_modules_import(module_name: str) -> None:
 
 def test_portfolio_backtester_package_exports_core_entrypoints() -> None:
     assert set(portfolio_backtester.__all__) == {
+        "CANONICAL_POSITIONS_BY_REBALANCE_META_FILE",
         "BacktestSpec",
         "CostBreakdown",
         "DailyWatch20Config",
@@ -106,6 +108,7 @@ def test_portfolio_backtester_package_exports_core_entrypoints() -> None:
         "available_factor_names",
         "backtest_topk",
         "build_portfolio_sizing_receipt",
+        "build_positions_envelope_v2",
         "build_rebalance_turnover_report",
         "build_sized_weights",
         "build_sizing_receipt",
@@ -153,6 +156,7 @@ def test_portfolio_backtester_package_exports_core_entrypoints() -> None:
         "turnover_from_trade_weights",
         "validate_positions_by_rebalance_frame",
         "validate_targets",
+        "write_positions_by_rebalance_artifact",
         "write_receipt",
     }
 
