@@ -22,6 +22,9 @@ FACTOR_NAMES = [
     "institution_holding",
     "dividend_yield",
     "ps_value",
+    # Public-fund ownership breadth from fund_portfolio_features:
+    "fund_breadth",
+    "fund_breadth_change",
 ]
 
 
