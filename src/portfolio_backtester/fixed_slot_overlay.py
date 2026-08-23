@@ -94,7 +94,6 @@ def build_fixed_slot_overlay_target(
         raise FixedSlotOverlayError("incumbent count cannot exceed target_slots")
 
     work = _validate_ranking(ranking)
-    ranking_symbols = set(work["symbol"].astype(str))
     flagged_incumbents = set(work.loc[work["is_current_holding"], "symbol"].astype(str))
     unknown_flagged = flagged_incumbents - set(incumbents)
     if unknown_flagged:
@@ -149,17 +148,13 @@ def build_fixed_slot_overlay_target(
     if target_cash_weight < -1e-12:
         raise FixedSlotOverlayError("constructed target weight exceeds one")
 
-    # Keep the validation read explicit. An empty intersection is valid when every
-    # incumbent is ineligible and will be exited.
-    _ = ranking_symbols & incumbent_set
-
     return FixedSlotOverlayTarget(
         target_symbols=target_symbols,
         retained_symbols=retained_symbols,
         new_symbols=new_symbols,
         exited_symbols=exited_symbols,
         target_weights=weights,
-        target_cash_weight=max(0.0, target_cash_weight),
+        target_cash_weight=target_cash_weight,
         target_name_turnover=(len(new_symbols) + len(exited_symbols)) / (2.0 * slots),
         target_full_l1=full_l1,
         target_half_l1=full_l1 / 2.0,
