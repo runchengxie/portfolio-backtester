@@ -79,7 +79,11 @@ def _capacity_weight(
     if not liquidity_values:
         return 0.0
     liquidity = min(liquidity_values)
-    notional = float(config.participation_rate) * liquidity
+    notional = (
+        float(config.participation_rate)
+        * float(config.liquidity_notional_multiplier)
+        * liquidity
+    )
     return max(notional / float(config.portfolio_value), 0.0)
 
 
