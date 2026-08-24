@@ -244,11 +244,46 @@ def test_build_execution_sim_config_defaults_to_daily_amount_cap():
 
     assert config.portfolio_value == pytest.approx(2_000_000.0)
     assert config.liquidity_cols == ("medadv60_amount", "amount")
+    assert config.liquidity_notional_multiplier == pytest.approx(1.0)
     assert required_execution_sim_columns(
         config,
         price_col="open",
         tradable_col="is_tradable",
     ) == {"open", "medadv60_amount", "amount"}
+
+
+def test_capacity_execution_applies_explicit_liquidity_notional_multiplier():
+    dates = pd.date_range("2020-01-01", periods=3, freq="B")
+    positions = pd.DataFrame(
+        {
+            "rebalance_date": ["20200101"],
+            "entry_date": ["20200102"],
+            "symbol": ["AAA"],
+            "weight": [0.20],
+            "side": ["long"],
+        }
+    )
+    pricing = _pricing_frame(dates, ["AAA"], amount_map={("AAA", "20200102"): 100.0})
+    config = ExecutionSimConfig(
+        enabled=True,
+        portfolio_value=10_000.0,
+        participation_rate=0.05,
+        liquidity_cols=("amount",),
+        liquidity_notional_multiplier=1_000.0,
+        buy_max_days=1,
+    )
+
+    result = simulate_capacity_execution(
+        positions,
+        pricing,
+        config,
+        price_col="open",
+        tradable_col="is_tradable",
+    )
+
+    # 100 is 100 thousand CNY in Tushare native units, so 5% is 5,000 CNY.
+    assert result.orders.loc[0, "filled_notional"] == pytest.approx(2_000.0)
+    assert result.orders.loc[0, "fill_ratio"] == pytest.approx(1.0)
 
 
 def test_capacity_execution_skips_long_short_targets():

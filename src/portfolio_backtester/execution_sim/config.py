@@ -23,6 +23,10 @@ class ExecutionSimConfig:
     portfolio_value: float = 1_000_000.0
     participation_rate: float = 0.05
     liquidity_cols: tuple[str, ...] = ("medadv20_amount", "amount")
+    # Liquidity columns retain their source-data unit. Tushare daily
+    # ``amount`` is conventionally in thousand CNY; generic callers often
+    # provide notional values directly in CNY.
+    liquidity_notional_multiplier: float = 1.0
     buy_max_days: int = 5
     sell_max_days: int | str = 10
     zero_fill_abort_days_buy: int | None = 5
@@ -65,6 +69,10 @@ def build_execution_sim_config(
     participation_rate = _coerce_positive_float(
         sim_cfg.get("participation_rate", sim_cfg.get("participation", 0.05)),
         label="execution_sim.participation_rate",
+    )
+    liquidity_notional_multiplier = _coerce_positive_float(
+        sim_cfg.get("liquidity_notional_multiplier", 1.0),
+        label="execution_sim.liquidity_notional_multiplier",
     )
     liquidity_cols = _resolve_liquidity_cols(
         cast("Mapping[str, Any]", sim_cfg),
@@ -111,6 +119,7 @@ def build_execution_sim_config(
         portfolio_value=portfolio_value,
         participation_rate=participation_rate,
         liquidity_cols=liquidity_cols,
+        liquidity_notional_multiplier=liquidity_notional_multiplier,
         buy_max_days=buy_max_days,
         sell_max_days=sell_max_days,
         zero_fill_abort_days_buy=zero_fill_abort_days_buy,
@@ -146,6 +155,7 @@ def describe_execution_sim_config(config: ExecutionSimConfig) -> dict[str, Any]:
         "portfolio_value": float(config.portfolio_value),
         "participation_rate": float(config.participation_rate),
         "liquidity_cols": list(config.liquidity_cols),
+        "liquidity_notional_multiplier": float(config.liquidity_notional_multiplier),
         "buy_max_days": int(config.buy_max_days),
         "sell_max_days": config.sell_max_days,
         "zero_fill_abort_days_buy": config.zero_fill_abort_days_buy,

@@ -30,6 +30,7 @@ from portfolio_backtester.execution_sim import (
 | `portfolio_value` | 1,000,000 | 组合名义规模 |
 | `participation_rate` | 0.05 | 单日成交参与率 |
 | `liquidity_cols` | `medadv20_amount`、`amount` | 容量约束使用的流动性列 |
+| `liquidity_notional_multiplier` | 1.0 | 将流动性列换算为组合名义货币单位的乘数，Tushare `amount` 为千元时应设为 1,000 |
 | `buy_max_days` | 5 | 买单最长等待天数 |
 | `sell_max_days` | 10 | 卖单最长等待天数 |
 | `zero_fill_abort_days_buy` | 5 | 连续零成交后的买单终止天数 |
