@@ -99,6 +99,7 @@ from .style_factors_backtest import (
     compute_yearly_breakdown,
     get_rebalance_dates,
 )
+from .trade_accounting import compute_trade_summary, drift_previous_weights
 from .turnover import (
     RebalanceTurnoverReport,
     TurnoverBreakdown,
@@ -107,7 +108,6 @@ from .turnover import (
     name_turnover,
     turnover_from_trade_weights,
 )
-from .trade_accounting import compute_trade_summary, drift_previous_weights
 from .types import CostBreakdown
 
 __all__ = [
@@ -163,8 +163,8 @@ __all__ = [
     "build_targets",
     "combine_targets",
     "compute_factor_correlations",
-    "compute_trade_summary",
     "compute_summary",
+    "compute_trade_summary",
     "compute_yearly_breakdown",
     "construct_positions_from_strategy",
     "deflated_sharpe_ratio",

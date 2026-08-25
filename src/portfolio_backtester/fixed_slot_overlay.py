@@ -137,12 +137,7 @@ def build_fixed_slot_overlay_target(
     previous = pd.Series(slot_weight, index=list(incumbents), dtype=float)
     union = previous.index.union(weights.index)
     full_l1 = float(
-        (
-            weights.reindex(union).fillna(0.0)
-            - previous.reindex(union).fillna(0.0)
-        )
-        .abs()
-        .sum()
+        (weights.reindex(union).fillna(0.0) - previous.reindex(union).fillna(0.0)).abs().sum()
     )
     target_cash_weight = 1.0 - float(weights.sum())
     if target_cash_weight < -1e-12:

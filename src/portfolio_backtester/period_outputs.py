@@ -120,3 +120,14 @@ def _record_period_exposure_outputs(
         industry_columns=context.get("industry_columns", []),
         industry_source_df=context.get("industry_source_df"),
     )
+
+
+build_period_positions = _build_period_positions
+record_period_backtest_nav_outputs = _record_period_backtest_nav_outputs
+record_period_exposure_outputs = _record_period_exposure_outputs
+
+__all__ = [
+    "build_period_positions",
+    "record_period_backtest_nav_outputs",
+    "record_period_exposure_outputs",
+]
