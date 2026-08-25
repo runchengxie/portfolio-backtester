@@ -7,7 +7,6 @@ from typing import Any, cast
 
 import pandas as pd
 
-
 DEFAULT_EXECUTION_COMPARISON_METRICS: tuple[str, ...] = (
     "total_return",
     "annualized_return",
