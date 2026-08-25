@@ -18,6 +18,7 @@
 | 成本与滑点 | `DetailedTradeFeeModel`、`l2_price_tiered_slippage` |
 | 交易会话调仓 | `SessionRebalanceSchedule`、`get_session_interval_rebalance_dates` |
 | 换手与成本 | `TurnoverBreakdown`、`RebalanceTurnoverReport`、`CostBreakdown`、`name_turnover`、`annualize_turnover`、`turnover_from_trade_weights`、`build_rebalance_turnover_report` |
+| Trade accounting | `compute_trade_summary`, `drift_previous_weights` |
 | 收益汇总 | `summarize_period_returns` |
 | A 股风格因子回测 | `available_factor_names`、`get_rebalance_dates`、`build_factor_returns`、`build_quantile_portfolio_returns`、`compute_summary`、`compute_factor_correlations`、`compute_yearly_breakdown` |
 | 信号腿归因 | `leg_attribution_frame`、`summarize_leg_attribution` |
