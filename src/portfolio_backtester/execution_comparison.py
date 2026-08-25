@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from collections.abc import Sequence
+from typing import Any, cast
 
 import pandas as pd
 
@@ -74,7 +75,7 @@ def compare_paired_execution_metrics(
     rows: list[dict[str, object]] = []
     expected_variants = {baseline_variant, challenger_variant}
     for raw_key, group in metrics.groupby(["horizon", "single_side_cost_bps"], sort=True):
-        horizon, cost = raw_key
+        horizon, cost = cast(tuple[Any, Any], raw_key)
         indexed = group.set_index("variant")
         if len(indexed) != 2 or set(indexed.index) != expected_variants:
             raise ValueError("execution metrics do not contain exactly one paired variant row")
