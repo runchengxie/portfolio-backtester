@@ -25,11 +25,17 @@
 | 夏普推断 | `probabilistic_sharpe_ratio`、`probabilistic_sharpe_ratio_from_stats`、`deflated_sharpe_ratio`、`expected_max_sharpe`、`sharpe_standard_error`、`annualized_sharpe_to_periodic`、`annualized_variance_to_periodic` |
 | 仓位缩放 | `SizingConfig`、`average_active_bets`、`build_sized_weights`、`build_sizing_receipt`、`discretize_weights`、`probability_to_size` |
 | 分层风险平价 | `HrpConfig`、`HrpResult`、`hierarchical_risk_parity`、`rolling_hrp_weights` |
+| 鲁棒不确定性原语 | `conservative_score`、`add_conservative_score`、`box_worst_case_return` |
 | 行业平衡袖套 | `SelectionSpec`、`select_industry_balanced`、`build_targets`、`combine_targets`、`attach_entry_dates`、`target_turnover`、`validate_targets` |
 | 策略风险 | `StrategyRiskReport`、`implementation_shortfall_metrics`、`return_concentration`、`strategy_failure_probability`、`summarize_strategy_risk` |
 | 证据回执 | `build_portfolio_sizing_receipt`、`series_sha256`、`sha256_file`、`write_receipt` |
 
 `probabilistic_sharpe_ratio` 接收收益序列。`probabilistic_sharpe_ratio_from_stats` 接收已经计算好的周期 Sharpe、偏度和超额峰度。
+
+鲁棒不确定性入口只做调用方显式提供的 box uncertainty 变换：`conservative_score` 计算
+`score - aversion * uncertainty`，`box_worst_case_return` 计算固定权重下的线性最坏情形收益。
+它们不会从 alpha 分数反推不确定性，也不执行 DRO、MILP 或组合优化。用于正式研究时，
+`uncertainty` / `uncertainty_radius` 应来自严格样本外证据，并与调仓时点保持 PIT 语义。
 
 `DailyWatch20` 是现有调用方使用的兼容例外。新增研究假设、特征和晋升规则由研究层与编排层维护。
 
