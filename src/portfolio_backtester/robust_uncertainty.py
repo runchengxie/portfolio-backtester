@@ -95,7 +95,9 @@ def box_worst_case_return(
     return_array = _finite_vector(expected_returns, name="expected_returns")
     radius_array = _uncertainty_vector(uncertainty_radius, name="uncertainty_radius")
     if not (weight_array.shape == return_array.shape == radius_array.shape):
-        raise ValueError("weights, expected_returns and uncertainty_radius must have the same shape")
+        raise ValueError(
+            "weights, expected_returns and uncertainty_radius must have the same shape"
+        )
     nominal = float(np.dot(weight_array, return_array))
     penalty = float(np.dot(np.abs(weight_array), radius_array))
     return nominal - penalty
