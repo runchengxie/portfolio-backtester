@@ -68,6 +68,7 @@ from .positions_artifact import (
     write_positions_by_rebalance_artifact,
 )
 from .rebalance import SessionRebalanceSchedule, get_session_interval_rebalance_dates
+from .robust_uncertainty import add_conservative_score, box_worst_case_return, conservative_score
 from .sharpe_inference import (
     annualized_sharpe_to_periodic,
     annualized_variance_to_periodic,
@@ -145,6 +146,7 @@ __all__ = [
     "StrategyRiskReport",
     "StrategySpec",
     "TurnoverBreakdown",
+    "add_conservative_score",
     "annualize_turnover",
     "annualized_sharpe_to_periodic",
     "annualized_variance_to_periodic",
@@ -153,6 +155,7 @@ __all__ = [
     "available_factor_names",
     "average_active_bets",
     "backtest_topk",
+    "box_worst_case_return",
     "build_factor_returns",
     "build_portfolio_sizing_receipt",
     "build_positions_envelope_v2",
@@ -166,6 +169,7 @@ __all__ = [
     "compute_summary",
     "compute_trade_summary",
     "compute_yearly_breakdown",
+    "conservative_score",
     "construct_positions_from_strategy",
     "deflated_sharpe_ratio",
     "discretize_weights",
