@@ -14,14 +14,12 @@ from portfolio_backtester.sleeve_portfolio import (
 
 def _signals() -> pd.DataFrame:
     rows = [
-        # date 1: A quota sleeve
         ("20260105", "000001", 9.0, None, "t1", "bank"),
         ("20260105", "000002", 8.0, 9.0, "t1", "bank"),
         ("20260105", "000003", 7.0, 8.0, "t1", "bank"),
         ("20260105", "000004", 9.0, 7.0, "t2", "tech"),
         ("20260105", "000005", 8.0, 6.0, "t2", "tech"),
         ("20260105", "000006", 7.0, 5.0, "t2", "health"),
-        # date 2: 000002 is held and remains inside A exit buffer even after rank slips.
         ("20260106", "000001", 9.0, None, "t1", "bank"),
         ("20260106", "000007", 8.5, 9.5, "t1", "tech"),
         ("20260106", "000002", 8.0, 9.0, "t1", "bank"),
@@ -61,19 +59,21 @@ def _spec() -> SleevePortfolioSpec:
     )
 
 
-def test_build_sleeve_positions_preserves_quota_buffer_overlap_and_weights() -> None:
+def test_build_sleeve_positions_preserves_quota_rank_buffer_overlap_and_weights() -> None:
     positions = build_sleeve_positions(_signals(), spec=_spec())
 
     day1 = positions.loc[positions["rebalance_date"].eq("20260105")].set_index("symbol")
-    assert set(day1.index) == {"000001", "000002", "000004", "000005"}
+    assert set(day1.index) == {"000001", "000002", "000003", "000004", "000005"}
     assert day1.loc["000002", "leg"] == "A+B"
     assert day1.loc["000002", "weight"] == 0.2
-    assert day1.loc["000001", "weight"] == 0.1
+    assert day1.loc["000003", "leg"] == "B"
+    assert day1["weight"].sum() == 0.6
 
     day2 = positions.loc[positions["rebalance_date"].eq("20260106")].set_index("symbol")
-    assert "000002" in day2.index
-    assert day2.loc["000002", "leg"] == "A+B"
-    assert day2["weight"].sum() == 0.5
+    assert set(day2.index) == {"000001", "000002", "000004", "000005", "000007"}
+    assert day2.loc["000007", "leg"] == "A+B"
+    assert day2.loc["000002", "leg"] == "B"
+    assert day2["weight"].sum() == 0.6
 
 
 def test_position_change_and_exposure_helpers_are_portfolio_owned() -> None:
