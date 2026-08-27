@@ -26,6 +26,7 @@
 | 仓位缩放 | `SizingConfig`、`average_active_bets`、`build_sized_weights`、`build_sizing_receipt`、`discretize_weights`、`probability_to_size` |
 | 分层风险平价 | `HrpConfig`、`HrpResult`、`hierarchical_risk_parity`、`rolling_hrp_weights` |
 | 鲁棒不确定性原语 | `conservative_score`、`add_conservative_score`、`box_worst_case_return` |
+| 结果分布与路径诊断 | `OutcomeDistributionReport`、`summarize_outcome_distribution` |
 | 行业平衡袖套 | `SelectionSpec`、`select_industry_balanced`、`build_targets`、`combine_targets`、`attach_entry_dates`、`target_turnover`、`validate_targets` |
 | 策略风险 | `StrategyRiskReport`、`implementation_shortfall_metrics`、`return_concentration`、`strategy_failure_probability`、`summarize_strategy_risk` |
 | 证据回执 | `build_portfolio_sizing_receipt`、`series_sha256`、`sha256_file`、`write_receipt` |
@@ -36,6 +37,11 @@
 `score - aversion * uncertainty`，`box_worst_case_return` 计算固定权重下的线性最坏情形收益。
 它们不会从 alpha 分数反推不确定性，也不执行 DRO、MILP 或组合优化。用于正式研究时，
 `uncertainty` / `uncertainty_radius` 应来自严格样本外证据，并与调仓时点保持 PIT 语义。
+
+结果分布入口只汇总已经实现的交易或持仓结果。`summarize_outcome_distribution` 同时接收
+realized return、MFE、MAE、peak giveback 和 holding period，返回收益分位数、亏损概率、
+5% CVaR 以及路径和持有期摘要。接口会拒绝空输入、非有限数值、长度不一致和不符合路径
+语义的数据。它不预测未来，也不判断某个目标结果在理论上可实现。
 
 `DailyWatch20` 是现有调用方使用的兼容例外。新增研究假设、特征和晋升规则由研究层与编排层维护。
 
