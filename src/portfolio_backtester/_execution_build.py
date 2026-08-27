@@ -189,6 +189,10 @@ def build_slippage_model(slippage_cfg: Mapping | None) -> SlippageModel:
                 label="slippage_model.impact_bps",
             ),
             amount_col=amount_col,
+            amount_multiplier=_coerce_positive_float(
+                slippage_cfg.get("amount_multiplier", 1.0),
+                label="slippage_model.amount_multiplier",
+            ),
             portfolio_value=_coerce_positive_float(
                 slippage_cfg.get("portfolio_value", 1_000_000.0),
                 label="slippage_model.portfolio_value",
@@ -375,6 +379,7 @@ def describe_slippage_model(slippage_model: SlippageModel) -> dict:
             "base_bps": float(slippage_model.base_bps),
             "impact_bps": float(slippage_model.impact_bps),
             "amount_col": slippage_model.amount_col,
+            "amount_multiplier": float(slippage_model.amount_multiplier),
             "portfolio_value": float(slippage_model.portfolio_value),
             "power": float(slippage_model.power),
             "max_participation": (

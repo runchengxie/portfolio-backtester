@@ -7,7 +7,7 @@ from typing import Any
 import numpy as np
 import pandas as pd
 
-from ..execution import DetailedTradeFeeModel
+from ..execution import DetailedTradeFeeModel, SlippageModel
 from ..types import CostBreakdown
 from .capacity import (
     _capacity_notional,
@@ -43,6 +43,22 @@ from .orders_nav_states import (
 )
 
 TradeFeeModel = DetailedTradeFeeModel
+
+
+def _slippage_pricing_row(
+    *,
+    symbol: str,
+    trade_date: pd.Timestamp,
+    tables: _ExecutionTables,
+    slippage_model: SlippageModel | None,
+) -> pd.Series | None:
+    if slippage_model is None:
+        return None
+    amount_col = str(getattr(slippage_model, "amount_col", "amount"))
+    table = tables.liquidity_tables.get(amount_col)
+    if table is None or trade_date not in table.index or symbol not in table.columns:
+        return None
+    return pd.Series({symbol: table.at[trade_date, symbol]}, dtype=float)
 
 
 def _execute_sell_orders(
@@ -227,6 +243,7 @@ def _execute_nav_orders_for_day(
     config: ExecutionSimConfig,
     cost_rate: float,
     trade_fee_model: TradeFeeModel | None,
+    slippage_model: SlippageModel | None,
     fill_rows: list[dict[str, Any]],
     market_rules: _MarketRules | None = None,
     t1_available: dict[str, float] | None = None,
@@ -243,6 +260,7 @@ def _execute_nav_orders_for_day(
         config=config,
         cost_rate=cost_rate,
         trade_fee_model=trade_fee_model,
+        slippage_model=slippage_model,
         fill_rows=fill_rows,
         market_rules=market_rules,
         t1_available=t1_available,
@@ -260,6 +278,7 @@ def _execute_nav_orders_for_day(
         config=config,
         cost_rate=cost_rate,
         trade_fee_model=trade_fee_model,
+        slippage_model=slippage_model,
         fill_rows=fill_rows,
         market_rules=market_rules,
     )
@@ -279,6 +298,7 @@ def _execute_nav_sell_orders_for_day(
     config: ExecutionSimConfig,
     cost_rate: float,
     trade_fee_model: TradeFeeModel | None,
+    slippage_model: SlippageModel | None,
     fill_rows: list[dict[str, Any]],
     market_rules: _MarketRules | None = None,
     t1_available: dict[str, float] | None = None,
@@ -340,7 +360,21 @@ def _execute_nav_sell_orders_for_day(
         shares[order.symbol] = max(held_quantity - fill_quantity, 0.0)
         if shares[order.symbol] <= 1e-10:
             shares.pop(order.symbol, None)
-        cost = _trade_fee(fill, side="sell", cost_rate=cost_rate, fee_model=trade_fee_model)
+        cost = _trade_fee(
+            fill,
+            side="sell",
+            cost_rate=cost_rate,
+            fee_model=trade_fee_model,
+            slippage_model=slippage_model,
+            symbol=order.symbol,
+            pricing_row=_slippage_pricing_row(
+                symbol=order.symbol,
+                trade_date=trade_date,
+                tables=tables,
+                slippage_model=slippage_model,
+            ),
+            portfolio_value=config.portfolio_value,
+        )
         cash_ref["cash"] = float(cash_ref.get("cash", 0.0)) + fill - cost.total_cost
         _update_nav_order(
             order,
@@ -376,6 +410,7 @@ def _execute_nav_buy_orders_for_day(
     config: ExecutionSimConfig,
     cost_rate: float,
     trade_fee_model: TradeFeeModel | None,
+    slippage_model: SlippageModel | None,
     fill_rows: list[dict[str, Any]],
     market_rules: _MarketRules | None = None,
 ) -> tuple[float, CostBreakdown]:
@@ -413,7 +448,21 @@ def _execute_nav_buy_orders_for_day(
         return 0.0, CostBreakdown()
     cash = max(float(cash_ref.get("cash", 0.0)), 0.0)
     total_cash_required = total_raw_fill + sum(
-        _trade_fee(item[3], side="buy", cost_rate=cost_rate, fee_model=trade_fee_model).total_cost
+        _trade_fee(
+            item[3],
+            side="buy",
+            cost_rate=cost_rate,
+            fee_model=trade_fee_model,
+            slippage_model=slippage_model,
+            symbol=item[0].symbol,
+            pricing_row=_slippage_pricing_row(
+                symbol=item[0].symbol,
+                trade_date=trade_date,
+                tables=tables,
+                slippage_model=slippage_model,
+            ),
+            portfolio_value=config.portfolio_value,
+        ).total_cost
         for item in raw_fills.values()
     )
     scale = min(1.0, cash / total_cash_required) if total_cash_required > 0 else 0.0
@@ -441,7 +490,21 @@ def _execute_nav_buy_orders_for_day(
             if fill <= 1e-8:
                 order.zero_fill_days += 1
                 continue
-        cost = _trade_fee(fill, side="buy", cost_rate=cost_rate, fee_model=trade_fee_model)
+        cost = _trade_fee(
+            fill,
+            side="buy",
+            cost_rate=cost_rate,
+            fee_model=trade_fee_model,
+            slippage_model=slippage_model,
+            symbol=order.symbol,
+            pricing_row=_slippage_pricing_row(
+                symbol=order.symbol,
+                trade_date=trade_date,
+                tables=tables,
+                slippage_model=slippage_model,
+            ),
+            portfolio_value=config.portfolio_value,
+        )
         quantity = fill / float(price)
         shares[order.symbol] = float(shares.get(order.symbol, 0.0)) + quantity
         cash_ref["cash"] = float(cash_ref.get("cash", 0.0)) - fill - cost.total_cost

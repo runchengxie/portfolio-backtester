@@ -4,6 +4,7 @@ import numpy as np
 import pandas as pd
 import pytest
 
+from portfolio_backtester.execution import ParticipationSlippageModel
 from portfolio_backtester.execution_sim import (
     ExecutionSimConfig,
     TradeFeeModel,
@@ -348,6 +349,60 @@ def test_execution_adjusted_nav_tracks_fully_filled_position_return():
     assert result.daily["executed_nav"].iloc[-1] == pytest.approx(1.10)
     assert result.daily["executed_return"].iloc[-1] == pytest.approx(0.10)
     assert result.summary["stats"]["total_return"] == pytest.approx(0.10)
+
+
+def test_execution_adjusted_nav_applies_participation_impact_to_fill_cost():
+    dates = pd.date_range("2020-01-02", periods=2, freq="B")
+    positions = pd.DataFrame(
+        {
+            "rebalance_date": ["20200101"],
+            "entry_date": ["20200102"],
+            "symbol": ["AAA"],
+            "weight": [1.0],
+            "side": ["long"],
+        }
+    )
+    pricing = _pricing_frame(
+        dates,
+        ["AAA"],
+        amount_map={("AAA", "20200102"): 1_000.0, ("AAA", "20200103"): 1_000.0},
+        price_map={("AAA", "20200102"): 10.0, ("AAA", "20200103"): 10.0},
+    )
+    config = ExecutionSimConfig(
+        enabled=True,
+        portfolio_value=1_000.0,
+        participation_rate=1.0,
+        liquidity_cols=("amount",),
+        buy_max_days=1,
+    )
+
+    baseline = simulate_execution_adjusted_nav(
+        positions,
+        pricing,
+        config,
+        price_col="open",
+        tradable_col="is_tradable",
+        transaction_cost_bps=0.0,
+    )
+    result = simulate_execution_adjusted_nav(
+        positions,
+        pricing,
+        config,
+        price_col="open",
+        tradable_col="is_tradable",
+        transaction_cost_bps=0.0,
+        slippage_model=ParticipationSlippageModel(
+            impact_bps=100.0,
+            amount_col="amount",
+            portfolio_value=1_000.0,
+        ),
+    )
+
+    assert result.fills.loc[0, "cost_temporary_impact"] > 0.0
+    assert result.fills.loc[0, "transaction_cost"] == pytest.approx(
+        result.fills.loc[0, "cost_temporary_impact"]
+    )
+    assert result.daily["executed_nav"].iloc[0] < baseline.daily["executed_nav"].iloc[0]
 
 
 def test_execution_adjusted_nav_delayed_sell_tracks_quantity_across_price_change():

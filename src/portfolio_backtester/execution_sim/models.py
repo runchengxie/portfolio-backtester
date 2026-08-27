@@ -8,7 +8,7 @@ from typing import Any
 import numpy as np
 import pandas as pd
 
-from ..execution import DetailedTradeFeeModel
+from ..execution import DetailedTradeFeeModel, SlippageModel
 from ..types import CostBreakdown
 from .config import ExecutionSimConfig
 
@@ -57,6 +57,10 @@ def _trade_fee(
     side: str,
     cost_rate: float,
     fee_model: TradeFeeModel | None,
+    slippage_model: SlippageModel | None = None,
+    symbol: str | None = None,
+    pricing_row: pd.Series | None = None,
+    portfolio_value: float | None = None,
 ) -> CostBreakdown:
     """Per-fill transaction cost split into stage-3 sub-items.
 
@@ -68,13 +72,35 @@ def _trade_fee(
     """
     if fee_model is None:
         spread = max(float(notional), 0.0) * max(float(cost_rate), 0.0)
-        return CostBreakdown(fee_cost=0.0, slippage_cost=spread, spread_cost=spread)
-    breakdown = fee_model.notional_cost_breakdown(notional, side=side)
+        breakdown = CostBreakdown.from_components(spread_cost=spread)
+    else:
+        fee_breakdown = fee_model.notional_cost_breakdown(notional, side=side)
+        breakdown = CostBreakdown.from_components(
+            commission=fee_breakdown["commission"],
+            stamp_tax=fee_breakdown["stamp_tax"],
+            transfer_fee=fee_breakdown["transfer_fee"],
+            spread_cost=fee_breakdown["spread_cost"],
+        )
+    if slippage_model is None or symbol is None or portfolio_value is None or portfolio_value <= 0:
+        return breakdown
+    trade_weights = pd.Series({symbol: float(notional) / float(portfolio_value)})
+    impact = slippage_model.cost(
+        trade_weights,
+        pricing_row=pricing_row,
+        is_initial=False,
+        side=side,
+    ) * float(portfolio_value)
+    if not np.isfinite(impact) or impact <= 0:
+        return breakdown
     return CostBreakdown.from_components(
-        commission=breakdown["commission"],
-        stamp_tax=breakdown["stamp_tax"],
-        transfer_fee=breakdown["transfer_fee"],
-        spread_cost=breakdown["spread_cost"],
+        commission=breakdown.commission,
+        stamp_tax=breakdown.stamp_tax,
+        transfer_fee=breakdown.transfer_fee,
+        spread_cost=breakdown.spread_cost,
+        temporary_impact=impact,
+        permanent_impact=breakdown.permanent_impact,
+        opportunity_cost=breakdown.opportunity_cost,
+        financing_cost=breakdown.financing_cost,
     )
 
 
@@ -196,6 +222,7 @@ class _AdjustedNavPlan:
     next_entry_by_date: dict[pd.Timestamp, pd.Timestamp | None]
     start_idx: int
     cost_rate: float
+    slippage_model: SlippageModel | None = None
 
 
 @dataclass

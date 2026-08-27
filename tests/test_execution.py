@@ -135,6 +135,7 @@ def test_build_execution_model_supports_slippage_entry_and_constraints() -> None
                 "base_bps": 2,
                 "impact_bps": 10,
                 "amount_col": "amount",
+                "amount_multiplier": 1000,
                 "portfolio_value": 500000,
             },
             "entry": {"price_col": "open"},
@@ -148,6 +149,7 @@ def test_build_execution_model_supports_slippage_entry_and_constraints() -> None
 
     assert isinstance(model.cost_model, SideBpsCostModel)
     assert isinstance(model.slippage_model, ParticipationSlippageModel)
+    assert model.slippage_model.amount_multiplier == 1000.0
     assert model.entry_policy.price_col == "open"
     assert model.exit_policy.price_col == "close"
     assert model.selection_constraints.min_price == pytest.approx(5.0)
