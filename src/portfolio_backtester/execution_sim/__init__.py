@@ -10,11 +10,13 @@ from .config import (
     required_execution_sim_columns as required_execution_sim_columns,
 )
 from .core import (
+    prepare_execution_tables as prepare_execution_tables,
     simulate_capacity_execution as simulate_capacity_execution,
     simulate_execution_adjusted_nav as simulate_execution_adjusted_nav,
     simulate_ideal_daily_nav as simulate_ideal_daily_nav,
 )
 from .models import (
+    PreparedExecutionTables as PreparedExecutionTables,
     TradeFeeModel as TradeFeeModel,
     describe_trade_fee_model as describe_trade_fee_model,
 )
@@ -29,6 +31,7 @@ __all__ = [
     "SELL_UNTIL_NEXT_REBALANCE",
     "ExecutionAdjustedNavResult",
     "ExecutionSimConfig",
+    "PreparedExecutionTables",
     "ExecutionSimResult",
     "TradeFeeModel",
     "UnifiedLedger",
@@ -36,6 +39,7 @@ __all__ = [
     "describe_execution_sim_config",
     "describe_trade_fee_model",
     "required_execution_sim_columns",
+    "prepare_execution_tables",
     "simulate_capacity_execution",
     "simulate_execution_adjusted_nav",
     "simulate_ideal_daily_nav",

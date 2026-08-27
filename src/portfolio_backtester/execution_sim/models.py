@@ -131,6 +131,11 @@ class _ExecutionTables:
     listing_status_table: pd.DataFrame | None = None
 
 
+# Public type alias for callers that want to prepare immutable execution tables
+# once and reuse them across multiple ledger simulations.
+PreparedExecutionTables = _ExecutionTables
+
+
 @dataclass(frozen=True)
 class _MarketRules:
     """Resolved phase-4 market-rule contract for a single simulation run.

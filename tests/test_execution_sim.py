@@ -4,11 +4,13 @@ import numpy as np
 import pandas as pd
 import pytest
 
+import portfolio_backtester.execution_sim.core as execution_core
 from portfolio_backtester.execution import ParticipationSlippageModel
 from portfolio_backtester.execution_sim import (
     ExecutionSimConfig,
     TradeFeeModel,
     build_execution_sim_config,
+    prepare_execution_tables,
     required_execution_sim_columns,
     simulate_capacity_execution,
     simulate_execution_adjusted_nav,
@@ -38,6 +40,47 @@ def _pricing_frame(dates, symbols, *, amount_map=None, tradable_map=None, price_
                 }
             )
     return pd.DataFrame(rows)
+
+
+def test_adjusted_nav_accepts_reused_prepared_execution_tables(monkeypatch):
+    dates = pd.date_range("2020-01-01", periods=3, freq="B")
+    pricing = _pricing_frame(dates, ["AAA"])
+    positions = pd.DataFrame(
+        {
+            "rebalance_date": [dates[0]],
+            "entry_date": [dates[1]],
+            "symbol": ["AAA"],
+            "weight": [1.0],
+        }
+    )
+    config = ExecutionSimConfig(
+        enabled=True,
+        portfolio_value=1_000_000.0,
+        liquidity_cols=("amount",),
+        round_lot=100,
+        enforce_t1=True,
+    )
+    prepared = prepare_execution_tables(
+        pricing,
+        config,
+        price_col="open",
+        tradable_col="amount",
+    )
+
+    def unexpected_rebuild(*args, **kwargs):
+        raise AssertionError("execution tables were rebuilt")
+
+    monkeypatch.setattr(execution_core, "_build_execution_tables", unexpected_rebuild)
+    result = simulate_execution_adjusted_nav(
+        positions,
+        pricing,
+        config,
+        price_col="open",
+        tradable_col="amount",
+        prepared_tables=prepared,
+    )
+
+    assert result.summary["status"] == "ok"
 
 
 def test_capacity_execution_uses_side_aware_buy_tradeability():
