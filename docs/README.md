@@ -6,27 +6,29 @@
 
 1. [根目录 README](../README.md)
 2. [常用入口](guides/entry-points.md)
-3. [组合式回测规范](concepts/backtest-spec.md)
-4. [回测后端与统一账本边界](concepts/backend-architecture.md)
-5. [机器可读框架状态账本](framework-integration-ledger.yml)
-6. [成本与执行假设](concepts/execution-costs.md)
-7. [执行容量与每日净值模拟](guides/execution-simulation.md)
-8. [AFML 仓位与策略风险](concepts/afml-sizing-and-risk.md)
-9. [换手率口径](concepts/turnover.md)
-10. [成本口径](concepts/cost-breakdown.md)
-11. [回测结果解读](concepts/backtest-interpretation.md)
-12. [市场 benchmark 阶梯](concepts/benchmark-ladder.md)
-13. [持仓输出约定](reference/outputs/positions.md)
-14. [回测输出契约](reference/outputs/backtest-outputs.md)
-15. [公开 API](reference/public-api.md)
-16. [测试和质量检查](testing.md)
-17. [会计与执行路线图](accounting_execution_roadmap.md)
+3. [通用多袖组合构造](guides/sleeve-portfolio.md)
+4. [组合式回测规范](concepts/backtest-spec.md)
+5. [回测后端与统一账本边界](concepts/backend-architecture.md)
+6. [机器可读框架状态账本](framework-integration-ledger.yml)
+7. [成本与执行假设](concepts/execution-costs.md)
+8. [执行容量与每日净值模拟](guides/execution-simulation.md)
+9. [AFML 仓位与策略风险](concepts/afml-sizing-and-risk.md)
+10. [换手率口径](concepts/turnover.md)
+11. [成本口径](concepts/cost-breakdown.md)
+12. [回测结果解读](concepts/backtest-interpretation.md)
+13. [市场 benchmark 阶梯](concepts/benchmark-ladder.md)
+14. [持仓输出约定](reference/outputs/positions.md)
+15. [回测输出契约](reference/outputs/backtest-outputs.md)
+16. [公开 API](reference/public-api.md)
+17. [测试和质量检查](testing.md)
+18. [会计与执行路线图](accounting_execution_roadmap.md)
 
 ## 事实来源
 
 | 内容 | 代码位置 |
 | --- | --- |
 | 顶层公开入口 | `src/portfolio_backtester/__init__.py` |
+| 通用多袖组合构造 | `src/portfolio_backtester/sleeve_portfolio.py` |
 | 回测规范 | `src/portfolio_backtester/backtest_spec.py` |
 | 高层 API | `src/portfolio_backtester/api.py` |
 | 输入和输出契约 | `src/portfolio_backtester/contracts.py` |
