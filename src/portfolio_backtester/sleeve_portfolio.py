@@ -100,25 +100,18 @@ def _prepare_signals(signals: pd.DataFrame, spec: SleevePortfolioSpec) -> pd.Dat
 
     frame = signals.copy()
     if spec.signal_date_col in frame.columns:
-        frame[spec.trade_date_col] = pd.to_datetime(
-            frame[spec.signal_date_col], errors="coerce"
-        )
+        frame[spec.trade_date_col] = pd.to_datetime(frame[spec.signal_date_col], errors="coerce")
     elif spec.trade_date_col in frame.columns:
-        frame[spec.trade_date_col] = pd.to_datetime(
-            frame[spec.trade_date_col], errors="coerce"
-        )
+        frame[spec.trade_date_col] = pd.to_datetime(frame[spec.trade_date_col], errors="coerce")
     else:
         raise ValueError(
-            f"Sleeve signals require {spec.signal_date_col!r} "
-            f"or {spec.trade_date_col!r}."
+            f"Sleeve signals require {spec.signal_date_col!r} or {spec.trade_date_col!r}."
         )
     frame[spec.symbol_col] = frame[spec.symbol_col].astype(str)
     return frame.dropna(subset=[spec.trade_date_col, spec.symbol_col])
 
 
-def _ranked_symbols(
-    frame: pd.DataFrame, *, score_col: str, symbol_col: str
-) -> list[str]:
+def _ranked_symbols(frame: pd.DataFrame, *, score_col: str, symbol_col: str) -> list[str]:
     return frame.sort_values(score_col, ascending=False)[symbol_col].astype(str).tolist()
 
 
@@ -135,12 +128,8 @@ def _select_quota_sleeve(
         quota = int(raw_quota)
         if quota <= 0:
             continue
-        candidates = day.loc[
-            day[spec.group_col].eq(group_value) & day[spec.score_col].notna()
-        ]
-        ranked = _ranked_symbols(
-            candidates, score_col=spec.score_col, symbol_col=symbol_col
-        )
+        candidates = day.loc[day[spec.group_col].eq(group_value) & day[spec.score_col].notna()]
+        ranked = _ranked_symbols(candidates, score_col=spec.score_col, symbol_col=symbol_col)
         exit_rank = max(quota + 1, int(quota * spec.exit_multiplier))
         pool = [
             symbol
@@ -172,9 +161,7 @@ def _select_rank_sleeve(
     spec: RankBufferedSleeveSpec,
     symbol_col: str,
 ) -> list[str]:
-    ranked = day.loc[day[spec.score_col].notna()].sort_values(
-        spec.score_col, ascending=False
-    )
+    ranked = day.loc[day[spec.score_col].notna()].sort_values(spec.score_col, ascending=False)
     selected: list[str] = []
     group_counts: dict[str, int] = {}
     replacements = 0
@@ -187,10 +174,7 @@ def _select_rank_sleeve(
         if not held and (rank > spec.entry_rank or replacements >= spec.max_replacements):
             continue
         group = _group_value(row, spec.group_col)
-        if (
-            spec.max_per_group is not None
-            and group_counts.get(group, 0) >= spec.max_per_group
-        ):
+        if spec.max_per_group is not None and group_counts.get(group, 0) >= spec.max_per_group:
             continue
         selected.append(symbol)
         if group:
@@ -292,12 +276,8 @@ def _build_position_rows(
         else:
             leg = spec.rank_sleeve.name
         source = lookup.loc[symbol] if symbol in lookup.index else pd.Series(dtype=object)
-        quota_score = pd.to_numeric(
-            source.get(spec.quota_sleeve.score_col), errors="coerce"
-        )
-        rank_score = pd.to_numeric(
-            source.get(spec.rank_sleeve.score_col), errors="coerce"
-        )
+        quota_score = pd.to_numeric(source.get(spec.quota_sleeve.score_col), errors="coerce")
+        rank_score = pd.to_numeric(source.get(spec.rank_sleeve.score_col), errors="coerce")
         row: dict[str, Any] = {
             "rebalance_date": date_text,
             "entry_date": date_text,
@@ -313,9 +293,7 @@ def _build_position_rows(
     return rows
 
 
-def build_sleeve_positions(
-    signals: pd.DataFrame, *, spec: SleevePortfolioSpec
-) -> pd.DataFrame:
+def build_sleeve_positions(signals: pd.DataFrame, *, spec: SleevePortfolioSpec) -> pd.DataFrame:
     """Convert scored candidates into a positions-by-rebalance frame."""
 
     frame = _prepare_signals(signals, spec)
@@ -379,9 +357,7 @@ def build_sleeve_positions(
         .rank(ascending=False, method="first", na_option="bottom")
         .astype("Int64")
     )
-    return positions.sort_values(
-        ["rebalance_date", "rank", "symbol"]
-    ).reset_index(drop=True)
+    return positions.sort_values(["rebalance_date", "rank", "symbol"]).reset_index(drop=True)
 
 
 def compute_position_changes(positions: pd.DataFrame) -> pd.DataFrame:
@@ -429,13 +405,10 @@ def _exposure_summary(positions: pd.DataFrame) -> dict[str, Any]:
     if positions.empty:
         return {}
     legs = positions["leg"].astype("string")
-    tokens = sorted(
-        {token for value in legs.dropna() for token in str(value).split("+")}
-    )
+    tokens = sorted({token for value in legs.dropna() for token in str(value).split("+")})
     sleeve_counts = {token: int(_leg_mask(legs, token).sum()) for token in tokens}
     sleeve_weights = {
-        token: float(positions.loc[_leg_mask(legs, token), "weight"].sum())
-        for token in tokens
+        token: float(positions.loc[_leg_mask(legs, token), "weight"].sum()) for token in tokens
     }
     summary: dict[str, Any] = {
         "rebalance_date": str(positions["rebalance_date"].iloc[0]),

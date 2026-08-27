@@ -15,7 +15,7 @@ from portfolio_backtester.sleeve_portfolio import (
 )
 ```
 
-`QuotaSleeveSpec` 适用于按主题、行业或其他分组配额构造的 sleeve；`RankBufferedSleeveSpec` 适用于带入选/退出排名、组内上限和每日替换限制的 sleeve。`SleevePortfolioSpec` 只组合这些机制以及 overlap/weight 规则。
+`QuotaSleeveSpec` 适用于按主题、行业或其他分组配额构造的 sleeve。`RankBufferedSleeveSpec` 适用于带入选/退出排名、组内上限和每日替换限制的 sleeve。`SleevePortfolioSpec` 只组合这些机制以及 overlap/weight 规则。
 
 具体策略应在上游 strategy owner 中冻结自己的参数，再显式转换成这些通用 spec。这里不得加入 StyleReplica、DailyWatch20 或其他策略身份常量。
 
