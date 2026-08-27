@@ -17,6 +17,7 @@ OWNED_MODULES = (
     "portfolio_backtester.backends.native",
     "portfolio_backtester.engine",
     "portfolio_backtester.metrics",
+    "portfolio_backtester.outcome_metrics",
     "portfolio_backtester.a_share_executable_oos_topk",
     "portfolio_backtester.execution",
     "portfolio_backtester.execution_contracts",
@@ -47,24 +48,8 @@ OWNED_MODULES = (
     "portfolio_backtester.types",
 )
 FORBIDDEN_RUNTIME_PREFIXES = ("alpha_research", "strategy_pipeline.pipeline")
-
-
-def test_portfolio_backtester_package_uses_owner_native_root() -> None:
-    package_root = Path(portfolio_backtester.__file__).resolve().parent
-    expected_package_root = (Path(__file__).parents[1] / "src" / "portfolio_backtester").resolve()
-
-    assert package_root == expected_package_root
-
-
-@pytest.mark.parametrize("module_name", OWNED_MODULES)
-def test_owned_modules_import(module_name: str) -> None:
-    module = importlib.import_module(module_name)
-
-    assert module.__name__ == module_name
-
-
-def test_portfolio_backtester_package_exports_core_entrypoints() -> None:
-    assert set(portfolio_backtester.__all__) == {
+CORE_ENTRYPOINTS = frozenset(
+    {
         "CANONICAL_POSITIONS_BY_REBALANCE_META_FILE",
         "BacktestSpec",
         "CostBreakdown",
@@ -84,6 +69,7 @@ def test_portfolio_backtester_package_exports_core_entrypoints() -> None:
         "IncumbentRequalificationPolicy",
         "IncumbentRequalificationReceipt",
         "IncumbentRequalificationResult",
+        "OutcomeDistributionReport",
         "PORTFOLIO_POLICY_SCHEMA",
         "POSITIONS_BY_REBALANCE_CONTRACT",
         "PositionBacktestConfig",
@@ -91,7 +77,7 @@ def test_portfolio_backtester_package_exports_core_entrypoints() -> None:
         "PositionBacktestResult",
         "PositionsByRebalanceFrameContract",
         "RebalanceTurnoverReport",
-        "leg_attribution_frame",
+        "SelectionSpec",
         "SessionRebalanceSchedule",
         "SizingConfig",
         "StaggeredCohortExecutionConfig",
@@ -99,27 +85,30 @@ def test_portfolio_backtester_package_exports_core_entrypoints() -> None:
         "StrategyRiskReport",
         "StrategySpec",
         "TurnoverBreakdown",
+        "add_conservative_score",
         "annualize_turnover",
         "annualized_sharpe_to_periodic",
         "annualized_variance_to_periodic",
         "assert_positions_by_rebalance_frame",
         "attach_entry_dates",
-        "average_active_bets",
         "available_factor_names",
+        "average_active_bets",
         "backtest_topk",
+        "box_worst_case_return",
+        "build_factor_returns",
         "build_portfolio_sizing_receipt",
         "build_positions_envelope_v2",
+        "build_quantile_portfolio_returns",
         "build_rebalance_turnover_report",
         "build_sized_weights",
         "build_sizing_receipt",
-        "build_factor_returns",
-        "build_quantile_portfolio_returns",
         "build_targets",
         "combine_targets",
         "compute_factor_correlations",
-        "compute_trade_summary",
         "compute_summary",
+        "compute_trade_summary",
         "compute_yearly_breakdown",
+        "conservative_score",
         "construct_positions_from_strategy",
         "deflated_sharpe_ratio",
         "discretize_weights",
@@ -127,23 +116,23 @@ def test_portfolio_backtester_package_exports_core_entrypoints() -> None:
         "evaluate_position_backtest",
         "execution_summary_frame",
         "expected_max_sharpe",
-        "hierarchical_risk_parity",
         "get_rebalance_dates",
         "get_session_interval_rebalance_dates",
+        "hierarchical_risk_parity",
         "implementation_shortfall_metrics",
         "l2_price_tiered_slippage",
+        "leg_attribution_frame",
         "name_turnover",
         "probabilistic_sharpe_ratio",
         "probabilistic_sharpe_ratio_from_stats",
         "probability_to_size",
         "return_concentration",
         "rolling_hrp_weights",
-        "run_position_backtest",
         "run_backtest",
+        "run_position_backtest",
         "select_daily_watch20",
         "select_incumbent_requalified_portfolio",
         "select_industry_balanced",
-        "SelectionSpec",
         "series_sha256",
         "sha256_file",
         "sharpe_standard_error",
@@ -151,6 +140,7 @@ def test_portfolio_backtester_package_exports_core_entrypoints() -> None:
         "strategy_failure_probability",
         "strategy_from_config",
         "summarize_leg_attribution",
+        "summarize_outcome_distribution",
         "summarize_period_returns",
         "summarize_staggered_execution",
         "summarize_strategy_risk",
@@ -161,6 +151,25 @@ def test_portfolio_backtester_package_exports_core_entrypoints() -> None:
         "write_positions_by_rebalance_artifact",
         "write_receipt",
     }
+)
+
+
+def test_portfolio_backtester_package_uses_owner_native_root() -> None:
+    package_root = Path(portfolio_backtester.__file__).resolve().parent
+    expected_package_root = (Path(__file__).parents[1] / "src" / "portfolio_backtester").resolve()
+
+    assert package_root == expected_package_root
+
+
+@pytest.mark.parametrize("module_name", OWNED_MODULES)
+def test_owned_modules_import(module_name: str) -> None:
+    module = importlib.import_module(module_name)
+
+    assert module.__name__ == module_name
+
+
+def test_portfolio_backtester_package_exports_core_entrypoints() -> None:
+    assert set(portfolio_backtester.__all__) == CORE_ENTRYPOINTS
 
 
 def test_owned_modules_do_not_load_sibling_namespaces() -> None:
