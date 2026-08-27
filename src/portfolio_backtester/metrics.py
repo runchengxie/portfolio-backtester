@@ -1,9 +1,11 @@
-"""Portfolio performance metrics.
+"""Portfolio reporting metrics and compatibility helpers.
 
-This module re-exports the public metric helpers, which now live in the
-private submodules (:mod:`_metrics_ic`, :mod:`_metrics_active`,
-:mod:`_metrics_turnover`, :mod:`_metrics_period`). The original behavior is
-unchanged; symbols remain importable from this path.
+Portfolio-owned public semantics are turnover, active-return, period-return and
+leg-attribution measures. The IC/quantile helpers re-exported from this legacy
+module remain for package compatibility and attribution internals; canonical
+alpha-research IC, Pearson IC, IC-IR and quantile research semantics belong to
+``alpha-research``. New portfolio APIs should not treat these helpers as an
+alpha-evaluation owner surface.
 """
 
 from __future__ import annotations
@@ -28,7 +30,7 @@ scipy_stats = _metrics_ic.scipy_stats
 
 
 def summarize_ic(ic_series: pd.Series) -> dict[str, float]:
-    """Summarize IC while honoring the public module's SciPy override."""
+    """Summarize compatibility IC while honoring the SciPy override."""
     _metrics_ic.scipy_stats = scipy_stats
     return _metrics_ic.summarize_ic(ic_series)
 
