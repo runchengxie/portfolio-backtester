@@ -1,7 +1,7 @@
 """Generic multi-sleeve portfolio construction.
 
-This module owns portfolio mechanics only. Strategy identity and frozen strategy
-policy belong to upstream callers, which provide explicit sleeve specifications.
+This module owns portfolio mechanics only. Strategy identity and frozen policy
+belong to upstream callers, which pass explicit sleeve specifications.
 """
 
 from __future__ import annotations
@@ -10,7 +10,6 @@ from collections.abc import Mapping
 from dataclasses import dataclass
 from typing import Any, cast
 
-import numpy as np
 import pandas as pd
 
 
@@ -66,7 +65,7 @@ class RankBufferedSleeveSpec:
 
 @dataclass(frozen=True)
 class SleevePortfolioSpec:
-    """Portfolio-level mechanics for combining one quota and one ranked sleeve."""
+    """Mechanics for combining one quota sleeve and one ranked sleeve."""
 
     quota_sleeve: QuotaSleeveSpec
     rank_sleeve: RankBufferedSleeveSpec
@@ -101,18 +100,25 @@ def _prepare_signals(signals: pd.DataFrame, spec: SleevePortfolioSpec) -> pd.Dat
 
     frame = signals.copy()
     if spec.signal_date_col in frame.columns:
-        frame[spec.trade_date_col] = pd.to_datetime(frame[spec.signal_date_col], errors="coerce")
+        frame[spec.trade_date_col] = pd.to_datetime(
+            frame[spec.signal_date_col], errors="coerce"
+        )
     elif spec.trade_date_col in frame.columns:
-        frame[spec.trade_date_col] = pd.to_datetime(frame[spec.trade_date_col], errors="coerce")
+        frame[spec.trade_date_col] = pd.to_datetime(
+            frame[spec.trade_date_col], errors="coerce"
+        )
     else:
         raise ValueError(
-            f"Sleeve signals require {spec.signal_date_col!r} or {spec.trade_date_col!r}."
+            f"Sleeve signals require {spec.signal_date_col!r} "
+            f"or {spec.trade_date_col!r}."
         )
     frame[spec.symbol_col] = frame[spec.symbol_col].astype(str)
     return frame.dropna(subset=[spec.trade_date_col, spec.symbol_col])
 
 
-def _ranked_symbols(frame: pd.DataFrame, *, score_col: str, symbol_col: str) -> list[str]:
+def _ranked_symbols(
+    frame: pd.DataFrame, *, score_col: str, symbol_col: str
+) -> list[str]:
     return frame.sort_values(score_col, ascending=False)[symbol_col].astype(str).tolist()
 
 
@@ -129,8 +135,12 @@ def _select_quota_sleeve(
         quota = int(raw_quota)
         if quota <= 0:
             continue
-        candidates = day.loc[day[spec.group_col].eq(group_value) & day[spec.score_col].notna()]
-        ranked = _ranked_symbols(candidates, score_col=spec.score_col, symbol_col=symbol_col)
+        candidates = day.loc[
+            day[spec.group_col].eq(group_value) & day[spec.score_col].notna()
+        ]
+        ranked = _ranked_symbols(
+            candidates, score_col=spec.score_col, symbol_col=symbol_col
+        )
         exit_rank = max(quota + 1, int(quota * spec.exit_multiplier))
         pool = [
             symbol
@@ -155,14 +165,16 @@ def _group_value(row: pd.Series, group_col: str | None) -> str:
     return "" if pd.isna(value) else str(value)
 
 
-def _select_rank_buffered_sleeve(
+def _select_rank_sleeve(
     day: pd.DataFrame,
     previous: set[str],
     *,
     spec: RankBufferedSleeveSpec,
     symbol_col: str,
 ) -> list[str]:
-    ranked = day.loc[day[spec.score_col].notna()].sort_values(spec.score_col, ascending=False)
+    ranked = day.loc[day[spec.score_col].notna()].sort_values(
+        spec.score_col, ascending=False
+    )
     selected: list[str] = []
     group_counts: dict[str, int] = {}
     replacements = 0
@@ -174,9 +186,11 @@ def _select_rank_buffered_sleeve(
             continue
         if not held and (rank > spec.entry_rank or replacements >= spec.max_replacements):
             continue
-
         group = _group_value(row, spec.group_col)
-        if spec.max_per_group is not None and group_counts.get(group, 0) >= spec.max_per_group:
+        if (
+            spec.max_per_group is not None
+            and group_counts.get(group, 0) >= spec.max_per_group
+        ):
             continue
         selected.append(symbol)
         if group:
@@ -186,9 +200,8 @@ def _select_rank_buffered_sleeve(
         if len(selected) >= spec.slots:
             return selected
 
-    # Compatibility fill: retain the historical behavior where a short sleeve is
-    # filled by rank after constrained admission. This keeps existing position
-    # artifacts stable while ownership moves out of the alpha repository.
+    # Preserve the historical fill behavior while ownership moves. The fallback
+    # intentionally fills by raw rank after the constrained admission pass.
     for rank, (_, row) in enumerate(ranked.iterrows(), start=1):
         symbol = str(row[symbol_col])
         if symbol in selected or rank > spec.exit_rank * 2:
@@ -199,38 +212,24 @@ def _select_rank_buffered_sleeve(
     return selected
 
 
-def _fill_quota_sleeve(
+def _fill_sleeve(
     day: pd.DataFrame,
     holdings: list[str],
     *,
-    spec: QuotaSleeveSpec,
+    score_col: str,
+    slots: int,
     symbol_col: str,
+    require_group_col: str | None = None,
 ) -> list[str]:
     result = list(holdings)
-    candidates = day.loc[day[spec.group_col].notna() & day[spec.score_col].notna()].sort_values(
-        spec.score_col, ascending=False
-    )
+    mask = day[score_col].notna()
+    if require_group_col:
+        mask &= day[require_group_col].notna()
+    candidates = day.loc[mask].sort_values(score_col, ascending=False)
     for symbol in candidates[symbol_col].astype(str):
         if symbol not in result:
             result.append(symbol)
-        if len(result) >= spec.slots:
-            break
-    return result
-
-
-def _fill_rank_sleeve(
-    day: pd.DataFrame,
-    holdings: list[str],
-    *,
-    spec: RankBufferedSleeveSpec,
-    symbol_col: str,
-) -> list[str]:
-    result = list(holdings)
-    candidates = day.loc[day[spec.score_col].notna()].sort_values(spec.score_col, ascending=False)
-    for symbol in candidates[symbol_col].astype(str):
-        if symbol not in result:
-            result.append(symbol)
-        if len(result) >= spec.slots:
+        if len(result) >= slots:
             break
     return result
 
@@ -269,10 +268,9 @@ def _build_position_rows(
     lookup = day.drop_duplicates(spec.symbol_col, keep="last").set_index(spec.symbol_col)
     quota_set = set(quota_holdings)
     rank_set = set(rank_holdings)
-    rows: list[dict[str, Any]] = []
-
-    carry_columns = list(
-        dict.fromkeys(
+    carry_columns = [
+        column
+        for column in dict.fromkeys(
             [
                 spec.quota_sleeve.score_col,
                 spec.rank_sleeve.score_col,
@@ -280,20 +278,26 @@ def _build_position_rows(
                 spec.rank_sleeve.group_col,
             ]
         )
-    )
-    carry_columns = [column for column in carry_columns if column]
+        if column
+    ]
 
+    rows: list[dict[str, Any]] = []
     for symbol in sorted(quota_set | rank_set):
-        if symbol in quota_set and symbol in rank_set:
+        in_quota = symbol in quota_set
+        in_rank = symbol in rank_set
+        if in_quota and in_rank:
             leg = f"{spec.quota_sleeve.name}+{spec.rank_sleeve.name}"
-        elif symbol in quota_set:
+        elif in_quota:
             leg = spec.quota_sleeve.name
         else:
             leg = spec.rank_sleeve.name
-        signal_row = lookup.loc[symbol] if symbol in lookup.index else pd.Series(dtype=object)
-        quota_score = pd.to_numeric(signal_row.get(spec.quota_sleeve.score_col), errors="coerce")
-        rank_score = pd.to_numeric(signal_row.get(spec.rank_sleeve.score_col), errors="coerce")
-        signal = quota_score if pd.notna(quota_score) else rank_score
+        source = lookup.loc[symbol] if symbol in lookup.index else pd.Series(dtype=object)
+        quota_score = pd.to_numeric(
+            source.get(spec.quota_sleeve.score_col), errors="coerce"
+        )
+        rank_score = pd.to_numeric(
+            source.get(spec.rank_sleeve.score_col), errors="coerce"
+        )
         row: dict[str, Any] = {
             "rebalance_date": date_text,
             "entry_date": date_text,
@@ -301,18 +305,16 @@ def _build_position_rows(
             "weight": weights.get(symbol, 0.0),
             "side": "long",
             "leg": leg,
-            "signal": signal,
+            "signal": quota_score if pd.notna(quota_score) else rank_score,
         }
         for column in carry_columns:
-            row[column] = signal_row.get(column)
+            row[column] = source.get(column)
         rows.append(row)
     return rows
 
 
 def build_sleeve_positions(
-    signals: pd.DataFrame,
-    *,
-    spec: SleevePortfolioSpec,
+    signals: pd.DataFrame, *, spec: SleevePortfolioSpec
 ) -> pd.DataFrame:
     """Convert scored candidates into a positions-by-rebalance frame."""
 
@@ -331,28 +333,29 @@ def build_sleeve_positions(
             spec=spec.quota_sleeve,
             symbol_col=spec.symbol_col,
         )
-        rank_holdings = _select_rank_buffered_sleeve(
+        rank_holdings = _select_rank_sleeve(
             day,
             previous_rank,
             spec=spec.rank_sleeve,
             symbol_col=spec.symbol_col,
         )
-        quota_holdings = _fill_quota_sleeve(
+        quota_holdings = _fill_sleeve(
             day,
             quota_holdings,
-            spec=spec.quota_sleeve,
+            score_col=spec.quota_sleeve.score_col,
+            slots=spec.quota_sleeve.slots,
             symbol_col=spec.symbol_col,
+            require_group_col=spec.quota_sleeve.group_col,
         )
-        rank_holdings = _fill_rank_sleeve(
+        rank_holdings = _fill_sleeve(
             day,
             rank_holdings,
-            spec=spec.rank_sleeve,
+            score_col=spec.rank_sleeve.score_col,
+            slots=spec.rank_sleeve.slots,
             symbol_col=spec.symbol_col,
         )
         quota_final, rank_final, weights = _resolve_overlap(
-            quota_holdings,
-            rank_holdings,
-            spec=spec,
+            quota_holdings, rank_holdings, spec=spec
         )
         date_text = cast(pd.Timestamp, pd.Timestamp(date)).strftime("%Y%m%d")
         rows.extend(
@@ -376,7 +379,9 @@ def build_sleeve_positions(
         .rank(ascending=False, method="first", na_option="bottom")
         .astype("Int64")
     )
-    return positions.sort_values(["rebalance_date", "rank", "symbol"]).reset_index(drop=True)
+    return positions.sort_values(
+        ["rebalance_date", "rank", "symbol"]
+    ).reset_index(drop=True)
 
 
 def compute_position_changes(positions: pd.DataFrame) -> pd.DataFrame:
@@ -384,11 +389,9 @@ def compute_position_changes(positions: pd.DataFrame) -> pd.DataFrame:
 
     if positions.empty:
         return pd.DataFrame()
-    dates = sorted(positions["rebalance_date"].unique())
     changes: list[dict[str, Any]] = []
     previous: dict[str, float] = {}
-
-    for date in dates:
+    for date in sorted(positions["rebalance_date"].unique()):
         day = positions.loc[positions["rebalance_date"].eq(date)]
         current = dict(zip(day["symbol"], day["weight"], strict=True))
         legs = dict(zip(day["symbol"], day.get("leg", [None] * len(day)), strict=True))
@@ -418,37 +421,36 @@ def compute_position_changes(positions: pd.DataFrame) -> pd.DataFrame:
     return pd.DataFrame(changes)
 
 
+def _leg_mask(legs: pd.Series, token: str) -> pd.Series:
+    return legs.fillna("").astype(str).map(lambda value: token in value.split("+"))
+
+
 def _exposure_summary(positions: pd.DataFrame) -> dict[str, Any]:
     if positions.empty:
         return {}
     legs = positions["leg"].astype("string")
-    tokens = sorted({token for value in legs.dropna() for token in str(value).split("+")})
+    tokens = sorted(
+        {token for value in legs.dropna() for token in str(value).split("+")}
+    )
+    sleeve_counts = {token: int(_leg_mask(legs, token).sum()) for token in tokens}
+    sleeve_weights = {
+        token: float(positions.loc[_leg_mask(legs, token), "weight"].sum())
+        for token in tokens
+    }
     summary: dict[str, Any] = {
         "rebalance_date": str(positions["rebalance_date"].iloc[0]),
         "total_stocks": len(positions),
         "total_weight": float(positions["weight"].sum()),
-        "overlap_count": int(legs.str.contains("+", regex=False, na=False).sum()),
-        "sleeve_counts": {
-            token: int(legs.str.split("+").apply(lambda parts: token in parts if parts else False).sum())
-            for token in tokens
-        },
-        "sleeve_weights": {
-            token: float(
-                positions.loc[
-                    legs.str.split("+").apply(lambda parts: token in parts if parts else False),
-                    "weight",
-                ].sum()
-            )
-            for token in tokens
-        },
+        "overlap_count": int(legs.fillna("").str.contains("+", regex=False).sum()),
+        "sleeve_counts": sleeve_counts,
+        "sleeve_weights": sleeve_weights,
     }
-    # Backward-compatible A/B summary columns are derived from generic leg labels.
     if "A" in tokens:
-        summary["a_leg_count"] = summary["sleeve_counts"]["A"]
-        summary["a_weight"] = summary["sleeve_weights"]["A"]
+        summary["a_leg_count"] = sleeve_counts["A"]
+        summary["a_weight"] = sleeve_weights["A"]
     if "B" in tokens:
-        summary["b_leg_count"] = summary["sleeve_counts"]["B"]
-        summary["b_weight"] = summary["sleeve_weights"]["B"]
+        summary["b_leg_count"] = sleeve_counts["B"]
+        summary["b_weight"] = sleeve_weights["B"]
     if "theme" in positions.columns:
         summary["theme_distribution"] = positions["theme"].value_counts().to_dict()
     if "industry" in positions.columns:
