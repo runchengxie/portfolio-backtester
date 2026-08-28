@@ -296,6 +296,27 @@ def test_build_execution_sim_config_defaults_to_daily_amount_cap():
     ) == {"open", "medadv60_amount", "amount"}
 
 
+def test_required_columns_include_enabled_market_rule_inputs():
+    config = build_execution_sim_config(
+        {
+            "enabled": True,
+            "round_lot": 100,
+            "enforce_t1": True,
+            "enforce_price_limits": True,
+            "limit_up_col": "is_limit_up",
+            "limit_down_col": "is_limit_down",
+            "enforce_listing_status": True,
+            "listing_status_col": "listing_status",
+        }
+    )
+
+    assert required_execution_sim_columns(
+        config,
+        price_col="open",
+        tradable_col="is_tradable",
+    ) >= {"is_limit_up", "is_limit_down", "listing_status"}
+
+
 def test_capacity_execution_applies_explicit_liquidity_notional_multiplier():
     dates = pd.date_range("2020-01-01", periods=3, freq="B")
     positions = pd.DataFrame(

@@ -146,6 +146,12 @@ def required_execution_sim_columns(
     if not config.enabled:
         return set()
     columns = {str(price_col), *config.liquidity_cols}
+    if config.enforce_price_limits:
+        columns.update(
+            column for column in (config.limit_up_col, config.limit_down_col) if column
+        )
+    if config.enforce_listing_status and config.listing_status_col:
+        columns.add(config.listing_status_col)
     return {col for col in columns if col}
 
 

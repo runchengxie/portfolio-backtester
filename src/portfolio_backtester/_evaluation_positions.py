@@ -94,10 +94,20 @@ def _record_period_execution_sim(
     backtest_pricing_df = context["backtest_pricing_df"]
     execution_model = context["execution_model"]
     tradable_col = context["backtest_tradable_col"]
-    limit_up_col = _optional_market_rule_col(backtest_pricing_df, "limit_up_col", "limit_up")
-    limit_down_col = _optional_market_rule_col(backtest_pricing_df, "limit_down_col", "limit_down")
+    limit_up_col = _optional_market_rule_col(
+        backtest_pricing_df,
+        execution_sim_config.limit_up_col,
+        "limit_up",
+    )
+    limit_down_col = _optional_market_rule_col(
+        backtest_pricing_df,
+        execution_sim_config.limit_down_col,
+        "limit_down",
+    )
     listing_status_col = _optional_market_rule_col(
-        backtest_pricing_df, "listing_status_col", "listing_status"
+        backtest_pricing_df,
+        execution_sim_config.listing_status_col,
+        "listing_status",
     )
     sim_result = simulate_capacity_execution(
         sim_positions,
@@ -181,10 +191,20 @@ def _record_period_ideal_daily_nav(
     portfolio_value = float(
         getattr(context["execution_sim_config"], "portfolio_value", 1_000_000.0)
     )
-    limit_up_col = _optional_market_rule_col(backtest_pricing_df, "limit_up_col", "limit_up")
-    limit_down_col = _optional_market_rule_col(backtest_pricing_df, "limit_down_col", "limit_down")
+    limit_up_col = _optional_market_rule_col(
+        backtest_pricing_df,
+        execution_sim_config.limit_up_col,
+        "limit_up",
+    )
+    limit_down_col = _optional_market_rule_col(
+        backtest_pricing_df,
+        execution_sim_config.limit_down_col,
+        "limit_down",
+    )
     listing_status_col = _optional_market_rule_col(
-        backtest_pricing_df, "listing_status_col", "listing_status"
+        backtest_pricing_df,
+        execution_sim_config.listing_status_col,
+        "listing_status",
     )
     ideal_result = simulate_ideal_daily_nav(
         nav_positions,
@@ -214,17 +234,17 @@ def _record_period_ideal_daily_nav(
 
 def _optional_market_rule_col(
     pricing: pd.DataFrame,
-    config_key: str,
+    configured_name: str | None,
     default_name: str,
 ) -> str | None:
-    """Phase 4: resolve an optional market-rule column name from ``pricing``.
+    """Resolve a configured market-rule column, with a legacy fallback.
 
     Returns the column name when present, else ``None``. The engine only
     consults a rule column when the corresponding rule is switched on, so a
     missing column is safe (the rule simply stays inactive).
     """
-    if config_key in pricing.columns:
-        return config_key
+    if configured_name and configured_name in pricing.columns:
+        return configured_name
     if default_name in pricing.columns:
         return default_name
     return None
