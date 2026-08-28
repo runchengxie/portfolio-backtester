@@ -258,6 +258,7 @@ class ParticipationSlippageModel:
     base_bps: float = 0.0
     impact_bps: float = 0.0
     amount_col: str = "amount"
+    amount_multiplier: float = 1.0
     portfolio_value: float = 1_000_000.0
     power: float = 0.5
     max_participation: float | None = None
@@ -293,7 +294,7 @@ class ParticipationSlippageModel:
             amounts = pd.to_numeric(
                 pricing_row.reindex(trade_abs.index),
                 errors="coerce",
-            )
+            ) * float(self.amount_multiplier)
             valid = amounts.notna() & np.isfinite(amounts) & (amounts > 0)
             if valid.any():
                 participation = (

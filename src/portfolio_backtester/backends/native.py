@@ -8,6 +8,7 @@ from typing import ClassVar, Literal
 import pandas as pd
 
 from .._position_backtest_config import PositionBacktestResult
+from ..execution import SlippageModel
 from ..execution_sim import ExecutionSimConfig, simulate_execution_adjusted_nav
 from ..position_backtest import PositionBacktestConfig, run_position_backtest
 from .base import (
@@ -43,6 +44,7 @@ class NativePositionReplayRequest:
     allow_stale_execution_price: bool = False
     ledger: bool = False
     ledger_config: ExecutionSimConfig | None = None
+    slippage_model: SlippageModel | None = None
 
 
 class NativePositionReplayBackend:
@@ -112,6 +114,7 @@ class NativePositionReplayBackend:
             listing_status_col=_optional_rule_col(request.pricing, "listing_status"),
             transaction_cost_bps=float(getattr(request.config, "transaction_cost_bps", 0.0) or 0.0),
             trading_days_per_year=int(getattr(request.config, "trading_days_per_year", 252) or 252),
+            slippage_model=request.slippage_model,
         )
         ledger = ledger_result.to_unified_ledger(portfolio_value=float(sim_config.portfolio_value))
         orders = _attach_order_ids(ledger.orders)

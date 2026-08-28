@@ -10,12 +10,13 @@ from portfolio_backtester.execution_sim import (
     simulate_capacity_execution,
     simulate_execution_adjusted_nav,
     simulate_ideal_daily_nav,
+    PreparedExecutionTables,
     to_unified_ledger,
     UnifiedLedger,
 )
 ```
 
-- `simulate_capacity_execution` 输出订单、成交和汇总
+- `simulate_capacity_execution` 输出订单、成交和汇总。`prepare_execution_tables` 预先整理可复用的执行数据表
 - `simulate_execution_adjusted_nav` 输出每日净值、订单、成交和汇总
 - `simulate_ideal_daily_nav` 假设目标仓位立即完成，用作充分流动性对照
 - `to_unified_ledger` 把模拟结果适配为路线图定义的八个统一账本字段，也可通过 `ExecutionSimResult.to_unified_ledger` 与 `ExecutionAdjustedNavResult.to_unified_ledger` 方法调用
@@ -45,7 +46,7 @@ from portfolio_backtester.execution_sim import (
 
 `ExecutionSimResult` 包含 `summary`、`orders` 和 `fills`。`ExecutionAdjustedNavResult` 额外包含 `daily`，其中记录每日净值、现金和敞口等结果。
 
-其余公开对象包括 `SELL_UNTIL_NEXT_REBALANCE`、`TradeFeeModel`、`describe_execution_sim_config` 和 `describe_trade_fee_model`。它们分别用于延迟卖出期限、费用协议以及配置和费用说明的序列化。
+其余公开对象包括 `SELL_UNTIL_NEXT_REBALANCE`、`TradeFeeModel`、`PreparedExecutionTables`、`describe_execution_sim_config` 和 `describe_trade_fee_model`。它们分别用于延迟卖出期限、准备后的执行表、费用协议以及配置和费用说明的序列化。
 
 容量模拟根据参与率限制成交，并保留未成交余量。它不会自动补全涨跌停、T+1、整手、停牌原因或券商拒单规则。调用方应通过规范化行情和可交易字段提供所需约束。
 

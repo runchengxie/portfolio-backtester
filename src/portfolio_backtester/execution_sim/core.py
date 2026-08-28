@@ -7,7 +7,7 @@ from typing import Any
 import numpy as np
 import pandas as pd
 
-from ..execution import DetailedTradeFeeModel
+from ..execution import DetailedTradeFeeModel, SlippageModel
 from ..types import CostBreakdown
 from .capacity import (
     _positions_value,
@@ -277,11 +277,42 @@ def _prepare_execution_tables(
     return tables, None, None
 
 
+def prepare_execution_tables(
+    pricing_data: pd.DataFrame,
+    config: ExecutionSimConfig,
+    *,
+    price_col: str,
+    tradable_col: str | None = None,
+    buy_tradable_col: str | None = None,
+    sell_tradable_col: str | None = None,
+    limit_up_col: str | None = None,
+    limit_down_col: str | None = None,
+    listing_status_col: str | None = None,
+) -> _ExecutionTables:
+    """Prepare pivoted execution inputs for reuse across ledger simulations."""
+    tables, status, extra = _prepare_execution_tables(
+        pricing_data,
+        config,
+        price_col=price_col,
+        tradable_col=tradable_col,
+        buy_tradable_col=buy_tradable_col,
+        sell_tradable_col=sell_tradable_col,
+        limit_up_col=limit_up_col,
+        limit_down_col=limit_down_col,
+        listing_status_col=listing_status_col,
+    )
+    if tables is None:
+        detail = f" ({extra})" if extra else ""
+        raise ValueError(f"could not prepare execution tables: {status}{detail}")
+    return tables
+
+
 def _build_adjusted_nav_plan(
     work_positions: pd.DataFrame,
     *,
     tables: _ExecutionTables,
     cost_rate: float,
+    slippage_model: SlippageModel | None = None,
 ) -> tuple[_AdjustedNavPlan | None, str | None]:
     targets_by_rebalance = _build_targets_by_rebalance(work_positions)
     targets_by_entry = {
@@ -303,6 +334,7 @@ def _build_adjusted_nav_plan(
             next_entry_by_date=next_entry_by_date,
             start_idx=tables.date_to_idx[entry_dates[0]],
             cost_rate=cost_rate,
+            slippage_model=slippage_model,
         ),
         None,
     )
@@ -498,6 +530,7 @@ def _process_adjusted_nav_trade_day(
         config=config,
         cost_rate=plan.cost_rate,
         trade_fee_model=trade_fee_model,
+        slippage_model=plan.slippage_model,
         fill_rows=ledger.fill_rows,
         market_rules=market_rules,
         t1_available=ledger.t1_available,
@@ -566,6 +599,8 @@ def simulate_execution_adjusted_nav(
     transaction_cost_bps: float = 0.0,
     trading_days_per_year: int = 252,
     trade_fee_model: TradeFeeModel | None = None,
+    slippage_model: SlippageModel | None = None,
+    prepared_tables: _ExecutionTables | None = None,
 ) -> ExecutionAdjustedNavResult:
     if not config.enabled:
         return _empty_adjusted_nav_result(config, status="disabled")
@@ -578,24 +613,30 @@ def simulate_execution_adjusted_nav(
     if status is not None or work_positions is None:
         return _empty_adjusted_nav_result(config, status=status, extra=extra)
 
-    tables, status, extra = _prepare_execution_tables(
-        pricing_data,
-        config,
-        price_col=price_col,
-        tradable_col=tradable_col,
-        buy_tradable_col=buy_tradable_col,
-        sell_tradable_col=sell_tradable_col,
-        limit_up_col=limit_up_col,
-        limit_down_col=limit_down_col,
-        listing_status_col=listing_status_col,
-    )
-    if status is not None or tables is None:
-        return _empty_adjusted_nav_result(config, status=status or "no_trade_dates", extra=extra)
+    if prepared_tables is None:
+        tables, status, extra = _prepare_execution_tables(
+            pricing_data,
+            config,
+            price_col=price_col,
+            tradable_col=tradable_col,
+            buy_tradable_col=buy_tradable_col,
+            sell_tradable_col=sell_tradable_col,
+            limit_up_col=limit_up_col,
+            limit_down_col=limit_down_col,
+            listing_status_col=listing_status_col,
+        )
+        if status is not None or tables is None:
+            return _empty_adjusted_nav_result(
+                config, status=status or "no_trade_dates", extra=extra
+            )
+    else:
+        tables = prepared_tables
 
     plan, status = _build_adjusted_nav_plan(
         work_positions,
         tables=tables,
         cost_rate=max(float(transaction_cost_bps), 0.0) / 10_000.0,
+        slippage_model=slippage_model,
     )
     if status is not None or plan is None:
         return _empty_adjusted_nav_result(config, status=status or "no_executable_entry_dates")
