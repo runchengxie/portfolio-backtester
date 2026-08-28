@@ -56,6 +56,7 @@ from .industry_sleeves import (
     validate_targets,
 )
 from .metrics import leg_attribution_frame, summarize_leg_attribution, summarize_period_returns
+from .outcome_metrics import OutcomeDistributionReport, summarize_outcome_distribution
 from .position_backtest import (
     PositionBacktestConfig,
     PositionBacktestResult,
@@ -133,6 +134,7 @@ __all__ = [
     "IncumbentRequalificationPolicy",
     "IncumbentRequalificationReceipt",
     "IncumbentRequalificationResult",
+    "OutcomeDistributionReport",
     "PositionBacktestConfig",
     "PositionBacktestEvaluation",
     "PositionBacktestResult",
@@ -201,6 +203,7 @@ __all__ = [
     "strategy_failure_probability",
     "strategy_from_config",
     "summarize_leg_attribution",
+    "summarize_outcome_distribution",
     "summarize_period_returns",
     "summarize_staggered_execution",
     "summarize_strategy_risk",
