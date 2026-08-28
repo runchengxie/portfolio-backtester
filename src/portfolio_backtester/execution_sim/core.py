@@ -626,7 +626,9 @@ def simulate_execution_adjusted_nav(
             listing_status_col=listing_status_col,
         )
         if status is not None or tables is None:
-            return _empty_adjusted_nav_result(config, status=status or "no_trade_dates", extra=extra)
+            return _empty_adjusted_nav_result(
+                config, status=status or "no_trade_dates", extra=extra
+            )
     else:
         tables = prepared_tables
 
