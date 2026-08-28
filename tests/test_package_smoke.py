@@ -47,6 +47,9 @@ OWNED_MODULES = (
     "portfolio_backtester.types",
 )
 FORBIDDEN_RUNTIME_PREFIXES = ("alpha_research", "strategy_pipeline.pipeline")
+ROBUST_UNCERTAINTY_EXPORTS = frozenset(
+    {"add_conservative_score", "box_worst_case_return", "conservative_score"}
+)
 
 
 def test_portfolio_backtester_package_uses_owner_native_root() -> None:
@@ -64,7 +67,8 @@ def test_owned_modules_import(module_name: str) -> None:
 
 
 def test_portfolio_backtester_package_exports_core_entrypoints() -> None:
-    assert set(portfolio_backtester.__all__) == {
+    assert set(portfolio_backtester.__all__) >= ROBUST_UNCERTAINTY_EXPORTS
+    assert set(portfolio_backtester.__all__) - ROBUST_UNCERTAINTY_EXPORTS == {
         "CANONICAL_POSITIONS_BY_REBALANCE_META_FILE",
         "BacktestSpec",
         "CostBreakdown",
