@@ -87,9 +87,12 @@ from portfolio_backtester import (
 
 输入表、最小示例和返回值说明见 [docs/guides/entry-points.md](docs/guides/entry-points.md)。
 
+风格因子分位数组合可以在形成日显式选择等权或价值权重，持有期保持固定份额并让权重自然漂移。完整语义见[风格因子组合权重](docs/concepts/style-factor-portfolio-weighting.md)。
+
 公开 API 与契约见：
 
 - [公开 API](docs/reference/public-api.md)
+- [风格因子组合权重](docs/concepts/style-factor-portfolio-weighting.md)
 - [旧仓再资格组合构造](docs/guides/incumbent-requalification.md)
 - [组合式回测规范](docs/concepts/backtest-spec.md)
 - [回测后端与统一账本边界](docs/concepts/backend-architecture.md)
@@ -154,6 +157,7 @@ scripts/dev/run_tests.sh maintainability
 
 - [文档首页](docs/README.md)
 - [常用入口](docs/guides/entry-points.md)
+- [风格因子组合权重](docs/concepts/style-factor-portfolio-weighting.md)
 - [旧仓再资格组合构造](docs/guides/incumbent-requalification.md)
 - [回测后端与统一账本边界](docs/concepts/backend-architecture.md)
 - [成本与执行假设](docs/concepts/execution-costs.md)
