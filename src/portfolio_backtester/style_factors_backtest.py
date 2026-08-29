@@ -64,19 +64,34 @@ def _daily_return_matrix(daily: pd.DataFrame) -> pd.DataFrame:
 def _buy_and_hold_leg_returns(
     period_returns: pd.DataFrame,
     symbols: list[str],
+    initial_weights: np.ndarray | None = None,
 ) -> pd.Series:
-    """Return an equal-weight leg whose shares are fixed until rebalance.
+    """Return a fixed-share leg initialized with equal or explicit weights.
 
     Missing marks inside the holding window are treated as zero return so a
     suspended name keeps its capital weight instead of silently reallocating it
-    to the remaining names.  Delisting terminal returns are still unavailable in
-    the current raw input and remain an explicit research limitation.
+    to the remaining names.  Initial weights are normalized once at formation;
+    thereafter the fixed-share holdings drift naturally with returns until the
+    next rebalance.  Delisting terminal returns are still unavailable in the
+    current raw input and remain an explicit research limitation.
     """
     if not symbols or period_returns.empty:
         return pd.Series(dtype=float, index=period_returns.index)
 
     returns = period_returns.reindex(columns=symbols).fillna(0.0)
-    weights = np.full(len(symbols), 1.0 / len(symbols), dtype=float)
+    if initial_weights is None:
+        weights = np.full(len(symbols), 1.0 / len(symbols), dtype=float)
+    else:
+        weights = np.asarray(initial_weights, dtype=float)
+        if weights.shape != (len(symbols),):
+            raise ValueError("initial_weights must align one-to-one with symbols")
+        if not np.isfinite(weights).all() or (weights <= 0).any():
+            raise ValueError("initial_weights must be finite and positive")
+        total = float(weights.sum())
+        if total <= 0:
+            raise ValueError("initial_weights must have a positive sum")
+        weights = weights / total
+
     portfolio_returns: list[float] = []
     for row in returns.to_numpy(dtype=float):
         portfolio_return = float(weights @ row)
@@ -125,6 +140,29 @@ def _resolve_requested_quantiles(
     return quantiles
 
 
+def _formation_initial_weights(
+    formation: pd.DataFrame,
+    symbols: list[str],
+    *,
+    weighting: str,
+    weight_column: str | None,
+) -> np.ndarray | None:
+    if weighting == "equal":
+        return None
+    if weighting != "value":
+        raise ValueError("weighting must be 'equal' or 'value'")
+    if weight_column is None:
+        raise ValueError("weight_column is required when weighting='value'")
+    if weight_column not in formation.columns:
+        raise ValueError(f"factors_df is missing weight column: {weight_column}")
+
+    selected = formation.set_index("symbol").loc[symbols, weight_column]
+    weights = pd.to_numeric(selected, errors="coerce").to_numpy(dtype=float)
+    if not np.isfinite(weights).all() or (weights <= 0).any():
+        raise ValueError("value weights must be finite and positive")
+    return weights / weights.sum()
+
+
 def _build_signal_quantile_result(
     factors_df: pd.DataFrame,
     daily_returns: pd.DataFrame,
@@ -135,6 +173,8 @@ def _build_signal_quantile_result(
     n_quantiles: int,
     quantiles: tuple[int, ...],
     include_universe: bool,
+    weighting: str,
+    weight_column: str | None,
 ) -> dict[str, object]:
     quantile_parts: dict[int, list[pd.Series]] = {value: [] for value in quantiles}
     universe_parts: list[pd.Series] = []
@@ -159,10 +199,33 @@ def _build_signal_quantile_result(
 
         for quantile in quantiles:
             symbols = formation[formation["quantile"] == quantile - 1]["symbol"].tolist()
-            quantile_parts[quantile].append(_buy_and_hold_leg_returns(period_returns, symbols))
+            initial_weights = _formation_initial_weights(
+                formation,
+                symbols,
+                weighting=weighting,
+                weight_column=weight_column,
+            )
+            quantile_parts[quantile].append(
+                _buy_and_hold_leg_returns(
+                    period_returns,
+                    symbols,
+                    initial_weights=initial_weights,
+                )
+            )
         if include_universe:
+            universe_symbols = formation["symbol"].tolist()
+            universe_weights = _formation_initial_weights(
+                formation,
+                universe_symbols,
+                weighting=weighting,
+                weight_column=weight_column,
+            )
             universe_parts.append(
-                _buy_and_hold_leg_returns(period_returns, formation["symbol"].tolist())
+                _buy_and_hold_leg_returns(
+                    period_returns,
+                    universe_symbols,
+                    initial_weights=universe_weights,
+                )
             )
 
     quantile_returns = {
@@ -201,16 +264,25 @@ def build_quantile_portfolio_returns(
     n_quantiles: int = 5,
     requested_quantiles: tuple[int, ...] | None = None,
     include_universe: bool = True,
+    weighting: str = "equal",
+    weight_column: str | None = None,
 ) -> dict[str, dict[str, object]]:
     """Build fixed-share quantile portfolios for arbitrary formation-date signals.
 
     Quantile 1 contains the lowest signal scores and ``n_quantiles`` contains
-    the highest.  The function is shared by the standard factor backtest and
-    focused diagnostics that need every quantile and an eligible-universe
-    benchmark.
+    the highest.  ``weighting='equal'`` preserves the historical equal-weight
+    behavior.  ``weighting='value'`` requires an explicit caller-owned
+    ``weight_column``; weights are normalized at formation and then drift with
+    fixed shares until the next rebalance.  The function is shared by the
+    standard factor backtest and focused diagnostics that need every quantile
+    and an eligible-universe benchmark.
     """
-    quantiles = _resolve_requested_quantiles(n_quantiles, requested_quantiles)
+    if weighting not in {"equal", "value"}:
+        raise ValueError("weighting must be 'equal' or 'value'")
+    if weighting == "value" and weight_column is None:
+        raise ValueError("weight_column is required when weighting='value'")
 
+    quantiles = _resolve_requested_quantiles(n_quantiles, requested_quantiles)
     daily_returns = _daily_return_matrix(daily)
     rd_list = sorted(rebalance_dates)
 
@@ -228,6 +300,8 @@ def build_quantile_portfolio_returns(
             n_quantiles=n_quantiles,
             quantiles=quantiles,
             include_universe=include_universe,
+            weighting=weighting,
+            weight_column=weight_column,
         )
 
     return results
