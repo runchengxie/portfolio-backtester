@@ -34,8 +34,16 @@ def test_settle_execution_fills_applies_fees_lots_and_t1() -> None:
     )
     marks = pd.DataFrame(
         [
-            {"trade_date": "2024-01-02", "instrument_id": "000001.SZ", "price": 10.0},
-            {"trade_date": "2024-01-03", "instrument_id": "000001.SZ", "price": 10.0},
+            {
+                "trade_date": "2024-01-02",
+                "instrument_id": "000001.SZ",
+                "price": 10.0,
+            },
+            {
+                "trade_date": "2024-01-03",
+                "instrument_id": "000001.SZ",
+                "price": 10.0,
+            },
         ]
     )
 
@@ -78,10 +86,21 @@ def test_settle_execution_fills_blocks_same_day_buys_from_being_sold() -> None:
         ]
     )
     marks = pd.DataFrame(
-        [{"trade_date": "2024-01-02", "instrument_id": "000001.SZ", "price": 10.0}]
+        [
+            {
+                "trade_date": "2024-01-02",
+                "instrument_id": "000001.SZ",
+                "price": 10.0,
+            }
+        ]
     )
 
-    result = settle_execution_fills(fills, marks, initial_capital=2_000.0, round_lot=100)
+    result = settle_execution_fills(
+        fills,
+        marks,
+        initial_capital=2_000.0,
+        round_lot=100,
+    )
 
     assert result.loc[0, "sell_shares"] == 0
     assert result.loc[0, "t1_blocked_shares"] == 100
@@ -100,7 +119,13 @@ def test_settle_execution_fills_blocks_buys_when_cash_is_insufficient() -> None:
         ]
     )
     marks = pd.DataFrame(
-        [{"trade_date": "2024-01-02", "instrument_id": "000001.SZ", "price": 10.0}]
+        [
+            {
+                "trade_date": "2024-01-02",
+                "instrument_id": "000001.SZ",
+                "price": 10.0,
+            }
+        ]
     )
 
     result = settle_execution_fills(
