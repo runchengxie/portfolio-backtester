@@ -25,7 +25,11 @@ def positions_by_rebalance_from_targets(
     """
 
     out = (
-        _target_frame_from_mapping(targets, entry_dates=entry_dates, default_side=default_side)
+        _target_frame_from_mapping(
+            targets,
+            entry_dates=entry_dates,
+            default_side=default_side,
+        )
         if not isinstance(targets, pd.DataFrame)
         else _copy_target_frame(targets, entry_dates=entry_dates)
     )
@@ -35,14 +39,20 @@ def positions_by_rebalance_from_targets(
     if missing:
         raise ValueError("targets are missing required columns: " + ", ".join(missing))
     if out.empty:
-        return pd.DataFrame(columns=["rebalance_date", "entry_date", "symbol", "weight", "side"])
+        return pd.DataFrame(
+            columns=["rebalance_date", "entry_date", "symbol", "weight", "side"]
+        )
 
     out = out.copy()
-    out["rebalance_date"] = pd.to_datetime(out["rebalance_date"], errors="coerce").dt.normalize()
+    out["rebalance_date"] = pd.to_datetime(
+        out["rebalance_date"], errors="coerce"
+    ).dt.normalize()
     if out["rebalance_date"].isna().any():
         raise ValueError("rebalance_date must be date-like")
     if "entry_date" in out.columns:
-        out["entry_date"] = pd.to_datetime(out["entry_date"], errors="coerce").dt.normalize()
+        out["entry_date"] = pd.to_datetime(
+            out["entry_date"], errors="coerce"
+        ).dt.normalize()
     else:
         out["entry_date"] = pd.NaT
     out["symbol"] = out["symbol"].astype("string").str.strip()
