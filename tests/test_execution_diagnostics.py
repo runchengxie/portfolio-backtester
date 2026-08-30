@@ -91,6 +91,34 @@ def test_attribute_delayed_fills_flips_price_move_for_sell() -> None:
     assert row["temporary_impact"] == pytest.approx(4.0)
 
 
+def test_attribute_delayed_fills_handles_orders_without_fills() -> None:
+    orders = pd.DataFrame(
+        [
+            {
+                "rebalance_date": "20240102",
+                "entry_date": "20240103",
+                "symbol": "AAA",
+                "side": "buy",
+                "requested_notional": 1000.0,
+                "filled_notional": 0.0,
+                "unfilled_notional": 1000.0,
+            }
+        ]
+    )
+    pricing = pd.DataFrame(
+        [{"trade_date": "20240103", "symbol": "AAA", "close": 10.0}]
+    )
+
+    attribution = attribute_delayed_fills(orders, pd.DataFrame(), pricing)
+
+    row = attribution.iloc[0]
+    assert pd.isna(row["first_fill_date"])
+    assert row["delay_days"] == 0
+    assert row["reference_return_to_first_fill"] == 0.0
+    assert row["delay_opportunity_cost"] == 0.0
+    assert row["temporary_impact"] == 0.0
+
+
 def test_attribute_delayed_fills_requires_pricing_columns() -> None:
     orders = pd.DataFrame(
         [
