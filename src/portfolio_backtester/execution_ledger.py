@@ -58,9 +58,7 @@ def settle_execution_fills(
     fill_frame["side"] = fill_frame["side"].astype(str).str.lower()
     if not fill_frame["side"].isin(["buy", "sell"]).all():
         raise ValueError("fills side must be buy or sell")
-    fill_frame["filled_notional"] = pd.to_numeric(
-        fill_frame["filled_notional"], errors="raise"
-    )
+    fill_frame["filled_notional"] = pd.to_numeric(fill_frame["filled_notional"], errors="raise")
     fill_frame["average_fill_price"] = pd.to_numeric(
         fill_frame["average_fill_price"], errors="raise"
     )
@@ -99,11 +97,7 @@ def settle_execution_fills(
                 lot_shares = (requested_shares // round_lot) * round_lot
                 affordable_shares = int(
                     np.floor(
-                        cash
-                        / (
-                            float(fill.average_fill_price)
-                            * (1.0 + buy_fee_bps / 10000.0)
-                        )
+                        cash / (float(fill.average_fill_price) * (1.0 + buy_fee_bps / 10000.0))
                     )
                 )
                 affordable_shares = (affordable_shares // round_lot) * round_lot
@@ -113,8 +107,7 @@ def settle_execution_fills(
                 notional = shares * float(fill.average_fill_price)
                 fee = notional * buy_fee_bps / 10000.0
                 lot_blocked_notional += max(
-                    float(fill.filled_notional)
-                    - lot_shares * float(fill.average_fill_price),
+                    float(fill.filled_notional) - lot_shares * float(fill.average_fill_price),
                     0.0,
                 )
                 cash_blocked_notional += max(
