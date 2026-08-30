@@ -35,7 +35,9 @@ def attribute_delayed_fills(
         raise ValueError("pricing is missing required columns: " + ", ".join(missing_pricing))
 
     keys = ["rebalance_date", "entry_date", "symbol", "side"]
-    out = orders[[*keys, "requested_notional", "filled_notional", "unfilled_notional"]].copy()
+    out = orders[
+        [*keys, "requested_notional", "filled_notional", "unfilled_notional"]
+    ].copy()
     for column in ("rebalance_date", "entry_date"):
         out[column] = pd.to_datetime(out[column], errors="coerce").dt.normalize()
     out["symbol"] = out["symbol"].astype(str)
@@ -49,7 +51,9 @@ def attribute_delayed_fills(
             fill_work["trade_date"], errors="coerce"
         ).dt.normalize()
         for column in ("rebalance_date", "entry_date"):
-            fill_work[column] = pd.to_datetime(fill_work[column], errors="coerce").dt.normalize()
+            fill_work[column] = pd.to_datetime(
+                fill_work[column], errors="coerce"
+            ).dt.normalize()
         fill_work["symbol"] = fill_work["symbol"].astype(str)
         fill_work["side"] = fill_work["side"].astype(str).str.lower()
         first = (
@@ -74,7 +78,9 @@ def attribute_delayed_fills(
         price_work["trade_date"], errors="coerce"
     ).dt.normalize()
     price_work["close"] = pd.to_numeric(price_work["close"], errors="coerce")
-    entry_price = price_work.rename(columns={"trade_date": "entry_date", "close": "entry_price"})
+    entry_price = price_work.rename(
+        columns={"trade_date": "entry_date", "close": "entry_price"}
+    )
     fill_price = price_work.rename(
         columns={"trade_date": "first_fill_date", "close": "first_fill_price"}
     )
