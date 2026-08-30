@@ -60,7 +60,13 @@ def test_run_native_position_replay_returns_canonical_performance() -> None:
         ]
     )
     periods = pd.DataFrame(
-        [{"rebalance_date": "20240102", "entry_date": "20240103", "exit_date": "20240104"}]
+        [
+            {
+                "rebalance_date": "20240102",
+                "entry_date": "20240103",
+                "exit_date": "20240104",
+            }
+        ]
     )
 
     result = run_native_position_replay(
@@ -82,12 +88,28 @@ def test_run_native_position_replay_forwards_ledger_and_slippage() -> None:
     )
     pricing = pd.DataFrame(
         [
-            {"trade_date": "20240103", "symbol": "AAA", "close": 10.0, "amount": 10_000.0},
-            {"trade_date": "20240104", "symbol": "AAA", "close": 11.0, "amount": 10_000.0},
+            {
+                "trade_date": "20240103",
+                "symbol": "AAA",
+                "close": 10.0,
+                "amount": 10_000.0,
+            },
+            {
+                "trade_date": "20240104",
+                "symbol": "AAA",
+                "close": 11.0,
+                "amount": 10_000.0,
+            },
         ]
     )
     periods = pd.DataFrame(
-        [{"rebalance_date": "20240102", "entry_date": "20240103", "exit_date": "20240104"}]
+        [
+            {
+                "rebalance_date": "20240102",
+                "entry_date": "20240103",
+                "exit_date": "20240104",
+            }
+        ]
     )
 
     result = run_native_position_replay(
