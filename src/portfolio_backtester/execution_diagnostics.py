@@ -62,7 +62,12 @@ def attribute_delayed_fills(
         )
 
     out = out.merge(first, on=keys, how="left")
-    out["delay_days"] = (out["first_fill_date"] - out["entry_date"]).dt.days.fillna(0).astype(int)
+    out["first_fill_date"] = pd.to_datetime(
+        out["first_fill_date"], errors="coerce"
+    ).dt.normalize()
+    out["delay_days"] = (
+        (out["first_fill_date"] - out["entry_date"]).dt.days.fillna(0).astype(int)
+    )
 
     price_work = pricing[["trade_date", "symbol", "close"]].copy()
     price_work["trade_date"] = pd.to_datetime(
