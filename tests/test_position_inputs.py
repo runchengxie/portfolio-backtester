@@ -83,9 +83,7 @@ def test_positions_by_rebalance_from_targets_rejects_duplicate_symbols() -> None
 
 
 def test_positions_by_rebalance_from_targets_rejects_negative_weight() -> None:
-    targets = pd.DataFrame(
-        [{"rebalance_date": "20240102", "symbol": "AAA", "weight": -0.1}]
-    )
+    targets = pd.DataFrame([{"rebalance_date": "20240102", "symbol": "AAA", "weight": -0.1}])
 
     with pytest.raises(ValueError, match="non-negative"):
         positions_by_rebalance_from_targets(targets)

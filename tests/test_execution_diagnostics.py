@@ -105,9 +105,7 @@ def test_attribute_delayed_fills_handles_orders_without_fills() -> None:
             }
         ]
     )
-    pricing = pd.DataFrame(
-        [{"trade_date": "20240103", "symbol": "AAA", "close": 10.0}]
-    )
+    pricing = pd.DataFrame([{"trade_date": "20240103", "symbol": "AAA", "close": 10.0}])
 
     attribution = attribute_delayed_fills(orders, pd.DataFrame(), pricing)
 

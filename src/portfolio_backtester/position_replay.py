@@ -31,12 +31,8 @@ def build_position_replay_periods(
         return pd.DataFrame(columns=["rebalance_date", "entry_date", "exit_date"])
 
     work = positions[["rebalance_date", "entry_date"]].copy()
-    work["rebalance_date"] = pd.to_datetime(
-        work["rebalance_date"], errors="coerce"
-    ).dt.normalize()
-    work["entry_date"] = pd.to_datetime(
-        work["entry_date"], errors="coerce"
-    ).dt.normalize()
+    work["rebalance_date"] = pd.to_datetime(work["rebalance_date"], errors="coerce").dt.normalize()
+    work["entry_date"] = pd.to_datetime(work["entry_date"], errors="coerce").dt.normalize()
     if work[["rebalance_date", "entry_date"]].isna().any().any():
         raise ValueError("positions rebalance_date and entry_date must be date-like")
 
@@ -46,9 +42,7 @@ def build_position_replay_periods(
         .sort_values("rebalance_date")
         .reset_index(drop=True)
     )
-    pricing_dates = (
-        pd.to_datetime(pricing["trade_date"], errors="coerce").dt.normalize().dropna()
-    )
+    pricing_dates = pd.to_datetime(pricing["trade_date"], errors="coerce").dt.normalize().dropna()
     if pricing_dates.empty:
         raise ValueError("pricing trade_date must contain at least one valid date")
 
