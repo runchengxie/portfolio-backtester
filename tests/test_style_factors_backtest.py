@@ -10,6 +10,8 @@ and factor-name discovery.
 
 from __future__ import annotations
 
+from typing import cast
+
 import numpy as np
 import pandas as pd
 import pytest
@@ -205,8 +207,10 @@ def test_build_quantile_portfolio_returns_value_weights_formation_subsets() -> N
         weighting="value",
         weight_column="formation_weight",
     )
-    assert not equal["size"]["long"].equals(value["size"]["long"])
-    assert not equal["size"]["universe"].equals(value["size"]["universe"])
+    assert not cast(pd.Series, equal["size"]["long"]).equals(cast(pd.Series, value["size"]["long"]))
+    assert not cast(pd.Series, equal["size"]["universe"]).equals(
+        cast(pd.Series, value["size"]["universe"])
+    )
 
 
 def test_value_weighting_requires_explicit_weight_column() -> None:

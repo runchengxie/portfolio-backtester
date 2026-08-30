@@ -188,6 +188,7 @@ def _record_period_ideal_daily_nav(
 
     backtest_pricing_df = context["backtest_pricing_df"]
     execution_model = context["execution_model"]
+    execution_sim_config = context["execution_sim_config"]
     portfolio_value = float(
         getattr(context["execution_sim_config"], "portfolio_value", 1_000_000.0)
     )
