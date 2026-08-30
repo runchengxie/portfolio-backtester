@@ -33,6 +33,7 @@ from .evidence_receipts import (
 )
 from .execution import DetailedTradeFeeModel, l2_price_tiered_slippage
 from .execution_diagnostics import attribute_delayed_fills
+from .execution_ledger import settle_execution_fills
 from .execution_summary import (
     EXECUTION_SUMMARY_SCHEMA,
     execution_summary_frame,
@@ -204,6 +205,7 @@ __all__ = [
     "select_incumbent_requalified_portfolio",
     "select_industry_balanced",
     "series_sha256",
+    "settle_execution_fills",
     "sha256_file",
     "sharpe_standard_error",
     "simulate_staggered_cohort_execution",
