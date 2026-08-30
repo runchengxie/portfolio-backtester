@@ -93,7 +93,9 @@ def attribute_delayed_fills(
     out["delay_opportunity_cost"] = (
         out["unfilled_notional"] * out["reference_return_to_first_fill"]
     ).astype(float)
-    out["temporary_impact"] = out["temporary_impact"].fillna(0.0)
+    out["temporary_impact"] = pd.to_numeric(
+        out["temporary_impact"], errors="coerce"
+    ).fillna(0.0)
     return out
 
 
