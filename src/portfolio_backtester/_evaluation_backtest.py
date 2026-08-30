@@ -12,7 +12,6 @@ import pandas as pd
 from .benchmarking import build_benchmark_series, warn_if_delay_exit_lag as _warn_if_delay_exit_lag
 from .engine import backtest_topk
 from .exposure import compute_backtest_exposure_analysis
-from .freshness_overlay import apply_freshness_overlay
 from .metrics import summarize_active_returns, summarize_period_returns
 from .portfolio_positions import build_positions_by_rebalance
 from .position_postprocess import apply_position_postprocess
@@ -20,6 +19,29 @@ from .rebalance import get_rebalance_dates
 from .signal_postprocess import apply_score_postprocess_inplace
 
 logger = logging.getLogger("portfolio_backtester")
+
+
+def _apply_freshness_overlay_if_configured(
+    frame: pd.DataFrame,
+    *,
+    score_col: str,
+    context: Mapping[str, Any],
+) -> pd.DataFrame:
+    freshness_cfg = context.get("freshness_overlay")
+    if not isinstance(freshness_cfg, Mapping) or not freshness_cfg.get("enabled"):
+        return frame
+    freshness_applier = context.get("freshness_overlay_applier")
+    if not callable(freshness_applier):
+        message = " ".join(
+            ("freshness_overlay_applier is required when", "freshness_overlay is enabled")
+        )
+        raise ValueError(message)
+    overlaid, _ = freshness_applier(
+        frame,
+        score_col=score_col,
+        cfg=freshness_cfg,
+    )
+    return overlaid
 
 
 def _record_backtest_outputs(
@@ -190,10 +212,10 @@ def _score_walk_forward_backtest_frame(
     if bt_direction != 1.0:
         test_full_w["signal_bt"] = test_full_w["pred"] * bt_direction
         bt_pred_col = "signal_bt"
-    test_full_w, _ = apply_freshness_overlay(
+    test_full_w = _apply_freshness_overlay_if_configured(
         test_full_w,
         score_col=bt_pred_col,
-        cfg=context.get("freshness_overlay"),
+        context=context,
     )
     return test_full_w, bt_pred_col
 
