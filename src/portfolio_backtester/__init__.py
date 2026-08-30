@@ -32,6 +32,7 @@ from .evidence_receipts import (
     write_receipt,
 )
 from .execution import DetailedTradeFeeModel, l2_price_tiered_slippage
+from .execution_diagnostics import attribute_delayed_fills
 from .execution_summary import (
     EXECUTION_SUMMARY_SCHEMA,
     execution_summary_frame,
@@ -63,6 +64,8 @@ from .position_backtest import (
     run_position_backtest,
 )
 from .position_evaluation import PositionBacktestEvaluation, evaluate_position_backtest
+from .position_inputs import positions_by_rebalance_from_targets
+from .position_replay import build_position_replay_periods, run_native_position_replay
 from .positions_artifact import (
     CANONICAL_POSITIONS_BY_REBALANCE_META_FILE,
     build_positions_envelope_v2,
@@ -154,12 +157,14 @@ __all__ = [
     "annualized_variance_to_periodic",
     "assert_positions_by_rebalance_frame",
     "attach_entry_dates",
+    "attribute_delayed_fills",
     "available_factor_names",
     "average_active_bets",
     "backtest_topk",
     "box_worst_case_return",
     "build_factor_returns",
     "build_portfolio_sizing_receipt",
+    "build_position_replay_periods",
     "build_positions_envelope_v2",
     "build_quantile_portfolio_returns",
     "build_rebalance_turnover_report",
@@ -186,12 +191,14 @@ __all__ = [
     "l2_price_tiered_slippage",
     "leg_attribution_frame",
     "name_turnover",
+    "positions_by_rebalance_from_targets",
     "probabilistic_sharpe_ratio",
     "probabilistic_sharpe_ratio_from_stats",
     "probability_to_size",
     "return_concentration",
     "rolling_hrp_weights",
     "run_backtest",
+    "run_native_position_replay",
     "run_position_backtest",
     "select_daily_watch20",
     "select_incumbent_requalified_portfolio",
