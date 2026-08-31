@@ -170,3 +170,9 @@ uv run --extra dev pytest tests/test_execution.py -k participation
 提交前检查暂存区。准备公开发布时，还应扫描完整 Git 历史，因为删除当前文件中的密钥无法清除旧提交。
 
 本仓库当前没有许可证文件。引入许可证属于项目所有者决策，不应由代码代理自行选择。
+
+## Worktree-first 目录规范
+
+开发和实验使用 `/home/richard/code/.worktrees/` 下的独立 worktree。生产调用只能引用
+`/home/richard/code/production/` 下固定的生产检出或 release，不得依赖开发 worktree。回测产物、
+缓存和大体量数据放在仓库外，清理 worktree 前先确认没有定时任务或 runbook 依赖该路径。
