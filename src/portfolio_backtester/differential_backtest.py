@@ -32,6 +32,23 @@ class DifferentialBacktestReport:
         }
 
 
+def _assert_unique_comparison_keys(
+    frame: pd.DataFrame,
+    *,
+    keys: tuple[str, ...],
+    label: str,
+) -> None:
+    if frame.empty:
+        return
+    missing = [key for key in keys if key not in frame.columns]
+    if missing:
+        return
+    if frame.duplicated(subset=list(keys), keep=False).any():
+        raise ValueError(
+            f"{label} must have unique comparison keys: " + ", ".join(keys)
+        )
+
+
 def _metric_columns(
     reference: pd.DataFrame,
     candidate: pd.DataFrame,
@@ -39,7 +56,11 @@ def _metric_columns(
     keys: tuple[str, ...],
     preferred: tuple[str, ...] | None = None,
 ) -> tuple[str, ...]:
-    shared = [column for column in reference.columns if column in candidate.columns and column not in keys]
+    shared = [
+        column
+        for column in reference.columns
+        if column in candidate.columns and column not in keys
+    ]
     if preferred is not None:
         shared = [column for column in preferred if column in shared]
     metrics: list[str] = []
@@ -58,6 +79,7 @@ def _numeric_differences(
     keys: tuple[str, ...],
     metrics: tuple[str, ...],
     tolerance: float,
+    label: str,
 ) -> pd.DataFrame:
     columns = [*keys, "metric", "reference", "candidate", "delta"]
     if not metrics:
@@ -65,9 +87,25 @@ def _numeric_differences(
     if reference.empty and candidate.empty:
         return pd.DataFrame(columns=columns)
 
-    left = reference.loc[:, [*keys, *metrics]].copy() if not reference.empty else pd.DataFrame(columns=[*keys, *metrics])
-    right = candidate.loc[:, [*keys, *metrics]].copy() if not candidate.empty else pd.DataFrame(columns=[*keys, *metrics])
-    merged = left.merge(right, on=list(keys), how="outer", suffixes=("__reference", "__candidate"))
+    _assert_unique_comparison_keys(reference, keys=keys, label=f"reference {label}")
+    _assert_unique_comparison_keys(candidate, keys=keys, label=f"candidate {label}")
+    left = (
+        reference.loc[:, [*keys, *metrics]].copy()
+        if not reference.empty
+        else pd.DataFrame(columns=[*keys, *metrics])
+    )
+    right = (
+        candidate.loc[:, [*keys, *metrics]].copy()
+        if not candidate.empty
+        else pd.DataFrame(columns=[*keys, *metrics])
+    )
+    merged = left.merge(
+        right,
+        on=list(keys),
+        how="outer",
+        suffixes=("__reference", "__candidate"),
+        validate="one_to_one",
+    )
 
     rows: list[dict[str, Any]] = []
     for metric in metrics:
@@ -82,10 +120,14 @@ def _numeric_differences(
                 {
                     "metric": metric,
                     "reference": (
-                        float(left_values.at[index]) if pd.notna(left_values.at[index]) else np.nan
+                        float(left_values.at[index])
+                        if pd.notna(left_values.at[index])
+                        else np.nan
                     ),
                     "candidate": (
-                        float(right_values.at[index]) if pd.notna(right_values.at[index]) else np.nan
+                        float(right_values.at[index])
+                        if pd.notna(right_values.at[index])
+                        else np.nan
                     ),
                     "delta": float(delta.at[index]) if pd.notna(delta.at[index]) else np.nan,
                 }
@@ -137,6 +179,20 @@ def compare_backtest_results(
     reference.validate()
     candidate.validate()
 
+    comparison_specs = (
+        ("performance", reference.performance, candidate.performance, ("period_end",)),
+        (
+            "positions",
+            reference.positions,
+            candidate.positions,
+            ("rebalance_date", "symbol"),
+        ),
+        ("daily_ledger", reference.daily_ledger, candidate.daily_ledger, ("trade_date",)),
+    )
+    for label, left_frame, right_frame, keys in comparison_specs:
+        _assert_unique_comparison_keys(left_frame, keys=keys, label=f"reference {label}")
+        _assert_unique_comparison_keys(right_frame, keys=keys, label=f"candidate {label}")
+
     performance_metrics = _metric_columns(
         reference.performance,
         candidate.performance,
@@ -148,6 +204,7 @@ def compare_backtest_results(
         keys=("period_end",),
         metrics=performance_metrics,
         tolerance=tolerance,
+        label="performance",
     )
 
     position_metrics = _metric_columns(
@@ -162,6 +219,7 @@ def compare_backtest_results(
         keys=("rebalance_date", "symbol"),
         metrics=position_metrics,
         tolerance=tolerance,
+        label="positions",
     )
 
     ledger_metrics = _metric_columns(
@@ -176,6 +234,7 @@ def compare_backtest_results(
         keys=("trade_date",),
         metrics=ledger_metrics,
         tolerance=tolerance,
+        label="daily_ledger",
     )
 
     row_count_delta = {
