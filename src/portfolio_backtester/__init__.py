@@ -1,4 +1,14 @@
 from .api import backtest_topk, run_backtest
+from .backtest_bundle import (
+    BACKTEST_BUNDLE_SCHEMA_VERSION,
+    EXECUTION_AWARE_BUNDLE_FILES,
+    BacktestBundleInventoryItem,
+    BacktestBundleManifest,
+    BacktestEvidenceTier,
+    reconcile_unified_ledger,
+    validate_execution_aware_bundle_inputs,
+)
+from .backtest_bundle_io import read_backtest_bundle, write_backtest_bundle
 from .backtest_spec import BacktestSpec
 from .bet_sizing import (
     SizingConfig,
@@ -126,12 +136,17 @@ from .turnover import (
 from .types import CostBreakdown
 
 __all__ = [
+    "BACKTEST_BUNDLE_SCHEMA_VERSION",
     "CANONICAL_POSITIONS_BY_REBALANCE_META_FILE",
+    "EXECUTION_AWARE_BUNDLE_FILES",
     "EXECUTION_SUMMARY_SCHEMA",
     "INCUMBENT_REQUALIFICATION_SCHEMA",
     "PORTFOLIO_OPTIMIZATION_RESULT_SCHEMA",
     "PORTFOLIO_POLICY_SCHEMA",
     "POSITIONS_BY_REBALANCE_CONTRACT",
+    "BacktestBundleInventoryItem",
+    "BacktestBundleManifest",
+    "BacktestEvidenceTier",
     "BacktestSpec",
     "CostBreakdown",
     "DailyWatch20Config",
@@ -212,6 +227,8 @@ __all__ = [
     "probabilistic_sharpe_ratio",
     "probabilistic_sharpe_ratio_from_stats",
     "probability_to_size",
+    "read_backtest_bundle",
+    "reconcile_unified_ledger",
     "return_concentration",
     "rolling_hrp_weights",
     "run_backtest",
@@ -234,8 +251,10 @@ __all__ = [
     "summarize_strategy_risk",
     "target_turnover",
     "turnover_from_trade_weights",
+    "validate_execution_aware_bundle_inputs",
     "validate_positions_by_rebalance_frame",
     "validate_targets",
+    "write_backtest_bundle",
     "write_positions_by_rebalance_artifact",
     "write_receipt",
 ]
