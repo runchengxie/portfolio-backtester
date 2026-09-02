@@ -45,6 +45,7 @@ jobs:
       - name: Install public CI dependencies
         run: |
           uv venv --python 3.12
+          echo "$GITHUB_WORKSPACE/.venv/bin" >> "$GITHUB_PATH"
           uv pip install --python .venv/bin/python \
             numpy pandas pyarrow PyYAML scikit-learn xgboost pytest pytest-cov ruff ty
           uv pip install --python .venv/bin/python \
