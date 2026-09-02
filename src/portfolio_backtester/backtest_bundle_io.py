@@ -5,7 +5,7 @@ import os
 import shutil
 import tempfile
 from collections.abc import Mapping, Sequence
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
@@ -165,7 +165,7 @@ def write_backtest_bundle(
         inventory_tuple = tuple(inventory)
 
         ArtifactEnvelopeV2, _, ProducerIdentity, _ = _shared_contracts()
-        timestamp = created_at or datetime.now(timezone.utc)
+        timestamp = created_at or datetime.now(UTC)
         envelope = ArtifactEnvelopeV2(
             artifact_id=artifact_id or f"backtest:{run_id}",
             artifact_type=BACKTEST_BUNDLE_SCHEMA_VERSION,
