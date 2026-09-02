@@ -180,3 +180,28 @@ def test_insufficient_candidates_fail_closed_with_receipt() -> None:
     assert receipt.summary["a_selected_count"] == 4
     assert receipt.summary["b_selected_count"] == 8
     assert receipt.summary["hard_eligible_count"] == 12
+
+
+def test_result_exposes_a_public_candidate_score_snapshot() -> None:
+    result = select_daily_watch20(_cross_section())
+
+    scores = result.candidate_scores
+
+    assert len(scores) == 60
+    assert {
+        "trade_date",
+        "symbol",
+        "first_industry_name",
+        "xgb_score",
+        "hard_eligible",
+        "xgb_percentile",
+        "guard_score",
+        "final_score",
+        "ml_rank",
+        "final_rank",
+    }.issubset(scores.columns)
+    assert not any(column.startswith("_") for column in scores.columns)
+    assert scores["symbol"].nunique() == 60
+    assert scores["ml_rank"].min() == 1
+    assert scores["final_rank"].min() == 1
+    assert scores.loc[scores["symbol"].eq("S000"), "ml_rank"].item() == 1

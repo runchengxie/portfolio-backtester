@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from collections.abc import Mapping
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import Any, Literal, cast
 
 import numpy as np
@@ -79,6 +79,7 @@ class DailyWatch20Result:
 
     watchlist: pd.DataFrame
     receipt: DailyWatch20Receipt
+    candidate_scores: pd.DataFrame = field(default_factory=pd.DataFrame)
 
 
 class DailyWatch20SelectionError(RuntimeError):

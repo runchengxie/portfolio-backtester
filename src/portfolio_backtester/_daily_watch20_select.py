@@ -238,6 +238,62 @@ def _build_watchlist(
     )
 
 
+def _candidate_score_snapshot(
+    prepared: _PreparedCrossSection,
+    *,
+    config: DailyWatch20Config,
+    fallback_mode: FallbackMode,
+) -> pd.DataFrame:
+    """Return public per-candidate scores without exposing selection internals."""
+    frame = prepared.frame
+    ml_score = pd.to_numeric(frame["_ml_score"], errors="coerce")
+    ml_percentile = pd.to_numeric(frame["_ml_percentile"], errors="coerce")
+    guard_prior = pd.to_numeric(frame["_guard_prior"], errors="coerce")
+    blended_score = pd.to_numeric(frame["_blended_score"], errors="coerce")
+    hard_eligible = frame["_hard_eligible"].astype(bool)
+    selection_score = blended_score if fallback_mode == "core20" else blended_score.copy()
+    selection_score = selection_score.where(frame["_b_eligible"].astype(bool))
+    if fallback_mode == "none":
+        selection_score = selection_score.where(
+            frame["_b_eligible"].astype(bool), other=ml_percentile
+        )
+
+    def _rank(values: pd.Series, eligible: pd.Series) -> pd.Series:
+        rank_frame = pd.DataFrame(
+            {
+                "value": values,
+                "ml_value": ml_score,
+                "symbol": frame[config.symbol_col].astype(str),
+            },
+            index=frame.index,
+        )
+        rank_frame = rank_frame.loc[eligible & values.notna()].sort_values(
+            ["value", "ml_value", "symbol"],
+            ascending=[False, False, True],
+            kind="mergesort",
+        )
+        ranked = pd.Series(np.nan, index=frame.index, dtype=float)
+        ranked.loc[rank_frame.index] = np.arange(1, len(rank_frame) + 1, dtype=float)
+        return ranked
+
+    snapshot = pd.DataFrame(
+        {
+            "trade_date": frame[config.date_col].to_numpy(),
+            "symbol": frame[config.symbol_col].astype(str).to_numpy(),
+            "first_industry_name": frame[config.industry_col].astype(str).to_numpy(),
+            "xgb_score": ml_score.to_numpy(),
+            "hard_eligible": hard_eligible.to_numpy(),
+            "xgb_percentile": ml_percentile.to_numpy(),
+            "guard_score": guard_prior.to_numpy(),
+            "final_score": selection_score.to_numpy(),
+        },
+        index=frame.index,
+    )
+    snapshot["ml_rank"] = _rank(ml_score, hard_eligible).to_numpy()
+    snapshot["final_rank"] = _rank(selection_score, selection_score.notna()).to_numpy()
+    return snapshot.reset_index(drop=True)
+
+
 def _validate_selected_watchlist(
     watchlist: pd.DataFrame,
     *,
@@ -414,4 +470,12 @@ def select_daily_watch20(
         fallback_mode=fallback_mode,
         fallback_reason=fallback_reason,
     )
-    return DailyWatch20Result(watchlist=watchlist, receipt=receipt)
+    return DailyWatch20Result(
+        watchlist=watchlist,
+        receipt=receipt,
+        candidate_scores=_candidate_score_snapshot(
+            prepared,
+            config=cfg,
+            fallback_mode=fallback_mode,
+        ),
+    )
