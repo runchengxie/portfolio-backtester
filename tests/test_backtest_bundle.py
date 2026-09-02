@@ -1,4 +1,4 @@
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 
 import pandas as pd
@@ -125,7 +125,7 @@ def writer_kwargs() -> dict[str, object]:
         "configuration_sha256": SHA_A,
         "input_refs": [{"artifact_id": "signals", "sha256": SHA_A}],
         "diagnostics": {"note": "fixture"},
-        "created_at": datetime(2026, 9, 3, 16, 0, tzinfo=timezone.utc),
+        "created_at": datetime(2026, 9, 3, 16, 0, tzinfo=UTC),
     }
 
 
@@ -180,7 +180,7 @@ def test_execution_aware_manifest_requires_all_ledger_files():
     ]
     with pytest.raises(
         ValueError,
-        match="missing required execution-aware bundle files: fills.parquet",
+        match=r"missing required execution-aware bundle files: fills\.parquet",
     ):
         BacktestBundleManifest.from_mapping(payload)
 
@@ -240,7 +240,7 @@ def test_write_read_bundle_round_trip_and_hash_verification(tmp_path: Path):
 def test_execution_aware_manifest_rejects_incomplete_clock_on_read():
     payload = manifest_payload()
     del payload["research_clock"]["earliest_order_at"]
-    with pytest.raises(ValueError, match="research_clock.earliest_order_at"):
+    with pytest.raises(ValueError, match=r"research_clock\.earliest_order_at"):
         BacktestBundleManifest.from_mapping(payload)
 
 
