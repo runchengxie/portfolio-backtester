@@ -47,7 +47,7 @@ jobs:
           uv venv --python 3.12
           echo "$GITHUB_WORKSPACE/.venv/bin" >> "$GITHUB_PATH"
           uv pip install --python .venv/bin/python \
-            numpy pandas pyarrow PyYAML scikit-learn xgboost pytest pytest-cov ruff ty
+            numpy pandas pyarrow PyYAML scikit-learn xgboost pytest pytest-cov ruff ty==0.0.55
           uv pip install --python .venv/bin/python \
             "research-dev-metrics @ git+https://github.com/runchengxie/research-dev-metrics.git@e1d6e278b0645a23adb523ada9fa8d4743c2e3bf"
           uv pip install --python .venv/bin/python \
@@ -59,6 +59,9 @@ jobs:
 
       - name: Format check
         run: .venv/bin/ruff format --check src tests scripts
+
+      - name: Typecheck
+        run: .venv/bin/ty check --extra-search-path .ci/research-workspace/src
 
       - name: Tests
         run: .venv/bin/pytest -q

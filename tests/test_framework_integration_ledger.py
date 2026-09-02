@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import tomllib
 from pathlib import Path
 
 import yaml
@@ -43,8 +44,10 @@ def test_framework_history_and_plans_are_not_registered_backends() -> None:
 def test_main_branch_has_no_external_framework_adapter_or_dependency() -> None:
     root = LEDGER_PATH.parents[1]
     backends_dir = root / "src" / "portfolio_backtester" / "backends"
-    pyproject = (root / "pyproject.toml").read_text(encoding="utf-8").lower()
+    pyproject = tomllib.loads((root / "pyproject.toml").read_text(encoding="utf-8"))
+    project = pyproject["project"]
+    dependencies = [*project["dependencies"], *project["optional-dependencies"]["dev"]]
 
     for framework in ("qlib", "lean", "backtrader", "vnpy"):
         assert not (backends_dir / f"{framework}.py").exists()
-        assert framework not in pyproject
+        assert not any(framework in dependency.lower() for dependency in dependencies)

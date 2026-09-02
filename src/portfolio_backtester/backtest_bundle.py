@@ -5,7 +5,7 @@ from collections.abc import Mapping
 from dataclasses import dataclass
 from enum import StrEnum
 from pathlib import Path
-from typing import Any
+from typing import Any, cast
 
 import pandas as pd
 
@@ -212,7 +212,7 @@ class BacktestBundleInventoryItem:
 def _mapping(value: object, field: str) -> Mapping[str, Any]:
     if not isinstance(value, Mapping):
         raise ValueError(f"{field} must be an object")
-    return value
+    return cast(Mapping[str, Any], value)
 
 
 def _mapping_list(value: object, field: str) -> tuple[Mapping[str, Any], ...]:
@@ -220,7 +220,7 @@ def _mapping_list(value: object, field: str) -> tuple[Mapping[str, Any], ...]:
         raise ValueError(f"{field} must be a list")
     if not all(isinstance(item, Mapping) for item in value):
         raise ValueError(f"each {field} item must be an object")
-    return tuple(dict(item) for item in value)
+    return tuple(dict(cast(Mapping[str, Any], item)) for item in value)
 
 
 @dataclass(frozen=True)
