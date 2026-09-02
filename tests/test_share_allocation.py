@@ -69,12 +69,8 @@ def test_allocate_equal_weight_shares_rejects_missing_reference_columns():
 
 
 def test_allocate_equal_weight_shares_rejects_nonpositive_price_or_lot():
-    bad_price = pd.DataFrame(
-        {"symbol": ["AAA"], "price": [0.0], "round_lot": [100]}
-    )
-    bad_lot = pd.DataFrame(
-        {"symbol": ["AAA"], "price": [10.0], "round_lot": [0]}
-    )
+    bad_price = pd.DataFrame({"symbol": ["AAA"], "price": [0.0], "round_lot": [100]})
+    bad_lot = pd.DataFrame({"symbol": ["AAA"], "price": [10.0], "round_lot": [0]})
 
     with pytest.raises(ValueError, match="price"):
         allocate_equal_weight_shares(bad_price, cash=1_000.0)
