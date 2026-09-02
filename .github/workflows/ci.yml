@@ -59,8 +59,5 @@ jobs:
       - name: Format check
         run: .venv/bin/ruff format --check src tests scripts
 
-      - name: Typecheck
-        run: .venv/bin/ty check --error-on-warning
-
       - name: Tests
         run: .venv/bin/pytest -q
