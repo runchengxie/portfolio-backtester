@@ -70,6 +70,10 @@ exclude = [
   "outputs",
 ]
 
+[[tool.ty.overrides]]
+include = ["src/portfolio_backtester/backends/qlib.py"]
+rules = { unresolved-import = "ignore" }
+
 [tool.coverage.run]
 source = ["src/portfolio_backtester"]
 
