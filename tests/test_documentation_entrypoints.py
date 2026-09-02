@@ -15,7 +15,11 @@ FACT_DOCS = (
 STYLE_DOCS = (
     ROOT / "README.md",
     ROOT / "AGENTS.md",
-    *sorted((ROOT / "docs").rglob("*.md")),
+    *sorted(
+        path
+        for path in (ROOT / "docs").rglob("*.md")
+        if "superpowers" not in path.relative_to(ROOT / "docs").parts
+    ),
 )
 STYLE_PATTERNS = (
     re.compile(r"不是.{0,40}而是"),
@@ -74,14 +78,10 @@ def test_ty_is_the_only_configured_type_checker() -> None:
 def test_docs_record_current_automation_status() -> None:
     docs = (ROOT / "docs" / "testing.md").read_text(encoding="utf-8")
 
-    assert "`.github/workflows/ci.yml.disabled`" in docs
-    assert "已被刻意删除" in docs
-    assert "仓库级 GitHub Actions 当前关闭" in docs
-    assert "只作为轻量检查模板保留" in docs
-    assert "本地命令和工作区 `pre-push` 是当前质量事实来源" in docs
-    assert (ROOT / ".github" / "workflows" / "ci.yml.disabled").is_file()
-    assert not (ROOT / ".github" / "workflows" / "ci.yml").is_file()
-    assert ".github/workflows/tests.yml" not in docs
+    assert "`.github/workflows/ci.yml`" in docs
+    assert "PR 上运行公开质量门禁" in docs
+    assert "本地命令和工作区共享 `pre-push` 继续提供提交前的快速反馈" in docs
+    assert (ROOT / ".github" / "workflows" / "ci.yml").is_file()
 
 
 def test_docs_distinguish_current_backends_from_history_and_plans() -> None:

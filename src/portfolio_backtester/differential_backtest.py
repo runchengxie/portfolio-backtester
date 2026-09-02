@@ -44,9 +44,7 @@ def _assert_unique_comparison_keys(
     if missing:
         return
     if frame.duplicated(subset=list(keys), keep=False).any():
-        raise ValueError(
-            f"{label} must have unique comparison keys: " + ", ".join(keys)
-        )
+        raise ValueError(f"{label} must have unique comparison keys: " + ", ".join(keys))
 
 
 def _metric_columns(
@@ -57,9 +55,7 @@ def _metric_columns(
     preferred: tuple[str, ...] | None = None,
 ) -> tuple[str, ...]:
     shared = [
-        column
-        for column in reference.columns
-        if column in candidate.columns and column not in keys
+        column for column in reference.columns if column in candidate.columns and column not in keys
     ]
     if preferred is not None:
         shared = [column for column in preferred if column in shared]
@@ -120,9 +116,7 @@ def _numeric_differences(
                 {
                     "metric": metric,
                     "reference": (
-                        float(left_values.at[index])
-                        if pd.notna(left_values.at[index])
-                        else np.nan
+                        float(left_values.at[index]) if pd.notna(left_values.at[index]) else np.nan
                     ),
                     "candidate": (
                         float(right_values.at[index])
@@ -142,7 +136,7 @@ def _difference_summary(frame: pd.DataFrame) -> dict[str, Any]:
     deltas = pd.to_numeric(frame["delta"], errors="coerce").abs().dropna()
     maximum = float(deltas.max()) if not deltas.empty else None
     return {
-        "different_cells": int(len(frame)),
+        "different_cells": len(frame),
         "max_abs_delta": round(maximum, 12) if maximum is not None else None,
     }
 

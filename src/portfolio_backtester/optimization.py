@@ -90,8 +90,7 @@ def _project_weights_to_bounds(
 
     if abs(remaining) > 1e-9:
         raise ValueError("failed to project optimizer weights into requested bounds")
-    projected = pd.Series(result, index=preference.index, dtype=float)
-    return projected
+    return pd.Series(result, index=preference.index, dtype=float)
 
 
 @dataclass(frozen=True)
@@ -219,9 +218,7 @@ class OptimizerRegistry:
     def names(self) -> tuple[str, ...]:
         return tuple(sorted(self._backends))
 
-    def run(
-        self, name: str, request: PortfolioOptimizationRequest
-    ) -> PortfolioOptimizationResult:
+    def run(self, name: str, request: PortfolioOptimizationRequest) -> PortfolioOptimizationResult:
         result = self.get(name).run(request)
         result.validate(request)
         return result
