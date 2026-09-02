@@ -31,15 +31,11 @@ def ledger() -> UnifiedLedger:
         ),
         orders=pd.DataFrame({"order_id": ["o1"], "status": ["filled"]}),
         fills=pd.DataFrame({"fill_id": ["f1"], "order_id": ["o1"]}),
-        daily_positions=pd.DataFrame(
-            {"trade_date": ["2026-09-03"], "positions_value": [800.0]}
-        ),
+        daily_positions=pd.DataFrame({"trade_date": ["2026-09-03"], "positions_value": [800.0]}),
         daily_cash=pd.DataFrame({"trade_date": ["2026-09-03"], "cash": [200.0]}),
         daily_nav=pd.DataFrame({"trade_date": ["2026-09-03"], "nav": [1000.0]}),
         cost_breakdown=pd.DataFrame({"side": ["total"], "transaction_cost": [1.0]}),
-        turnover_breakdown=pd.DataFrame(
-            {"side": ["total"], "filled_notional": [800.0]}
-        ),
+        turnover_breakdown=pd.DataFrame({"side": ["total"], "filled_notional": [800.0]}),
     )
 
 
