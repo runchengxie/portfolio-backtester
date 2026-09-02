@@ -85,3 +85,20 @@ def test_attribution_rejects_asset_or_factor_mismatch() -> None:
             factor_covariance=pd.DataFrame([[0.04]], index=["value"], columns=["value"]),
             specific_risk=pd.Series({"A": 0.10, "B": 0.20}),
         )
+
+
+def test_risk_attribution_rejects_indefinite_factor_covariance() -> None:
+    weights, benchmark, exposures = _inputs()
+
+    with pytest.raises(ValueError, match="positive semidefinite"):
+        attribute_factor_risk(
+            weights=weights,
+            benchmark_weights=benchmark,
+            exposures=exposures,
+            factor_covariance=pd.DataFrame(
+                [[0.01, 0.02], [0.02, 0.01]],
+                index=["value", "momentum"],
+                columns=["value", "momentum"],
+            ),
+            specific_risk=pd.Series({"A": 0.10, "B": 0.20}),
+        )
