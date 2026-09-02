@@ -680,7 +680,7 @@ requires-dist = [
     { name = "research-dev-metrics", git = "https://github.com/runchengxie/research-dev-metrics.git?rev=e1d6e278b0645a23adb523ada9fa8d4743c2e3bf" },
     { name = "ruff", marker = "extra == 'dev'", specifier = ">=0.8" },
     { name = "scikit-learn", specifier = ">=1.2" },
-    { name = "ty", marker = "extra == 'dev'", specifier = ">=0.0.55" },
+    { name = "ty", marker = "extra == 'dev'", specifier = "==0.0.55" },
     { name = "xgboost", specifier = ">=1.7" },
 ]
 provides-extras = ["dev"]
