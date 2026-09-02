@@ -60,5 +60,8 @@ jobs:
       - name: Format check
         run: .venv/bin/ruff format --check src tests scripts
 
+      - name: Typecheck
+        run: .venv/bin/ty check --extra-search-path .ci/research-workspace/src
+
       - name: Tests
         run: .venv/bin/pytest -q
