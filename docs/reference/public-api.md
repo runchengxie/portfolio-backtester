@@ -13,6 +13,7 @@
 | 错位持有汇总 | `EXECUTION_SUMMARY_SCHEMA`、`summarize_staggered_execution`、`execution_summary_frame` |
 | 持仓回放 | `PositionBacktestConfig`、`PositionBacktestResult`、`run_position_backtest` |
 | 研究持仓回放 | `positions_by_rebalance_from_targets`、`build_position_replay_periods`、`run_native_position_replay` |
+| Canonical 回测证据 | `BACKTEST_BUNDLE_SCHEMA_VERSION`、`EXECUTION_AWARE_BUNDLE_FILES`、`BacktestEvidenceTier`、`BacktestBundleInventoryItem`、`BacktestBundleManifest`、`reconcile_unified_ledger`、`validate_execution_aware_bundle_inputs`、`write_backtest_bundle`、`read_backtest_bundle` |
 | 延迟成交诊断 | `attribute_delayed_fills` |
 | 历史成交结算 | `settle_execution_fills` |
 | 持仓基准评估 | `PositionBacktestEvaluation`、`evaluate_position_backtest` |
@@ -34,6 +35,13 @@
 | 行业平衡袖套 | `SelectionSpec`、`select_industry_balanced`、`build_targets`、`combine_targets`、`attach_entry_dates`、`target_turnover`、`validate_targets` |
 | 策略风险 | `StrategyRiskReport`、`implementation_shortfall_metrics`、`return_concentration`、`strategy_failure_probability`、`summarize_strategy_risk` |
 | 证据回执 | `build_portfolio_sizing_receipt`、`series_sha256`、`sha256_file`、`write_receipt` |
+
+Canonical 回测 bundle 以现有 `UnifiedLedger` 为唯一账本来源，不重新实现订单、成交或现金模型。
+`diagnostic` 允许缺少可执行证据。`execution_aware` 要求 backend 明确支持订单生命周期和 daily ledger，
+要求完整 `research.clock.v1` 执行窗口，并且账户对账满足 `nav = cash + positions_value`。
+`write_backtest_bundle` 使用临时同级目录写入 Parquet/JSON，为文件生成 SHA-256 inventory，再原子切换为最终目录。
+`read_backtest_bundle` 默认验证 inventory 与文件内容哈希。完整语义见
+[Canonical 回测证据 bundle](../concepts/canonical-backtest-bundle.md)。
 
 `probabilistic_sharpe_ratio` 接收收益序列。`probabilistic_sharpe_ratio_from_stats` 接收已经计算好的周期 Sharpe、偏度和超额峰度。
 
