@@ -11,6 +11,8 @@ import portfolio_backtester
 
 OWNED_MODULES = (
     "portfolio_backtester.api",
+    "portfolio_backtester.backtest_bundle",
+    "portfolio_backtester.backtest_bundle_io",
     "portfolio_backtester.backtest_spec",
     "portfolio_backtester.backends",
     "portfolio_backtester.backends.base",
@@ -55,7 +57,12 @@ OWNED_MODULES = (
 FORBIDDEN_RUNTIME_PREFIXES = ("alpha_research", "strategy_pipeline.pipeline")
 CORE_ENTRYPOINTS = frozenset(
     {
+        "BACKTEST_BUNDLE_SCHEMA_VERSION",
         "CANONICAL_POSITIONS_BY_REBALANCE_META_FILE",
+        "EXECUTION_AWARE_BUNDLE_FILES",
+        "BacktestBundleInventoryItem",
+        "BacktestBundleManifest",
+        "BacktestEvidenceTier",
         "BacktestSpec",
         "CostBreakdown",
         "DailyWatch20Config",
@@ -141,6 +148,8 @@ CORE_ENTRYPOINTS = frozenset(
         "probabilistic_sharpe_ratio",
         "probabilistic_sharpe_ratio_from_stats",
         "probability_to_size",
+        "read_backtest_bundle",
+        "reconcile_unified_ledger",
         "return_concentration",
         "rolling_hrp_weights",
         "run_backtest",
@@ -163,8 +172,10 @@ CORE_ENTRYPOINTS = frozenset(
         "summarize_strategy_risk",
         "target_turnover",
         "turnover_from_trade_weights",
+        "validate_execution_aware_bundle_inputs",
         "validate_positions_by_rebalance_frame",
         "validate_targets",
+        "write_backtest_bundle",
         "write_positions_by_rebalance_artifact",
         "write_receipt",
     }
