@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import pandas as pd
+import pytest
 
 from portfolio_backtester.backends import BackendCapabilities, CanonicalBacktestResult
 from portfolio_backtester.differential_backtest import compare_backtest_results
@@ -79,3 +80,18 @@ def test_capability_difference_is_reported() -> None:
         ["t1", "limit"],
         ["t1"],
     ]
+
+
+def test_duplicate_semantic_keys_fail_before_outer_merge() -> None:
+    reference = _result("native")
+    duplicate = reference.positions.iloc[[0]].copy()
+    reference = CanonicalBacktestResult(
+        backend_name=reference.backend_name,
+        performance=reference.performance,
+        positions=pd.concat([reference.positions, duplicate], ignore_index=True),
+        daily_ledger=reference.daily_ledger,
+        capabilities=reference.capabilities,
+    )
+
+    with pytest.raises(ValueError, match="unique comparison keys"):
+        compare_backtest_results(reference, _result("other"))
