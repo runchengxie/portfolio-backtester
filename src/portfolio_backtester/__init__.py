@@ -58,6 +58,15 @@ from .industry_sleeves import (
     validate_targets,
 )
 from .metrics import leg_attribution_frame, summarize_leg_attribution, summarize_period_returns
+from .optimization import (
+    PORTFOLIO_OPTIMIZATION_RESULT_SCHEMA,
+    EqualWeightOptimizerBackend,
+    HrpOptimizerBackend,
+    OptimizerRegistry,
+    PortfolioOptimizationRequest,
+    PortfolioOptimizationResult,
+    PortfolioOptimizerBackend,
+)
 from .outcome_metrics import OutcomeDistributionReport, summarize_outcome_distribution
 from .position_backtest import (
     PositionBacktestConfig,
@@ -120,6 +129,7 @@ __all__ = [
     "CANONICAL_POSITIONS_BY_REBALANCE_META_FILE",
     "EXECUTION_SUMMARY_SCHEMA",
     "INCUMBENT_REQUALIFICATION_SCHEMA",
+    "PORTFOLIO_OPTIMIZATION_RESULT_SCHEMA",
     "PORTFOLIO_POLICY_SCHEMA",
     "POSITIONS_BY_REBALANCE_CONTRACT",
     "BacktestSpec",
@@ -130,15 +140,21 @@ __all__ = [
     "DailyWatch20Result",
     "DailyWatch20SelectionError",
     "DetailedTradeFeeModel",
+    "EqualWeightOptimizerBackend",
     "GroupCap",
     "GuardFactorSpec",
     "HrpConfig",
+    "HrpOptimizerBackend",
     "HrpResult",
     "IncumbentRequalificationConfig",
     "IncumbentRequalificationPolicy",
     "IncumbentRequalificationReceipt",
     "IncumbentRequalificationResult",
+    "OptimizerRegistry",
     "OutcomeDistributionReport",
+    "PortfolioOptimizationRequest",
+    "PortfolioOptimizationResult",
+    "PortfolioOptimizerBackend",
     "PositionBacktestConfig",
     "PositionBacktestEvaluation",
     "PositionBacktestResult",
