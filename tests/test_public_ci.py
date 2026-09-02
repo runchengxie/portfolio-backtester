@@ -10,5 +10,6 @@ def test_public_ci_runs_typecheck_before_tests() -> None:
 
     typecheck = ".venv/bin/ty check"
     tests = ".venv/bin/pytest -q"
+    assert "- name: Typecheck" in workflow
     assert typecheck in workflow
     assert workflow.index(typecheck) < workflow.index(tests)
