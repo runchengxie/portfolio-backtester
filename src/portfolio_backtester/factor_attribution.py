@@ -64,9 +64,7 @@ class FactorReturnAttribution:
     @property
     def reconciled_active_return(self) -> float:
         return float(
-            self.factor_contributions.sum()
-            + self.specific_return
-            + self.cost_contribution
+            self.factor_contributions.sum() + self.specific_return + self.cost_contribution
         )
 
     def receipt(self) -> dict[str, object]:

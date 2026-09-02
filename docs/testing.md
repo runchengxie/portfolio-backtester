@@ -66,9 +66,9 @@ coverage 按高风险模块逐步提高，不设置统一阈值。
 
 ## GitHub Actions 状态
 
-`.github/workflows/ci.yml` 已被刻意删除，仅保留 `.github/workflows/ci.yml.disabled` 只作为轻量检查模板保留。仓库级 GitHub Actions 当前关闭，GitHub 不会为已禁用的模板创建运行记录。本地命令和工作区 `pre-push` 是当前质量事实来源。
+`.github/workflows/ci.yml` 在公开 PR 上运行公开质量门禁。本地命令和工作区共享 `pre-push` 继续提供提交前的快速反馈。
 
-模板覆盖：
+PR workflow 覆盖：
 
 - Ruff 代码和格式检查。
 - 当前登记范围的 `ty`。
@@ -78,7 +78,7 @@ coverage 按高风险模块逐步提高，不设置统一阈值。
 - 持仓回放回归。
 - 包导入检查。
 
-模板使用并发控制取消同一 pull request 的旧运行。重新启用仓库级 Actions 前，需要复核触发条件、配额和检查范围。完整测试和维护性预算继续由本地或工作区门禁执行。
+workflow 使用路径过滤和并发控制取消同一 pull request 的旧运行。完整测试和维护性预算继续由本地或工作区门禁执行。
 
 ## 类型检查范围
 
