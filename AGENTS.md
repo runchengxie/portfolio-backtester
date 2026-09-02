@@ -68,7 +68,16 @@ scripts/dev/run_tests.sh maintainability
 
 当前类型检查只覆盖配置中列出的范围。不要把通过类型检查表述为整个包已经具备完整类型覆盖。
 
-仓库保留 `.github/workflows/ci.yml`，仓库级 GitHub Actions 当前关闭。本地命令和工作区共享 `pre-push` 是质量事实来源。
+## GitHub Actions 策略
+
+工作区统一采用以下默认规则：
+
+- public 仓库默认启用 GitHub Actions，用于拉取请求的轻量自动检查。
+- private 仓库默认关闭 GitHub Actions，避免持续占用私有仓库的 Actions 额度。
+- private 仓库如需启用远端 CI，应在仓库文档中记录原因、检查范围和资源成本，并由维护者明确批准。
+- 本地完整门禁继续由仓库自身检查和工作区共享 `pre-push` 承担。
+
+本仓库是 public 仓库，`.github/workflows/ci.yml` 运行拉取请求检查。远端 CI 提供快速反馈，本地门禁仍负责完整检查。
 
 ## 代码修改规则
 
