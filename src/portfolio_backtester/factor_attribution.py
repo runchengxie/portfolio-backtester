@@ -63,7 +63,11 @@ class FactorReturnAttribution:
 
     @property
     def reconciled_active_return(self) -> float:
-        return float(self.factor_contributions.sum() + self.specific_return + self.cost_contribution)
+        return float(
+            self.factor_contributions.sum()
+            + self.specific_return
+            + self.cost_contribution
+        )
 
     def receipt(self) -> dict[str, object]:
         return {
@@ -149,8 +153,17 @@ def attribute_factor_risk(
     if set(covariance.index) != set(factors) or set(covariance.columns) != set(factors):
         raise ValueError("factor_covariance factors must match exposure factors")
     covariance = covariance.reindex(index=factors, columns=factors)
-    if not np.allclose(covariance.to_numpy(), covariance.to_numpy().T, atol=1e-12, rtol=1e-12):
+    covariance_values = covariance.to_numpy(dtype=float)
+    if not np.allclose(
+        covariance_values,
+        covariance_values.T,
+        atol=1e-12,
+        rtol=1e-12,
+    ):
         raise ValueError("factor_covariance must be symmetric")
+    eigenvalues = np.linalg.eigvalsh((covariance_values + covariance_values.T) / 2.0)
+    if float(eigenvalues.min()) < -1e-10:
+        raise ValueError("factor_covariance must be positive semidefinite")
 
     specific = _series(specific_risk, label="specific_risk")
     if set(specific.index) != set(portfolio.index):
