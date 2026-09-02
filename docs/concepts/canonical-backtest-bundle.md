@@ -7,12 +7,12 @@
 
 `BacktestEvidenceTier` 第一版只有两级：
 
-- `diagnostic`：允许理想化成交、目标权重收益或缺少完整订单/现金证据的兼容研究。它可以写 bundle，
-  但下游晋级门禁不得把它当成可执行净值证据。
+- `diagnostic`：允许理想化成交、目标权重收益或缺少完整订单/现金证据的兼容研究。它可以写 bundle。
+  下游晋级门禁不得把它当成可执行净值证据。
 - `execution_aware`：要求 backend capability 明确支持 `order_lifecycle` 和 `daily_ledger`，要求完整
   `research.clock.v1` 执行窗口，并要求统一账本账户对账通过。
 
-`execution_aware` 不要求每次运行一定出现订单或成交行。没有交易的合法区间仍可以拥有空表；关键是
+`execution_aware` 不要求每次运行一定出现订单或成交行。没有交易的合法区间仍可以拥有空表。关键是
 订单/成交表和 daily ledger 能力真实存在，且文件与 capability 不互相撒谎。
 
 ## 目录
@@ -35,12 +35,12 @@ backtest_result/
 
 `manifest.json` 保存：
 
-- schema、run id 和 evidence tier；
-- `research.artifact-envelope.v2`；
-- `research.clock.v1` mapping；
-- backend 身份和 capability；
-- 上游 artifact 引用；
-- 每个文件的 SHA-256、required 状态和行数；
+- schema、run id 和 evidence tier。
+- `research.artifact-envelope.v2`。
+- `research.clock.v1` mapping。
+- backend 身份和 capability。
+- 上游 artifact 引用。
+- 每个文件的 SHA-256、required 状态和行数。
 - reconciliation 结果。
 
 Artifact Envelope 的 `content_sha256` 对 canonical inventory 做哈希。manifest 本身不进入 inventory，
@@ -67,14 +67,14 @@ nav = cash + positions_value
 ## 写入与读取
 
 `write_backtest_bundle` 先在最终目录同级创建临时目录，写完 Parquet/JSON、计算 inventory 哈希并构造
-Artifact Envelope，最后通过原子目录替换发布。目标目录已存在时直接拒绝覆盖；任何中间失败都会清理临时目录。
+Artifact Envelope，最后通过原子目录替换发布。目标目录已存在时直接拒绝覆盖。任何中间失败都会清理临时目录。
 
 `read_backtest_bundle` 默认验证：
 
-- manifest schema；
-- evidence-tier completeness；
-- Artifact Envelope；
-- inventory content hash；
+- manifest schema。
+- evidence-tier completeness。
+- Artifact Envelope。
+- inventory content hash。
 - inventory 中每个文件的内容 SHA-256。
 
 Reader 不重新执行组合、订单、成交或 PnL 计算。
