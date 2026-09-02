@@ -53,6 +53,40 @@ def test_hrp_backend_reuses_native_hrp_and_respects_bounds() -> None:
     assert result.diagnostics["method"] == "hrp"
 
 
+def test_hrp_backend_projects_extreme_native_weights_into_box_simplex() -> None:
+    index = pd.date_range("2025-01-01", periods=80, freq="B")
+    returns = pd.DataFrame(
+        {
+            "A": np.linspace(-0.001, 0.001, len(index)),
+            "B": np.linspace(-0.05, 0.05, len(index)),
+            "C": np.linspace(0.04, -0.04, len(index)),
+        },
+        index=index,
+    )
+    request = PortfolioOptimizationRequest(
+        returns=returns,
+        min_weight=0.2,
+        max_weight=0.5,
+    )
+
+    result = HrpOptimizerBackend().run(request)
+
+    result.validate(request)
+    assert result.weights.sum() == pytest.approx(1.0)
+    assert result.weights.min() >= 0.2 - 1e-12
+    assert result.weights.max() <= 0.5 + 1e-12
+
+
+def test_single_asset_hrp_keeps_requested_backend_identity() -> None:
+    request = PortfolioOptimizationRequest(returns=_returns()[["A"]])
+
+    result = HrpOptimizerBackend().run(request)
+
+    assert result.backend_name == "native.hrp"
+    assert result.weights.to_dict() == {"A": 1.0}
+    assert result.diagnostics["fallback"] == "single_asset"
+
+
 def test_optimizer_registry_is_explicit() -> None:
     registry = OptimizerRegistry()
     registry.register(EqualWeightOptimizerBackend())
