@@ -1,5 +1,6 @@
 from datetime import UTC, datetime
 from pathlib import Path
+from typing import Any
 
 import pandas as pd
 import pytest
@@ -55,7 +56,7 @@ def execution_clock() -> dict[str, str]:
     }
 
 
-def capabilities() -> dict[str, object]:
+def capabilities() -> dict[str, Any]:
     return {
         "order_lifecycle": True,
         "daily_ledger": True,
@@ -63,7 +64,7 @@ def capabilities() -> dict[str, object]:
     }
 
 
-def inventory_payload() -> list[dict[str, object]]:
+def inventory_payload() -> list[dict[str, Any]]:
     names = [
         "targets.parquet",
         "orders.parquet",
@@ -86,7 +87,7 @@ def inventory_payload() -> list[dict[str, object]]:
     ]
 
 
-def manifest_payload() -> dict[str, object]:
+def manifest_payload() -> dict[str, Any]:
     return {
         "schema_version": "portfolio_backtester.backtest_result.v1",
         "run_id": "run-001",
@@ -104,7 +105,7 @@ def manifest_payload() -> dict[str, object]:
     }
 
 
-def writer_kwargs() -> dict[str, object]:
+def writer_kwargs() -> dict[str, Any]:
     return {
         "run_id": "run-001",
         "evidence_tier": BacktestEvidenceTier.EXECUTION_AWARE,
