@@ -26,23 +26,41 @@ jobs:
       - name: Check out repository
         uses: actions/checkout@v4
 
+      - name: Check out public research contracts
+        uses: actions/checkout@v4
+        with:
+          repository: runchengxie/research-workspace
+          path: .ci/research-workspace
+          sparse-checkout: |
+            src/research_contracts
+          sparse-checkout-cone-mode: true
+          fetch-depth: 1
+
       - name: Set up uv
         uses: astral-sh/setup-uv@v6
         with:
           enable-cache: true
           python-version: "3.12"
 
-      - name: Install development dependencies
-        run: uv sync --locked --extra dev
+      - name: Install public CI dependencies
+        run: |
+          uv venv --python 3.12
+          uv pip install --python .venv/bin/python \
+            numpy pandas pyarrow PyYAML scikit-learn xgboost pytest pytest-cov ruff ty
+          uv pip install --python .venv/bin/python \
+            "research-dev-metrics @ git+https://github.com/runchengxie/research-dev-metrics.git@e1d6e278b0645a23adb523ada9fa8d4743c2e3bf"
+          uv pip install --python .venv/bin/python \
+            -e .ci/research-workspace/src/research_contracts
+          uv pip install --python .venv/bin/python --no-deps -e .
 
       - name: Lint
-        run: scripts/dev/run_tests.sh lint
+        run: .venv/bin/ruff check .
 
       - name: Format check
-        run: scripts/dev/run_tests.sh format
+        run: .venv/bin/ruff format --check .
 
       - name: Typecheck
-        run: scripts/dev/run_tests.sh typecheck
+        run: .venv/bin/ty check --error-on-warning
 
       - name: Tests
-        run: scripts/dev/run_tests.sh all
+        run: .venv/bin/pytest -q
