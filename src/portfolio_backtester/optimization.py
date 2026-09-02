@@ -35,6 +35,65 @@ def _numeric_series_for_assets(
     return normalized.astype(float)
 
 
+def _project_weights_to_bounds(
+    weights: pd.Series,
+    *,
+    min_weight: float,
+    max_weight: float | None,
+) -> pd.Series:
+    """Project positive preference weights into a feasible long-only box simplex.
+
+    Lower bounds are assigned first and the remaining mass is distributed in
+    proportion to the original preferences, repeatedly saturating upper bounds.
+    This avoids the common `clip -> normalize` bug where normalization can push a
+    previously clipped lower-bound weight below the promised minimum again.
+    """
+
+    numeric = pd.to_numeric(weights, errors="coerce").astype(float)
+    if numeric.isna().any() or not np.isfinite(numeric.to_numpy()).all():
+        raise ValueError("optimizer preference weights must be finite")
+    if (numeric < 0).any():
+        raise ValueError("optimizer preference weights must be non-negative")
+    total = float(numeric.sum())
+    if total <= 0:
+        numeric[:] = 1.0
+        total = float(numeric.sum())
+    preference = numeric / total
+
+    count = len(preference)
+    upper = 1.0 if max_weight is None else max_weight
+    result = np.full(count, min_weight, dtype=float)
+    capacity = np.full(count, upper - min_weight, dtype=float)
+    remaining = 1.0 - min_weight * count
+    preference_values = preference.to_numpy(dtype=float)
+    tolerance = 1e-12
+
+    for _ in range(count + 2):
+        if remaining <= tolerance:
+            break
+        eligible = capacity > tolerance
+        if not eligible.any():
+            break
+        allocation_preference = np.where(eligible, preference_values, 0.0)
+        preference_sum = float(allocation_preference.sum())
+        if preference_sum <= tolerance:
+            allocation_preference = eligible.astype(float)
+            preference_sum = float(allocation_preference.sum())
+        proposed = remaining * allocation_preference / preference_sum
+        allocation = np.minimum(proposed, capacity)
+        used = float(allocation.sum())
+        result += allocation
+        capacity -= allocation
+        remaining -= used
+        if used <= tolerance:
+            break
+
+    if abs(remaining) > 1e-9:
+        raise ValueError("failed to project optimizer weights into requested bounds")
+    projected = pd.Series(result, index=preference.index, dtype=float)
+    return projected
+
+
 @dataclass(frozen=True)
 class PortfolioOptimizationRequest:
     """Stable optimizer input independent of any third-party solver object."""
@@ -79,6 +138,8 @@ class PortfolioOptimizationRequest:
             raise ValueError("min_weight must be >= 0")
         if self.max_weight is not None and self.max_weight <= 0:
             raise ValueError("max_weight must be > 0")
+        if self.max_weight is not None and self.min_weight > self.max_weight:
+            raise ValueError("min_weight must be <= max_weight")
         if not 0.0 <= self.covariance_shrinkage <= 1.0:
             raise ValueError("covariance_shrinkage must be in [0, 1]")
         if not self.long_only:
@@ -185,22 +246,34 @@ class HrpOptimizerBackend:
 
     def run(self, request: PortfolioOptimizationRequest) -> PortfolioOptimizationResult:
         if len(request.assets) < 2:
-            return EqualWeightOptimizerBackend().run(request)
+            result = PortfolioOptimizationResult(
+                backend_name=self.name,
+                weights=pd.Series(1.0, index=request.assets, dtype=float),
+                diagnostics={"method": "hrp", "fallback": "single_asset"},
+            )
+            result.validate(request)
+            return result
         hrp = hierarchical_risk_parity(
             request.returns,
             config=HrpConfig(
                 shrinkage=request.covariance_shrinkage,
-                min_weight=request.min_weight,
-                max_weight=request.max_weight,
+                min_weight=0.0,
+                max_weight=None,
             ),
+        )
+        projected = _project_weights_to_bounds(
+            hrp.weights.reindex(request.assets).fillna(0.0),
+            min_weight=request.min_weight,
+            max_weight=request.max_weight,
         )
         result = PortfolioOptimizationResult(
             backend_name=self.name,
-            weights=hrp.weights.reindex(request.assets).fillna(0.0),
+            weights=projected,
             diagnostics={
                 "method": "hrp",
                 "ordered_assets": list(hrp.ordered_assets),
                 "covariance_shrinkage": request.covariance_shrinkage,
+                "bounds_projected": request.min_weight > 0 or request.max_weight is not None,
             },
         )
         result.validate(request)
