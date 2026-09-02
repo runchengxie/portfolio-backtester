@@ -3,7 +3,7 @@ from __future__ import annotations
 import re
 from collections.abc import Mapping
 from dataclasses import dataclass
-from enum import Enum
+from enum import StrEnum
 from pathlib import Path
 from typing import Any
 
@@ -15,7 +15,7 @@ BACKTEST_BUNDLE_SCHEMA_VERSION = "portfolio_backtester.backtest_result.v1"
 _SHA256 = re.compile(r"^[0-9a-f]{64}$")
 
 
-class BacktestEvidenceTier(str, Enum):
+class BacktestEvidenceTier(StrEnum):
     DIAGNOSTIC = "diagnostic"
     EXECUTION_AWARE = "execution_aware"
 
@@ -129,7 +129,7 @@ def reconcile_unified_ledger(
         raise ValueError("daily ledger must satisfy nav = cash + positions_value")
     return {
         "status": "passed",
-        "rows": int(len(merged)),
+        "rows": len(merged),
         "max_abs_error": float(errors.max()),
         "tolerance": float(tolerance),
     }
