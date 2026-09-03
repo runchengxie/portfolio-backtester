@@ -20,9 +20,10 @@
 14. [市场 benchmark 阶梯](concepts/benchmark-ladder.md)
 15. [持仓输出约定](reference/outputs/positions.md)
 16. [回测输出契约](reference/outputs/backtest-outputs.md)
-17. [公开 API](reference/public-api.md)
-18. [测试和质量检查](testing.md)
-19. [会计与执行路线图](accounting_execution_roadmap.md)
+17. [执行分配参考资产](reference/allocation-reference.md)
+18. [公开 API](reference/public-api.md)
+19. [测试和质量检查](testing.md)
+20. [会计与执行路线图](accounting_execution_roadmap.md)
 
 ## 事实来源
 
@@ -34,6 +35,7 @@
 | 高层 API | `src/portfolio_backtester/api.py` |
 | 输入和输出契约 | `src/portfolio_backtester/contracts.py` |
 | 执行领域契约 | `src/portfolio_backtester/execution_contracts.py` |
+| 执行分配参考资产 | `src/portfolio_backtester/allocation_reference.py` |
 | 后端协议与规范化结果 | `src/portfolio_backtester/backends/` |
 | 成本与滑点 | `src/portfolio_backtester/execution.py` |
 | 持仓回放 | `src/portfolio_backtester/position_backtest.py` |
