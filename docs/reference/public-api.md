@@ -18,6 +18,7 @@
 | 历史成交结算 | `settle_execution_fills` |
 | 持仓基准评估 | `PositionBacktestEvaluation`、`evaluate_position_backtest` |
 | 持仓契约 | `POSITIONS_BY_REBALANCE_CONTRACT`、`PositionsByRebalanceFrameContract`、`validate_positions_by_rebalance_frame`、`assert_positions_by_rebalance_frame` |
+| 回测输出契约 | `BACKTEST_PERIODS_CONTRACT`、`BACKTEST_RETURN_CONTRACT`、`TRADABLE_FLAGS_CONTRACT`、`BacktestPeriodsContract`、`BacktestReturnSeriesContract`、`TradableFlagsContract`、`build_backtest_periods_frame`、`build_backtest_return_frame`、`validate_backtest_periods_frame`、`validate_backtest_return_frame`、`validate_tradable_flags_frame`、`assert_backtest_periods_frame`、`assert_backtest_return_frame`、`assert_tradable_flags_frame` |
 | 持仓产物写入 | `CANONICAL_POSITIONS_BY_REBALANCE_META_FILE`、`write_positions_by_rebalance_artifact`、`build_positions_envelope_v2` |
 | 成本与滑点 | `DetailedTradeFeeModel`、`l2_price_tiered_slippage` |
 | 交易会话调仓 | `SessionRebalanceSchedule`、`get_session_interval_rebalance_dates` |
