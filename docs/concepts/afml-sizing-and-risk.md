@@ -66,6 +66,14 @@ HRP 输入必须严格早于调仓日。`rolling_hrp_weights` 使用 `returns.in
 
 ## 产物
 
+`portfolio_backtester.afml_evidence` 可以从已保存的回测运行目录生成 sizing、策略风险和可选 HRP 证据 sidecar。它只读取运行产物并写入可审计文件，不包含具体策略规则。
+
+```python
+from portfolio_backtester.afml_evidence import generate_run_afml_evidence
+
+generate_run_afml_evidence("artifacts/runs/example")
+```
+
 建议 `strategy-pipeline` 保存：
 
 ```text
