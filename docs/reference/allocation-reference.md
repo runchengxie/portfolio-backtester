@@ -27,6 +27,8 @@ ready = join_allocation_reference(selection, reference)
 
 合并操作保留选择结果的顺序。选择结果中找不到价格或整手信息的证券会直接失败，避免执行层生成不完整的数量。
 
+持仓筛选由 `portfolio_backtester.allocation_selection` 提供。它从保存的持仓文件中选取指定日期前最新的一期数据，按方向和排名完成 Top-N 筛选，不读取策略配置或运行时目录。
+
 分配结果的文本表格和 CSV 输出由 `portfolio_backtester.allocation_rendering` 负责。表格格式会按中英文字符宽度对齐，CSV 输出保留 DataFrame 的列顺序。
 
 ## 职责边界
