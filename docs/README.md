@@ -39,6 +39,7 @@
 | 后端协议与规范化结果 | `src/portfolio_backtester/backends/` |
 | 成本与滑点 | `src/portfolio_backtester/execution.py` |
 | 持仓回放 | `src/portfolio_backtester/position_backtest.py` |
+| 晋级证据成交模拟 | `src/portfolio_backtester/promotion_sidecar.py` |
 | 测试入口 | `scripts/dev/run_tests.sh` |
 
 代码、测试和文档发生冲突时，先核对当前实现，再在同一个改动中修正说明。
