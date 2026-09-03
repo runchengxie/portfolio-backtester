@@ -2,7 +2,9 @@
 
 本页说明组合回测侧的结果如何解读。预测质量、IC、CPCV、PBO 和特征重要度的解读见
 `alpha-research/docs/concepts/result-interpretation.md`。运行编排、产物目录和 `summary.json`
-顶层结构见 `strategy-pipeline/docs/metrics.md` 与 `strategy-pipeline/docs/outputs.md`。
+顶层结构见
+[`strategy-pipeline-internal/docs/metrics.md`](https://github.com/runchengxie/strategy-pipeline-internal/blob/main/docs/metrics.md) 与
+[`strategy-pipeline-internal/docs/outputs.md`](https://github.com/runchengxie/strategy-pipeline-internal/blob/main/docs/outputs.md)。
 
 ## 净收益与毛收益
 
