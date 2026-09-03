@@ -133,3 +133,16 @@ def test_docs_record_daily_watch20_compatibility_exception_and_index_new_pages()
     assert "`DailyWatch20` 是为现有调用方保留的兼容例外" in agents
     assert "guides/execution-simulation.md" in index
     assert "concepts/afml-sizing-and-risk.md" in index
+
+
+def test_backtest_output_docs_point_to_current_pipeline_owner() -> None:
+    outputs = (ROOT / "docs" / "reference" / "outputs" / "backtest-outputs.md").read_text(
+        encoding="utf-8"
+    )
+    interpretation = (ROOT / "docs" / "concepts" / "backtest-interpretation.md").read_text(
+        encoding="utf-8"
+    )
+    assert "strategy-pipeline-internal/blob/main/docs/outputs.md" in outputs
+    assert "strategy-pipeline-internal/blob/main/docs/metrics.md" in interpretation
+    assert "strategy-pipeline/docs/" not in outputs
+    assert "strategy-pipeline/docs/" not in interpretation
