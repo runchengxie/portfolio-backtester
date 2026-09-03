@@ -27,6 +27,8 @@ ready = join_allocation_reference(selection, reference)
 
 合并操作保留选择结果的顺序。选择结果中找不到价格或整手信息的证券会直接失败，避免执行层生成不完整的数量。
 
+分配结果的文本表格和 CSV 输出由 `portfolio_backtester.allocation_rendering` 负责。表格格式会按中英文字符宽度对齐，CSV 输出保留 DataFrame 的列顺序。
+
 ## 职责边界
 
 本模块只负责执行所需的参考资产读取、校验和连接。它不生成行情、不决定选股结果，也不负责订单发送。数据来源和快照日期由调用方提供并记录在运行产物中。
