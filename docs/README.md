@@ -25,6 +25,7 @@
 19. [公开 API](reference/public-api.md)
 20. [测试和质量检查](testing.md)
 21. [会计与执行路线图](accounting_execution_roadmap.md)
+22. [网格回测辅助函数](grid-support.md)
 
 ## 事实来源
 
@@ -43,6 +44,7 @@
 | 持仓回放 | `src/portfolio_backtester/position_backtest.py` |
 | 晋级证据成交模拟 | `src/portfolio_backtester/promotion_sidecar.py` |
 | 测试入口 | `scripts/dev/run_tests.sh` |
+| 网格回测辅助函数 | `src/portfolio_backtester/grid_support.py` |
 
 代码、测试和文档发生冲突时，先核对当前实现，再在同一个改动中修正说明。
 
