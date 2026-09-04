@@ -27,24 +27,47 @@ def _ensure_symbol_column(df: pd.DataFrame, *, context: str) -> pd.DataFrame:
 def select_from_positions_file(
     positions_path: Path,
     as_of: pd.Timestamp,
+    *,
+    allow_future_entry: bool = False,
 ) -> tuple[pd.DataFrame, pd.Timestamp]:
     if not positions_path.exists():
         raise SystemExit(f"Positions file not found: {positions_path}")
     df = pd.read_csv(positions_path)
+    selection, latest_entry = select_latest_holdings(
+        df,
+        as_of,
+        context=positions_path.name,
+        allow_future_entry=allow_future_entry,
+    )
+    selection = _ensure_symbol_column(selection, context=positions_path.name)
+    selection["symbol"] = selection["symbol"].astype(str).str.strip()
+    return selection, latest_entry
+
+
+def select_latest_holdings(
+    df: pd.DataFrame,
+    as_of: pd.Timestamp,
+    *,
+    context: str = "holdings",
+    allow_future_entry: bool = False,
+) -> tuple[pd.DataFrame, pd.Timestamp]:
+    """Select the latest saved holdings entry available at ``as_of``."""
+
     if df.empty:
-        raise SystemExit(f"{positions_path.name} is empty.")
+        raise SystemExit(f"{context} is empty.")
     if "entry_date" not in df.columns:
-        raise SystemExit(f"{positions_path.name} is missing entry_date.")
+        raise SystemExit(f"{context} is missing entry_date.")
     entry_dates = pd.to_datetime(df["entry_date"], errors="coerce").dt.normalize()
     if entry_dates.isna().all():
         raise SystemExit("Failed to parse entry_date column.")
-    eligible = entry_dates <= as_of
-    if not eligible.any():
-        raise SystemExit("No holdings available before the requested --as-of date.")
-    latest_entry = cast(pd.Timestamp, entry_dates[eligible].max())
+    if allow_future_entry:
+        latest_entry = cast(pd.Timestamp, entry_dates.max())
+    else:
+        eligible = entry_dates <= as_of
+        if not eligible.any():
+            raise SystemExit("No holdings available before the requested --as-of date.")
+        latest_entry = cast(pd.Timestamp, entry_dates[eligible].max())
     selection = cast(pd.DataFrame, df[entry_dates == latest_entry].copy())
-    selection = _ensure_symbol_column(selection, context=positions_path.name)
-    selection["symbol"] = selection["symbol"].astype(str).str.strip()
     if selection.empty:
         raise SystemExit("No holdings found for the latest entry date.")
     return selection, latest_entry
