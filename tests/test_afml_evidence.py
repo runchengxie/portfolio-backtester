@@ -7,6 +7,7 @@ import yaml
 
 from portfolio_backtester.afml_evidence import (
     generate_run_afml_evidence,
+    maybe_generate_run_afml_evidence,
     merge_evidence_fragment,
 )
 
@@ -48,3 +49,28 @@ def test_generated_evidence_merges_into_manifest(tmp_path: Path) -> None:
 
     evidence = cast(dict[str, Any], merged["evidence"])
     assert cast(dict[str, Any], evidence["strategy_risk"])["status"] == "pass"
+
+
+def test_maybe_generate_run_afml_evidence_updates_output_artifacts(tmp_path: Path) -> None:
+    _write_run(tmp_path)
+    artifacts: dict[str, Any] = {}
+
+    maybe_generate_run_afml_evidence(
+        context={
+            "run_dir": tmp_path,
+            "config": {
+                "research_protocol": {
+                    "generate_afml_evidence": True,
+                    "target_sharpe": 1.0,
+                    "evaluation_years": 2.0,
+                    "bootstrap_samples": 20,
+                    "random_state": 7,
+                }
+            },
+        },
+        artifacts=artifacts,
+    )
+
+    assert artifacts["sizing_receipt_path"].endswith("sizing_receipt.json")
+    assert artifacts["strategy_risk_report_path"].endswith("strategy_risk_report.json")
+    assert artifacts["afml_evidence_fragment_path"].endswith("afml_evidence_fragment.json")
