@@ -8,22 +8,23 @@
 2. [常用入口](guides/entry-points.md)
 3. [通用多袖组合构造](guides/sleeve-portfolio.md)
 4. [组合式回测规范](concepts/backtest-spec.md)
-5. [回测后端与统一账本边界](concepts/backend-architecture.md)
-6. [机器可读框架状态账本](framework-integration-ledger.yml)
-7. [成本与执行假设](concepts/execution-costs.md)
-8. [执行容量与每日净值模拟](guides/execution-simulation.md)
-9. [风格因子组合权重](concepts/style-factor-portfolio-weighting.md)
-10. [AFML 仓位与策略风险](concepts/afml-sizing-and-risk.md)
-11. [换手率口径](concepts/turnover.md)
-12. [成本口径](concepts/cost-breakdown.md)
-13. [回测结果解读](concepts/backtest-interpretation.md)
-14. [市场 benchmark 阶梯](concepts/benchmark-ladder.md)
-15. [持仓输出约定](reference/outputs/positions.md)
-16. [回测输出契约](reference/outputs/backtest-outputs.md)
-17. [执行分配参考资产](reference/allocation-reference.md)
-18. [公开 API](reference/public-api.md)
-19. [测试和质量检查](testing.md)
-20. [会计与执行路线图](accounting_execution_roadmap.md)
+5. [回测配置解析](concepts/backtest-configuration.md)
+6. [回测后端与统一账本边界](concepts/backend-architecture.md)
+7. [机器可读框架状态账本](framework-integration-ledger.yml)
+8. [成本与执行假设](concepts/execution-costs.md)
+9. [执行容量与每日净值模拟](guides/execution-simulation.md)
+10. [风格因子组合权重](concepts/style-factor-portfolio-weighting.md)
+11. [AFML 仓位与策略风险](concepts/afml-sizing-and-risk.md)
+12. [换手率口径](concepts/turnover.md)
+13. [成本口径](concepts/cost-breakdown.md)
+14. [回测结果解读](concepts/backtest-interpretation.md)
+15. [市场 benchmark 阶梯](concepts/benchmark-ladder.md)
+16. [持仓输出约定](reference/outputs/positions.md)
+17. [回测输出契约](reference/outputs/backtest-outputs.md)
+18. [执行分配参考资产](reference/allocation-reference.md)
+19. [公开 API](reference/public-api.md)
+20. [测试和质量检查](testing.md)
+21. [会计与执行路线图](accounting_execution_roadmap.md)
 
 ## 事实来源
 
@@ -32,6 +33,7 @@
 | 顶层公开入口 | `src/portfolio_backtester/__init__.py` |
 | 通用多袖组合构造 | `src/portfolio_backtester/sleeve_portfolio.py` |
 | 回测规范 | `src/portfolio_backtester/backtest_spec.py` |
+| 回测配置解析 | `src/portfolio_backtester/backtest_config.py` |
 | 高层 API | `src/portfolio_backtester/api.py` |
 | 输入和输出契约 | `src/portfolio_backtester/contracts.py` |
 | 执行领域契约 | `src/portfolio_backtester/execution_contracts.py` |
