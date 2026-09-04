@@ -1,9 +1,12 @@
 import pandas as pd
 
 from portfolio_backtester.grid_support import (
+    GRID_RESULT_FIELDS,
+    init_grid_row,
     parse_date_list,
     resolve_rebalance_dates,
     safe_run_name,
+    write_grid_rows,
 )
 
 
@@ -39,3 +42,13 @@ def test_resolve_rebalance_dates_filters_small_dates():
     )
     dates = resolve_rebalance_dates(None, scored, "D", min_symbols_per_date=2)
     assert dates == [pd.Timestamp("2020-01-02")]
+
+
+def test_grid_result_helpers_create_stable_csv(tmp_path):
+    row = init_grid_row(20, 12.5, 2, 3, "equal", "demo", tmp_path / "summary.json")
+    output = tmp_path / "reports" / "grid.csv"
+    write_grid_rows(output, [row])
+    assert row["status"] == "ok"
+    assert output.read_text(encoding="utf-8").splitlines()[0].split(",") == list(
+        GRID_RESULT_FIELDS
+    )
