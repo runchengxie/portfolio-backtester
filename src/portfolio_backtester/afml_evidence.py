@@ -71,6 +71,42 @@ def generate_run_afml_evidence(
     return fragment
 
 
+def maybe_generate_run_afml_evidence(
+    *,
+    context: Mapping[str, Any],
+    artifacts: dict[str, Any],
+) -> None:
+    """Generate configured AFML evidence and add its paths to output artifacts."""
+    config_raw = context.get("config")
+    config = config_raw if isinstance(config_raw, Mapping) else {}
+    protocol_raw = config.get("research_protocol")
+    protocol = protocol_raw if isinstance(protocol_raw, Mapping) else {}
+    if not bool(protocol.get("generate_afml_evidence", False)):
+        return
+
+    fragment = generate_run_afml_evidence(
+        context["run_dir"],
+        configuration=config,
+        target_sharpe=float(protocol.get("target_sharpe", 1.0)),
+        evaluation_years=float(protocol.get("evaluation_years", 2.0)),
+        bootstrap_samples=int(protocol.get("bootstrap_samples", 2000)),
+        random_state=int(protocol.get("random_state", 0)),
+        hrp_returns_path=protocol.get("hrp_returns"),
+    )
+    outputs = fragment.get("outputs")
+    if not isinstance(outputs, Mapping):
+        return
+    artifacts.update(
+        {
+            "sizing_receipt_path": outputs.get("sizing_receipt"),
+            "strategy_risk_report_path": outputs.get("strategy_risk_report"),
+            "hrp_receipt_path": outputs.get("hrp_receipt"),
+            "hrp_weights_path": outputs.get("hrp_weights"),
+            "afml_evidence_fragment_path": fragment.get("fragment_path"),
+        }
+    )
+
+
 def merge_evidence_fragment(
     manifest: Mapping[str, object],
     fragment: Mapping[str, object],
@@ -275,4 +311,8 @@ def _optional_float(value: object) -> float | None:
     return number if np.isfinite(number) else None
 
 
-__all__ = ["generate_run_afml_evidence", "merge_evidence_fragment"]
+__all__ = [
+    "generate_run_afml_evidence",
+    "maybe_generate_run_afml_evidence",
+    "merge_evidence_fragment",
+]
