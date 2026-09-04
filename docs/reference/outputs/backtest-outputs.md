@@ -1,9 +1,9 @@
 # 回测输出契约
 
-本页记录 portfolio 组合回测侧输出的报告文件与字段契约。运行编排、产物目录和 `summary.json`
-顶层结构见
-[`strategy-pipeline-internal/docs/outputs.md`](https://github.com/runchengxie/strategy-pipeline-internal/blob/main/docs/outputs.md) 与
-[`strategy-pipeline-internal/docs/reference/outputs/full-reference.md`](https://github.com/runchengxie/strategy-pipeline-internal/blob/main/docs/reference/outputs/full-reference.md)。
+本页记录 portfolio 组合回测侧输出的报告文件与字段契约。运行编排和通用产物生命周期见
+[`strategy-pipeline/docs/output-summary.md`](https://github.com/runchengxie/strategy-pipeline/blob/main/docs/output-summary.md)。跨仓库的
+`summary.json` 字段和文件交接见
+[`research-workspace/docs/contracts.md`](https://github.com/runchengxie/research-workspace/blob/main/docs/contracts.md)。
 
 ## 固定分数组合层对比
 

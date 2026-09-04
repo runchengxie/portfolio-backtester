@@ -142,7 +142,7 @@ def test_backtest_output_docs_point_to_current_pipeline_owner() -> None:
     interpretation = (ROOT / "docs" / "concepts" / "backtest-interpretation.md").read_text(
         encoding="utf-8"
     )
-    assert "strategy-pipeline-internal/blob/main/docs/outputs.md" in outputs
-    assert "strategy-pipeline-internal/blob/main/docs/metrics.md" in interpretation
-    assert "strategy-pipeline/docs/" not in outputs
-    assert "strategy-pipeline/docs/" not in interpretation
+    assert "strategy-pipeline/blob/main/docs/output-summary.md" in outputs
+    assert "research-workspace/blob/main/docs/contracts.md" in outputs
+    assert "strategy-pipeline/blob/main/docs/output-summary.md" in interpretation
+    assert "research-workspace/blob/main/docs/contracts.md" in interpretation
