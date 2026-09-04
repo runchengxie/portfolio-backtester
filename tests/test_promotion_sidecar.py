@@ -4,6 +4,7 @@ import pytest
 from portfolio_backtester.promotion_sidecar import (
     PromotionSidecarConfig,
     build_promotion_sidecar_config,
+    promotion_sidecar_config_from_pipeline_config,
     simulate_promotion_sidecar,
 )
 
@@ -38,3 +39,16 @@ def test_promotion_sidecar_disabled_and_capacity_partial_fill() -> None:
     assert result["summary"]["status"] == "ok"
     assert result["summary"]["fill_ratio"] < 1.0
     assert result["fills"]["unfilled_value"].iloc[0] == pytest.approx(9900.0)
+
+
+def test_promotion_sidecar_config_from_pipeline_config_supports_legacy_nesting() -> None:
+    config = {
+        "promotion": {
+            "event_sidecar": {"enabled": True, "participation_rate": 0.2},
+        }
+    }
+
+    resolved = promotion_sidecar_config_from_pipeline_config(config)
+
+    assert resolved.enabled is True
+    assert resolved.participation_rate == pytest.approx(0.2)
