@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from collections.abc import Mapping
 from dataclasses import asdict, dataclass
 from typing import Any, cast
 
@@ -48,6 +49,18 @@ def build_promotion_sidecar_config(value: Any) -> PromotionSidecarConfig:
         enforce_t1_sell=bool(value.get("enforce_t1_sell", True)),
         signal_entry_delay_days=int(value.get("signal_entry_delay_days", 1)),
     )
+
+
+def promotion_sidecar_config_from_pipeline_config(
+    config: Mapping[str, Any] | None,
+) -> PromotionSidecarConfig:
+    """Resolve the sidecar section from a pipeline configuration mapping."""
+    pipeline_config = config if isinstance(config, Mapping) else {}
+    value = pipeline_config.get("promotion_sidecar")
+    promotion = pipeline_config.get("promotion")
+    if value is None and isinstance(promotion, Mapping):
+        value = promotion.get("event_sidecar")
+    return build_promotion_sidecar_config(value)
 
 
 def _empty_result(config: PromotionSidecarConfig) -> dict[str, Any]:
