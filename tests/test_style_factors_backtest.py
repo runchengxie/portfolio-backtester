@@ -26,6 +26,13 @@ from portfolio_backtester.style_factors_backtest import (
 )
 
 
+def test_fixed_share_round_trip_does_not_create_rebalancing_profit() -> None:
+    returns = pd.DataFrame({"A": [1.0, -0.5], "B": [0.0, 0.0]})
+    result = _buy_and_hold_leg_returns(returns, ["A", "B"])
+    assert result.tolist() == pytest.approx([0.5, -1 / 3])
+    assert float((1 + result).prod()) == pytest.approx(1.0)
+
+
 def _synthetic_frames(
     *,
     days: int = 120,
