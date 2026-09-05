@@ -24,10 +24,10 @@ jobs:
     timeout-minutes: 20
     steps:
       - name: Check out repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       - name: Check out public research contracts
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
         with:
           repository: runchengxie/research-workspace
           path: .ci/research-workspace
