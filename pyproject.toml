@@ -30,7 +30,7 @@ dev = [
 
 [tool.uv.sources]
 research-contracts = { git = "https://github.com/runchengxie/research-workspace.git", subdirectory = "src/research_contracts", rev = "f28e97008b7c540730720aac82e63a2944a89b58" }
-research-code-quality = { git = "https://github.com/runchengxie/research-code-quality.git", rev = "3ff7580" }
+research-code-quality = { git = "https://github.com/runchengxie/research-code-quality.git", rev = "1c754c3" }
 
 [tool.setuptools]
 package-dir = {"" = "src"}

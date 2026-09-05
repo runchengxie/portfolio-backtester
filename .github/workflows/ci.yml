@@ -49,7 +49,7 @@ jobs:
           uv pip install --python .venv/bin/python \
             numpy pandas pyarrow PyYAML scikit-learn xgboost pytest pytest-cov ruff ty==0.0.55
           uv pip install --python .venv/bin/python \
-            "research-code-quality @ git+https://github.com/runchengxie/research-code-quality.git@3ff75804adb11b50800cb31e0bc83d449ca53504"
+            "research-code-quality @ git+https://github.com/runchengxie/research-code-quality.git@1c754c34adb11b50800cb31e0bc83d449ca53504"
           uv pip install --python .venv/bin/python \
             -e .ci/research-workspace/src/research_contracts
           uv pip install --python .venv/bin/python --no-deps -e .
