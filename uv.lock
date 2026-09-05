@@ -652,8 +652,8 @@ dependencies = [
     { name = "pandas" },
     { name = "pyarrow" },
     { name = "pyyaml" },
+    { name = "research-code-quality" },
     { name = "research-contracts" },
-    { name = "research-dev-metrics" },
     { name = "scikit-learn" },
     { name = "xgboost" },
 ]
@@ -676,8 +676,8 @@ requires-dist = [
     { name = "pytest", marker = "extra == 'dev'", specifier = ">=9.0.3" },
     { name = "pytest-cov", marker = "extra == 'dev'", specifier = ">=5" },
     { name = "pyyaml", specifier = ">=6.0" },
+    { name = "research-code-quality", git = "https://github.com/runchengxie/research-code-quality.git?rev=3f6c668" },
     { name = "research-contracts", git = "https://github.com/runchengxie/research-workspace.git?subdirectory=src%2Fresearch_contracts&rev=f28e97008b7c540730720aac82e63a2944a89b58" },
-    { name = "research-dev-metrics", git = "https://github.com/runchengxie/research-dev-metrics.git?rev=e1d6e278b0645a23adb523ada9fa8d4743c2e3bf" },
     { name = "ruff", marker = "extra == 'dev'", specifier = ">=0.8" },
     { name = "scikit-learn", specifier = ">=1.2" },
     { name = "ty", marker = "extra == 'dev'", specifier = "==0.0.55" },
@@ -862,14 +862,14 @@ wheels = [
 ]
 
 [[package]]
+name = "research-code-quality"
+version = "0.1.2"
+source = { git = "https://github.com/runchengxie/research-code-quality.git?rev=3f6c668#3f6c668df755a885b6db5999a8a8a593c579f05e" }
+
+[[package]]
 name = "research-contracts"
 version = "0.1.0"
 source = { git = "https://github.com/runchengxie/research-workspace.git?subdirectory=src%2Fresearch_contracts&rev=f28e97008b7c540730720aac82e63a2944a89b58#f28e97008b7c540730720aac82e63a2944a89b58" }
-
-[[package]]
-name = "research-dev-metrics"
-version = "0.1.2"
-source = { git = "https://github.com/runchengxie/research-dev-metrics.git?rev=e1d6e278b0645a23adb523ada9fa8d4743c2e3bf#e1d6e278b0645a23adb523ada9fa8d4743c2e3bf" }
 
 [[package]]
 name = "rich"

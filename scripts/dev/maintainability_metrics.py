@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Collect lightweight maintainability metrics for the repository.
 
-This script is now a thin wrapper around ``research-dev-metrics``. The
+This script is now a thin wrapper around ``research-code-quality``. The
 cross-repo-identical scan algorithm (file discovery, ast function-length
 counting, C901 per-file-ignore counting) lives in that shared package; this
 file keeps only portfolio-backtester's local concerns:
@@ -25,7 +25,7 @@ from collections.abc import Sequence
 from dataclasses import asdict, dataclass
 from pathlib import Path
 
-from research_dev_metrics.scanner import (
+from research_code_quality.scanner import (
     FileMetric,
     FunctionMetric,
     ScanResult,
