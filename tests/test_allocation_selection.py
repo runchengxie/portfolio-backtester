@@ -6,8 +6,8 @@ import pytest
 
 from portfolio_backtester.allocation_selection import (
     prepare_selection,
-    select_latest_holdings,
     select_from_positions_file,
+    select_latest_holdings,
 )
 
 

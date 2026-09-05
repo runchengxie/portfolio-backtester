@@ -49,6 +49,4 @@ def test_grid_result_helpers_create_stable_csv(tmp_path):
     output = tmp_path / "reports" / "grid.csv"
     write_grid_rows(output, [row])
     assert row["status"] == "ok"
-    assert output.read_text(encoding="utf-8").splitlines()[0].split(",") == list(
-        GRID_RESULT_FIELDS
-    )
+    assert output.read_text(encoding="utf-8").splitlines()[0].split(",") == list(GRID_RESULT_FIELDS)

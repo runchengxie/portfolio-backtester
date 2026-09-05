@@ -48,7 +48,9 @@ from portfolio_backtester.execution_sim import (
 
 其余公开对象包括 `SELL_UNTIL_NEXT_REBALANCE`、`TradeFeeModel`、`PreparedExecutionTables`、`describe_execution_sim_config` 和 `describe_trade_fee_model`。它们分别用于延迟卖出期限、准备后的执行表、费用协议以及配置和费用说明的序列化。
 
-容量模拟根据参与率限制成交，并保留未成交余量。它不会自动补全涨跌停、T+1、整手、停牌原因或券商拒单规则。调用方应通过规范化行情和可交易字段提供所需约束。
+容量模拟根据参与率限制成交，并保留未成交余量。`round_lot`、`enforce_t1`、`enforce_price_limits` 和 `enforce_listing_status` 可显式启用整手、T+1、价格限制与上市状态检查，默认关闭。调用方仍须提供相应的原始价格、涨跌停价格、上市状态和买卖可交易字段。停牌原因与券商拒单规则不会自动补全。
+
+整手数量与价格限制必须使用一致的真实股份和价格单位。不能直接把复权价格对应的合成份额视为真实可交易股数，也不能把原始涨跌停价格与复权成交价格直接比较。使用长期历史数据时，还需单独验证分红、拆并股等公司行动的处理。
 
 ## 使用边界
 
