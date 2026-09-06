@@ -167,6 +167,8 @@ scripts/dev/run_tests.sh maintainability
 - [成本口径](docs/concepts/cost-breakdown.md)
 - [测试和质量检查](docs/testing.md)
 
+编码代理默认读取根 README、[文档首页](docs/README.md) 和一个与任务相关的分类目录，不递归读取全部 Markdown。
+
 请勿提交凭证、账户信息、未授权数据、`artifacts/` 或 `outputs/`。
 
 仓库当前没有许可证文件。公开可见不自动授予复制、修改或再分发权限。
