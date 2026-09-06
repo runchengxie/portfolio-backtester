@@ -1,5 +1,12 @@
 # 文档入口
 
+> status: active
+> owner: portfolio-backtester
+> audience: human and agent
+> last_verified: 2026-09-06
+> source_of_truth: yes
+> superseded_by: n/a
+
 本目录记录 `portfolio-backtester` 的输入约定、执行假设、输出契约和开发检查。
 
 ## 推荐阅读顺序
@@ -24,8 +31,10 @@
 18. [执行分配参考资产](reference/allocation-reference.md)
 19. [公开 API](reference/public-api.md)
 20. [测试和质量检查](testing.md)
-21. [会计与执行路线图](accounting_execution_roadmap.md)
+21. [会计与执行路线图](governance/accounting-execution-roadmap.md)
 22. [网格回测辅助函数](grid-support.md)
+
+编码代理默认读取根 README、本页和一个与任务相关的分类目录，不递归读取全部 Markdown。
 
 ## 事实来源
 
