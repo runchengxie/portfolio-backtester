@@ -677,7 +677,7 @@ requires-dist = [
     { name = "pytest-cov", marker = "extra == 'dev'", specifier = ">=5" },
     { name = "pyyaml", specifier = ">=6.0" },
     { name = "research-code-quality", git = "https://github.com/runchengxie/research-code-quality.git?rev=1c754c3" },
-    { name = "research-contracts", git = "https://github.com/runchengxie/research-workspace.git?subdirectory=src%2Fresearch_contracts&rev=f28e97008b7c540730720aac82e63a2944a89b58" },
+    { name = "research-contracts", git = "https://github.com/runchengxie/research-workspace.git?subdirectory=src%2Fresearch_contracts&rev=235d8405b5706854cc6c1b68eb4e376c0e09f927" },
     { name = "ruff", marker = "extra == 'dev'", specifier = ">=0.8" },
     { name = "scikit-learn", specifier = ">=1.2" },
     { name = "ty", marker = "extra == 'dev'", specifier = "==0.0.55" },
@@ -869,7 +869,7 @@ source = { git = "https://github.com/runchengxie/research-code-quality.git?rev=1
 [[package]]
 name = "research-contracts"
 version = "0.1.0"
-source = { git = "https://github.com/runchengxie/research-workspace.git?subdirectory=src%2Fresearch_contracts&rev=f28e97008b7c540730720aac82e63a2944a89b58#f28e97008b7c540730720aac82e63a2944a89b58" }
+source = { git = "https://github.com/runchengxie/research-workspace.git?subdirectory=src%2Fresearch_contracts&rev=235d8405b5706854cc6c1b68eb4e376c0e09f927#235d8405b5706854cc6c1b68eb4e376c0e09f927" }
 
 [[package]]
 name = "rich"
