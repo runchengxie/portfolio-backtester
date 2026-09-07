@@ -1,5 +1,7 @@
 # portfolio-backtester
 
+> 迁移状态：migration-only。新的通用组合构造、回测、风险和执行模拟进入 `quant-platform`。本仓库保留历史 API、复现和迁移兼容。
+
 `portfolio-backtester` 是通用组合构造与回测工具包，权威 Python 包是 `portfolio_backtester`。
 
 它接收外部信号、目标持仓和行情数据，提供：
