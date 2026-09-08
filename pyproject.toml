@@ -29,7 +29,7 @@ dev = [
 ]
 
 [tool.uv.sources]
-research-contracts = { git = "https://github.com/runchengxie/research-workspace.git", subdirectory = "src/research_contracts", rev = "235d8405b5706854cc6c1b68eb4e376c0e09f927" }
+research-contracts = { git = "https://github.com/runchengxie/research-workspace.git", subdirectory = "src/research_contracts", rev = "e12aa19f4c17d9a64250cdd1f0d3c58c03fbd44c" }
 research-code-quality = { git = "https://github.com/runchengxie/research-code-quality.git", rev = "1c754c3" }
 
 [tool.setuptools]
